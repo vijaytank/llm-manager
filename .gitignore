@@ -1,0 +1,18 @@
+# Caches and logs
+/cache/
+/work/
+*.log
+*.tmp
+
+# Option registries & run configs
+/llo-config.json
+/models-preset.ini
+
+# Model files (don't commit large GGUFs)
+*.gguf
+/models/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
