@@ -103,10 +103,20 @@ foreach ($s in $scriptsToScan) {
     $content = Get-Content $s.FullName -Raw
     
     # Extract flags matching --[a-zA-Z0-9-]+
-    $flagsFound = [regex]::Matches($content, '--[a-zA-Z0-9-]+') | ForEach-Object { $_.Value } | Select-Object -Unique
+    $flagsFound = [regex]::Matches($content, '--[a-zA-Z0-9][a-zA-Z0-9-]*') | ForEach-Object { $_.Value } | Select-Object -Unique
     
-    # Exclude standard double-hyphen non-arguments (like --format in query-gpu etc.)
-    $excludeList = @("--query-gpu", "--format", "--oneline", "--no-merges", "--show-current")
+    # Exclude known non-llama-server arguments: git, nvidia-smi, and markdown/comment tokens
+    $excludeList = @(
+        # git flags used in GitDiff.ps1
+        "--query-gpu", "--format", "--oneline", "--no-merges", "--show-current",
+        "--pretty", "--abbrev-commit", "--since", "--follow",
+        # nvidia-smi query args
+        "--nounits", "--csv", "--noheader",
+        # PowerShell / general CLI flags that may appear in scripts
+        "--help", "--version", "--verbose", "--debug", "--dry-run",
+        # markdown table separators (--- inside table rows) — not real flags
+        "---"
+    )
     
     $incompatibles = New-Object System.Collections.Generic.List[string]
 

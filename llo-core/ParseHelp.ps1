@@ -36,75 +36,93 @@ function Get-LlamaServerFlags {
 
     Write-Host "Running $ServerPath --help to extract options..." -ForegroundColor Cyan
 
-    # Execute and capture stdout/stderr. Redirect stderr because llama-server may print help to stderr in some versions.
+    # Execute and capture stdout+stderr. Some llama-server versions write help to stderr.
     $helpLines = & $ServerPath --help 2>&1 | Out-String
     $lines = $helpLines -split "`r?`n"
 
     $flags = New-Object System.Collections.Generic.List[object]
-    
-    # Matches options like:
-    #   -t,    --threads N                      number of CPU threads to use...
-    #   --version                               show version and build info
-    #   -rea,  --reasoning [on|off|auto]        Use reasoning/thinking...
-    $regex = '^\s*(?:(-[\w?]+),\s+)?(--[\w-]+)(?:\s+([A-Z0-9_\-\[\]|{}]+))?\s+(.+)$'
+
+    # A help line with options looks like one of:
+    #   -t,    --threads N                       number of CPU threads to use...
+    #   --version                                show version and build info
+    #   -ngl,  --gpu-layers, --n-gpu-layers N    max layers in VRAM...
+    #   --jinja, --no-jinja                      whether to use jinja template...
+    #   --webui-mcp-proxy, --no-webui-mcp-proxy
+    # We match any line that starts with optional whitespace + a short/long flag.
+    $optionLineRegex = '^\s{0,12}((?:-[\w?]+,\s+)?(?:--[\w-]+(?:,\s+)?)+)'
 
     $currentFlag = $null
 
     foreach ($line in $lines) {
-        # Check if line contains a flag match
-        if ($line -match $regex) {
-            # If we had a previous flag, add it
-            if ($currentFlag) {
-                $flags.Add($currentFlag)
+        if ($line -match $optionLineRegex) {
+            # Flush the previous flag entry
+            if ($currentFlag) { $flags.Add($currentFlag) }
+
+            # Extract all long flags (--word) from this line
+            $longAliases = @([regex]::Matches($line, '--[\w-]+') | ForEach-Object { $_.Value })
+            if ($longAliases.Count -eq 0) {
+                $currentFlag = $null
+                continue
             }
 
-            $short = $Matches[1]
-            $long = $Matches[2]
-            $valueToken = $Matches[3]
-            $desc = $Matches[4].Trim()
+            # Extract short alias if present (leading -x,)
+            $shortAlias = $null
+            if ($line -match '^\s*(-[\w?]+),') { $shortAlias = $Matches[1] }
 
-            # Clean up value token and desc if value token was mistakenly captured in desc or vice versa
-            if ([string]::IsNullOrEmpty($valueToken) -and $desc -match '^([A-Z0-9_]{2,})\s+(.+)$') {
-                $valueToken = $Matches[1]
-                $desc = $Matches[2].Trim()
+            # Extract value token: an ALL-CAPS word/bracket token after the flags section
+            $valueToken = $null
+            if ($line -match '(?:--[\w-]+(?:,\s+)?)+\s+([A-Z0-9_\[\]{}/|.*-]{1,40})\s{2,}') {
+                $valueToken = $Matches[1].Trim()
             }
+
+            # Extract description: two or more spaces after the flags+value section
+            $desc = ""
+            if ($line -match '\s{2,}(.+)$') { $desc = $Matches[1].Trim() }
 
             # Detect env variable override
             $envVar = $null
-            if ($desc -match '\(env:\s*([\w_]+)\)') {
-                $envVar = $Matches[1]
-            }
+            if ($desc -match '\(env:\s*([\w_]+)\)') { $envVar = $Matches[1] }
 
+            # Primary flag entry
+            $primaryLong = $longAliases[0]
             $currentFlag = [pscustomobject]@{
-                Short       = if ($short) { $short.Trim() } else { $null }
-                Long        = $long.Trim()
-                ValueToken  = if ($valueToken) { $valueToken.Trim() } else { $null }
+                Short       = $shortAlias
+                Long        = $primaryLong
+                Aliases     = $longAliases
+                ValueToken  = $valueToken
                 Description = $desc
                 EnvVar      = $envVar
             }
+
+            # Register every additional alias as its own entry (allows allow-list lookups by any alias)
+            foreach ($alias in ($longAliases | Select-Object -Skip 1)) {
+                $flags.Add([pscustomobject]@{
+                    Short       = $null
+                    Long        = $alias
+                    Aliases     = $longAliases
+                    ValueToken  = $valueToken
+                    Description = "(alias) $desc"
+                    EnvVar      = $envVar
+                })
+            }
         } else {
-            # It's a continuation of the description for the current flag
+            # Continuation description line
             if ($currentFlag -and $line.Trim() -and -not ($line -match '^---')) {
-                # Append description
                 $trimmedLine = $line.Trim()
-                
-                # Check for env variable in continuation line
                 if ($trimmedLine -match '\(env:\s*([\w_]+)\)') {
                     $currentFlag.EnvVar = $Matches[1]
                 }
-                
                 $currentFlag.Description += " " + $trimmedLine
             }
         }
     }
 
     # Add the last flag
-    if ($currentFlag) {
-        $flags.Add($currentFlag)
-    }
+    if ($currentFlag) { $flags.Add($currentFlag) }
 
     return $flags.ToArray()
 }
+
 
 function Update-CachedFlags {
     param(
