@@ -5,8 +5,6 @@
 [![llama.cpp Compatibility](https://img.shields.io/badge/llama.cpp-compatible-blueviolet.svg)](https://github.com/ggerganov/llama.cpp)
 [![Optimization Status](https://img.shields.io/badge/optimization-automated-orange.svg)](#)
 
-> **Tags & Keywords**: `llama.cpp-optimization` `local-llm-router` `gpu-vram-fitting` `cpu-thread-scheduling` `kv-cache-quantization` `chat-template-mapping` `port-collision-scanner` `offline-llm-hosting` `local-ai-api`
-
 LLM Manager is an automated system-specific performance optimization tool and client integration router built on top of **llama.cpp**. It simplifies the configuration, hardware tuning, and deployment of local Large Language Models (LLMs) to ensure your local server runs at maximum speed and efficiency without manual configuration errors.
 
 ---
@@ -27,3 +25,6 @@ If you want to get started immediately, set up your model paths, and optimize yo
 
 ## 📐 System Architecture & Decision Engine
 To see the internal decision trees, mathematical budgets, and technical workflows of the manager's auto-tuning engine, read the **[ARCHITECTURE.md](ARCHITECTURE.md)** guide.
+
+---
+**Tags & Keywords**: `#llama.cpp-optimization` `#local-llm-router` `#gpu-vram-fitting` `#cpu-thread-scheduling` `#kv-cache-quantization` `#chat-template-mapping` `#port-collision-scanner` `#offline-llm-hosting` `#local-ai-api`

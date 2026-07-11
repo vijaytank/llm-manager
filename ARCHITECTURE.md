@@ -1,7 +1,5 @@
 # LLM Manager - System Architecture & Decision Engine Guide
 
-> **Tags & Keywords**: `llama.cpp-architecture` `performance-tuning` `hardware-budgeting` `vram-calculation` `port-collision-algorithm` `local-llm-router`
-
 This document details the internal design, optimization formulas, and automated decision-making logic of **LLM Manager**. The system is built to profile hardware and automatically configure `llama.cpp` parameters to extract maximum performance while guaranteeing system stability.
 
 ---
@@ -95,3 +93,6 @@ To prevent formatting errors in API clients, the preset setup scans GGUF file na
 * `deepseek` $\rightarrow$ `deepseek`
 * `mistral` / `mixtral` $\rightarrow$ `mistral-v3`
 * Others fallback to the GGUF file's internal metadata.
+
+---
+**Tags & Keywords**: `#llama.cpp-architecture` `#performance-tuning` `#hardware-budgeting` `#vram-calculation` `#port-collision-algorithm` `#local-llm-router`
