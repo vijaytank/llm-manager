@@ -1,0 +1,17 @@
+{
+    "terminal.integrated.env.windows": {
+        "LLAMA_BASE_URL": "http://127.0.0.1:8080",
+        "LLAMA_OPENAI_BASE_URL": "http://127.0.0.1:8080/v1",
+        "OPENAI_BASE_URL": "http://127.0.0.1:8080/v1",
+        "OPENAI_API_BASE": "http://127.0.0.1:8080/v1",
+        "OPENAI_API_KEY": "local-key",
+        "ANTHROPIC_BASE_URL": "http://127.0.0.1:8080",
+        "ANTHROPIC_API_KEY": "local-key",
+        "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "1"
+    },
+    "llmManager.integrationGuide": {
+        "claudeCode": "Run: `$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8080'; $env:ANTHROPIC_API_KEY='local-key'; claude`",
+        "continueExtension": "Configure config.json with a provider of type 'openai' and apiBase 'http://127.0.0.1:8080/v1'",
+        "cursor": "Go to settings -> Models -> OpenAI -> Base URL: http://localhost:8080/v1, API Key: local-key"
+    }
+}

@@ -7,6 +7,8 @@
 # Option registries & run configs
 /llo-config.json
 /models-preset.ini
+/.cached_flags.json
+/docs/SYSTEM_COMMANDS.md
 
 # Model files (don't commit large GGUFs)
 *.gguf
