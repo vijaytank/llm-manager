@@ -69,12 +69,19 @@ $config = @{
     llama_server_path = ""
     llama_repo_path = ""
     models_dir = ""
-    templates_dir = "F:\llama\templates"
+    templates_dir = ""                 # resolved dynamically during setup
     use_default_template = $false
     cache_type_k = "f16"
     cache_type_v = "f16"
     flash_attn = "auto"
     context_shift = $true
+    # Optimization parameters (auto-tuned by wizard; overridable in llo-config.json)
+    fit_ctx_min = 8192          # minimum context --fit is allowed to reduce to
+    cache_reuse_chunk = 256     # min prefix chunk size for KV cache reuse (0=off)
+    ubatch_size = 512           # physical GPU batch size per kernel call
+    parallel_slots = 1          # max concurrent request slots
+    cache_idle_slots = $true    # cache KV state of idle slots between requests
+    spec_type = "none"          # speculative decoding type (none | ngram-simple)
     custom_args = ""
     integrations = @()
     idle_timeout_sec = 60
@@ -314,37 +321,62 @@ Write-Host "`nStep 2.2: Automatically tuning performance parameters for your sys
 $flashAttn = "auto"
 $cacheType = "f16"
 $contextShift = $true
+$fitCtxMin = 8192
+$cacheReuseChunk = 256
+$ubatchSize = 512
+$parallelSlots = 1
 
 if ($hw) {
+    $vramGB = if ($hw.GPU -and $hw.GPU.TotalVramMB -gt 0) { $hw.GPU.TotalVramMB / 1024 } else { 0 }
+
     # 1. Enable Flash Attention if GPU is present
-    if ($hw.GPU -and $hw.GPU.TotalVramMB -gt 0) {
-        $flashAttn = "on"
-    }
-    
+    if ($vramGB -gt 0) { $flashAttn = "on" }
+
     # 2. Heuristically select KV Cache quantization to prevent VRAM bottlenecks
-    if ($hw.GPU -and $hw.GPU.TotalVramMB -gt 0) {
-        $vramGB = $hw.GPU.TotalVramMB / 1024
+    if ($vramGB -gt 0) {
         if ($vramGB -lt 6.0) {
-            $cacheType = "q4_0" # Max VRAM savings for low-end GPUs
+            $cacheType = "q4_0"   # Max VRAM savings for low-end GPUs
         } elseif ($vramGB -lt 12.0) {
-            $cacheType = "q8_0" # Balanced savings for mid-range GPUs (like RTX 5060)
+            $cacheType = "q8_0"   # Balanced savings for mid-range GPUs (like RTX 5060)
         } else {
-            $cacheType = "f16"  # High precision for high-end GPUs
+            $cacheType = "f16"    # High precision for high-end GPUs
         }
     } else {
-        # CPU-only: q8_0 reduces cache memory bandwidth and speeds up CPU inference significantly
+        # CPU-only: q8_0 reduces cache memory bandwidth significantly
         $cacheType = "q8_0"
     }
 
     # 3. Heuristically select context size to balance VRAM and capacity
     $defaultCtxSize = 65536
-    if ($hw.GPU -and $hw.GPU.TotalVramMB -gt 0) {
-        $vramGB = $hw.GPU.TotalVramMB / 1024
+    if ($vramGB -gt 0) {
         if ($vramGB -le 8.0) {
-            $defaultCtxSize = 32768 # 32k limits VRAM footprint for cards with <= 8GB
+            $defaultCtxSize = 32768    # 32k limits VRAM footprint for <= 8GB cards
         } elseif ($vramGB -ge 16.0) {
-            $defaultCtxSize = 131072 # 128k for high-end GPUs
+            $defaultCtxSize = 131072   # 128k for high-end GPUs
         }
+    }
+
+    # 4. Safe minimum context floor for --fit (prevents silent truncation)
+    if ($vramGB -le 8.0) {
+        $fitCtxMin = 8192   # 8K floor: keeps models usable on tight VRAM
+    } else {
+        $fitCtxMin = 16384  # 16K floor for larger cards
+    }
+
+    # 5. Physical GPU micro-batch size (higher = better throughput, more VRAM peak)
+    if ($vramGB -lt 6.0) {
+        $ubatchSize = 256    # Reduce memory spikes on very small GPUs
+    } elseif ($vramGB -lt 12.0) {
+        $ubatchSize = 512    # Safe balance for 8GB class GPUs
+    } else {
+        $ubatchSize = 1024   # Maximize throughput on 12GB+ cards
+    }
+
+    # 6. Parallel slots: cap to 1 on VRAM-limited GPUs to prevent OOM
+    if ($vramGB -le 8.0) {
+        $parallelSlots = 1   # Single-slot safe mode for 8GB VRAM
+    } else {
+        $parallelSlots = -1  # Auto (let llama-server decide) for larger cards
     }
 }
 
@@ -353,11 +385,30 @@ $config.cache_type_v = $cacheType
 $config.flash_attn = $flashAttn
 $config.context_shift = $contextShift
 $config.default_context_size = $defaultCtxSize
+$config.fit_ctx_min = $fitCtxMin
+$config.cache_reuse_chunk = $cacheReuseChunk
+$config.ubatch_size = $ubatchSize
+$config.parallel_slots = $parallelSlots
+$config.cache_idle_slots = $true   # always safe to enable
 
-Write-Host "  -> Flash Attention Auto-Tuned to: $flashAttn" -ForegroundColor Green
-Write-Host "  -> KV Cache Type Auto-Tuned to  : $cacheType" -ForegroundColor Green
-Write-Host "  -> Context Size Auto-Tuned to   : $defaultCtxSize tokens" -ForegroundColor Green
-Write-Host "  -> Context Shift Auto-Tuned to  : Enabled" -ForegroundColor Green
+Write-Host "  -> Flash Attention    : $flashAttn" -ForegroundColor Green
+Write-Host "  -> KV Cache Type      : $cacheType" -ForegroundColor Green
+Write-Host "  -> Context Size       : $defaultCtxSize tokens" -ForegroundColor Green
+Write-Host "  -> Context Shift      : Enabled" -ForegroundColor Green
+Write-Host "  -> Fit Ctx Floor      : $fitCtxMin tokens (--fit will not go below this)" -ForegroundColor Green
+Write-Host "  -> UBatch Size        : $ubatchSize tokens/kernel" -ForegroundColor Green
+Write-Host "  -> Parallel Slots     : $(if ($parallelSlots -eq -1) { 'Auto' } else { $parallelSlots })" -ForegroundColor Green
+Write-Host "  -> KV Cache Reuse     : Enabled ($cacheReuseChunk token prefix threshold)" -ForegroundColor Green
+Write-Host "  -> Idle Slot Caching  : Enabled" -ForegroundColor Green
+
+# Optional: Speculative decoding via n-gram (no draft model required)
+Write-Host "`n[Optional] N-Gram Speculative Decoding" -ForegroundColor Yellow
+Write-Host "  Enabling 'ngram-simple' can improve generation speed by ~10-15%." -ForegroundColor DarkGray
+Write-Host "  It works purely from token history - no secondary draft model needed." -ForegroundColor DarkGray
+Write-Host "  Works well with coding models (Qwen, etc.). May be less effective on reasoning models." -ForegroundColor DarkGray
+$defaultSpecChoice = if ($config.spec_type -and $config.spec_type -ne "none") { "Y" } else { "N" }
+$enableSpec = Get-UserInput "Enable ngram-simple speculative decoding? (Y/N)" -DefaultVal $defaultSpecChoice
+$config.spec_type = if ($enableSpec.ToUpper() -eq "Y") { "ngram-simple" } else { "none" }
 
 # 4. Optional Custom Arguments Override
 $defaultCustom = if ($config.custom_args) { $config.custom_args } else { "" }
@@ -414,12 +465,18 @@ if ($config.llama_repo_path) {
 Write-Host "    * Models Dir  : $($config.models_dir)" -ForegroundColor White
 Write-Host "    * Default Template: $(if ($config.use_default_template) { 'Applied (default.jinja)' } else { 'Disabled (Using GGUF internal templates)' })" -ForegroundColor White
 Write-Host "`n  [Optimizations & Performance]" -ForegroundColor Cyan
-Write-Host "    * Flash Attention: $($config.flash_attn)" -ForegroundColor White
-Write-Host "    * KV Cache Type  : $($config.cache_type_k)" -ForegroundColor White
-Write-Host "    * Context Size   : $($config.default_context_size) tokens" -ForegroundColor White
-Write-Host "    * Context Shift  : $(if ($config.context_shift) { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
+Write-Host "    * Flash Attention : $($config.flash_attn)" -ForegroundColor White
+Write-Host "    * KV Cache Type   : $($config.cache_type_k)" -ForegroundColor White
+Write-Host "    * Context Size    : $($config.default_context_size) tokens" -ForegroundColor White
+Write-Host "    * Context Shift   : $(if ($config.context_shift) { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
+Write-Host "    * Fit Ctx Floor   : $($config.fit_ctx_min) tokens" -ForegroundColor White
+Write-Host "    * UBatch Size     : $($config.ubatch_size) tokens" -ForegroundColor White
+Write-Host "    * Parallel Slots  : $(if ($config.parallel_slots -eq -1) { 'Auto' } elseif ($config.parallel_slots -eq 1) { '1 (Safe mode - prevents OOM)' } else { $config.parallel_slots })" -ForegroundColor White
+Write-Host "    * KV Cache Reuse  : $(if ($config.cache_reuse_chunk -gt 0) { "Enabled ($($config.cache_reuse_chunk) token chunks)" } else { 'Disabled' })" -ForegroundColor White
+Write-Host "    * Idle Slot Cache : $(if ($config.cache_idle_slots) { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
+Write-Host "    * Speculative Dec : $(if ($config.spec_type -ne 'none') { $config.spec_type } else { 'Disabled' })" -ForegroundColor White
 if ($config.custom_args) {
-    Write-Host "    * Custom Args    : $($config.custom_args)" -ForegroundColor White
+    Write-Host "    * Custom Args     : $($config.custom_args)" -ForegroundColor White
 }
 Write-Host "`n  [Selected Integrations]" -ForegroundColor Cyan
 foreach ($int in $config.integrations) {

@@ -52,6 +52,13 @@ $config = @{
     cache_type_v = "f16"
     flash_attn = "auto"
     context_shift = $true
+    # New optimization params (auto-tuned by main.ps1 or set here as safe defaults)
+    fit_ctx_min = 8192          # min ctx --fit is allowed to reduce to (tokens)
+    cache_reuse_chunk = 256     # prefix KV cache reuse threshold (tokens, 0=disabled)
+    ubatch_size = 512           # physical GPU kernel batch size (tokens)
+    parallel_slots = 1          # concurrent request slots (-1 = auto)
+    cache_idle_slots = $true    # save idle slot KV state between requests
+    spec_type = "none"          # speculative decoding: none | ngram-simple | ...
     custom_args = ""
     integrations = @()
 }
@@ -178,6 +185,10 @@ if ($config.enable_tools) {
 # Built-in fit features
 $presetLines.Add("fit = on")
 $presetLines.Add("fit-target = $($config.vram_margin_mb)")
+# Minimum context size --fit is permitted to reduce to (prevents silent truncation)
+if ($config.fit_ctx_min -gt 0) {
+    $presetLines.Add("fit-ctx = $($config.fit_ctx_min)")
+}
 
 # Optimized KV Cache, Flash Attention, and Context Shift
 if ($config.flash_attn) {
@@ -195,6 +206,35 @@ if ($null -ne $config.context_shift) {
     } else {
         $presetLines.Add("no-context-shift = 1")
     }
+}
+
+# Physical batch size per GPU kernel call (tuned by hardware profiler)
+if ($config.ubatch_size -and $config.ubatch_size -gt 0) {
+    $presetLines.Add("ubatch-size = $($config.ubatch_size)")
+}
+
+# KV Cache prefix reuse: speeds up repeat-prefix requests (Claude Code, Cursor system prompts)
+if ($null -ne $config.cache_reuse_chunk -and $config.cache_reuse_chunk -gt 0) {
+    $presetLines.Add("cache-reuse = $($config.cache_reuse_chunk)")
+}
+
+# Idle slot KV caching: saves and restores slot state between bursty requests
+if ($null -ne $config.cache_idle_slots) {
+    if ($config.cache_idle_slots) {
+        $presetLines.Add("cache-idle-slots = 1")
+    } else {
+        $presetLines.Add("no-cache-idle-slots = 1")
+    }
+}
+
+# Concurrent request slots: capped at 1 for safety on VRAM-constrained GPUs
+if ($null -ne $config.parallel_slots -and $config.parallel_slots -ne 0) {
+    $presetLines.Add("parallel = $($config.parallel_slots)")
+}
+
+# Speculative decoding: ngram-simple gives ~10-15% throughput boost, no draft model needed
+if ($config.spec_type -and $config.spec_type -ne "none") {
+    $presetLines.Add("spec-type = $($config.spec_type)")
 }
 $presetLines.Add("")
 
