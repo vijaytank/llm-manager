@@ -3,6 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 $ManagerDir = $PSScriptRoot
+$Version = "1.1.0"
 
 # Clear console for a fresh look
 Clear-Host
@@ -16,7 +17,7 @@ Write-Host "      | |____| |____| |  | | | |  | | | | | | | | (_| || | | | (_| |
 Write-Host "      |______|______|____|__|_|____|__|_|_|_|_|_|\__,_||_| |_|\__, ||_|   " -ForegroundColor Green
 Write-Host "                             |______|                         |___/       " -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "           LLM MANAGER - INTERACTIVE SETUP WIZARD" -ForegroundColor Cyan
+Write-Host "      LLM MANAGER - INTERACTIVE SETUP WIZARD (v$Version)" -ForegroundColor Cyan
 Write-Host "==========================================================`n" -ForegroundColor Green
 
 # 1. Helper functions for input
@@ -49,7 +50,12 @@ function Get-UserChoice {
         Write-Host "  $($i + 1)) $($Options[$i])" -ForegroundColor DarkGray
     }
     $choice = Get-UserInput "Select option" -DefaultVal $DefaultChoice
-    $idx = [int]$choice - 1
+    $idx = 0
+    if ($choice -match '^\d+$') {
+        $idx = [int]$choice - 1
+    } else {
+        $idx = $DefaultChoice - 1
+    }
     if ($idx -ge 0 -and $idx -lt $Options.Count) {
         return $idx
     }
@@ -63,7 +69,8 @@ $config = @{
     llama_server_path = ""
     llama_repo_path = ""
     models_dir = ""
-    templates_dir = ""
+    templates_dir = "F:\llama\templates"
+    use_default_template = $false
     cache_type_k = "f16"
     cache_type_v = "f16"
     flash_attn = "auto"
@@ -88,7 +95,9 @@ if (Test-Path $ConfigFile) {
             $config[$k] = $loaded.$k
         }
         Write-Host "[INFO] Loaded existing configuration from llo-config.json.`n" -ForegroundColor DarkGray
-    } catch {}
+    } catch {
+        Write-Host "[WARNING] Failed to load configuration from llo-config.json: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
 }
 
 # Run hardware profiling first so it is available for auto-tuning defaults
@@ -270,42 +279,34 @@ while ($true) {
 }
 $config.models_dir = $modelsDir
 
-# Step 2.1: Resolve Chat Templates Path
-Write-Host "`nStep 2.1: Configuring Jinja Chat Templates Directory (Optional)..." -ForegroundColor Cyan
-$detectedTemplatesDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\templates"))
-$defaultTemplatesInput = if ($config.templates_dir) { $config.templates_dir } elseif (Test-Path $detectedTemplatesDir) { $detectedTemplatesDir } else { "" }
-
-$templatesDir = ""
-while ($true) {
-    $promptMsg = "Enter the absolute path to your Chat Templates folder (press Enter to skip/use built-in)"
-    $templatesInput = Get-UserInput $promptMsg -DefaultVal $defaultTemplatesInput
-    
-    if ([string]::IsNullOrWhiteSpace($templatesInput) -or $templatesInput.ToLower() -eq "none") {
-        Write-Host "  No custom templates directory configured. Server will fallback to built-in model templates." -ForegroundColor Green
-        $templatesDir = ""
-        break
-    }
-    
-    if (Test-Path $templatesInput) {
-        $templatesDir = [System.IO.Path]::GetFullPath($templatesInput)
-        break
-    } else {
-        $create = Get-UserInput "Directory does not exist. Create it? (Y/N)" -DefaultVal "Y"
-        if ($create.ToUpper() -eq "Y") {
-            try {
-                New-Item -ItemType Directory -Path $templatesInput -Force | Out-Null
-                $templatesDir = [System.IO.Path]::GetFullPath($templatesInput)
-                break
-            } catch {
-                Write-Host "[ERROR] Failed to create directory: $($_.Exception.Message)" -ForegroundColor Red
-            }
-        } else {
-            $templatesDir = ""
-            break
-        }
-    }
+# Step 2.1: Jinja Chat Template Configuration
+Write-Host "`nStep 2.1: Jinja Chat Template Configuration..." -ForegroundColor Cyan
+# Templates live alongside the llm-manager folder, not derived from the models directory
+$templatesDir = Join-Path $ManagerDir "templates"
+if (-not (Test-Path $templatesDir)) {
+    try {
+        New-Item -ItemType Directory -Path $templatesDir -Force | Out-Null
+    } catch {}
 }
 $config.templates_dir = $templatesDir
+
+# Copy packaged default.jinja to active templates folder if missing
+$defaultTemplateDest = Join-Path $templatesDir "default.jinja"
+$packagedTemplateSource = Join-Path $ManagerDir "templates\default.jinja"
+if (-not (Test-Path $defaultTemplateDest) -and (Test-Path $packagedTemplateSource)) {
+    try {
+        Copy-Item -Path $packagedTemplateSource -Destination $defaultTemplateDest -Force | Out-Null
+        Write-Host "  [OK] Copied default template to: $defaultTemplateDest" -ForegroundColor Green
+    } catch {
+        Write-Host "  [WARNING] Failed to copy default template: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
+
+$defaultUseTemplate = if ($null -ne $config.use_default_template) { if ($config.use_default_template) { "Y" } else { "N" } } else { "N" }
+Write-Host "A default chat template (default.jinja) is available in $templatesDir." -ForegroundColor White
+Write-Host "[WARNING] Using a custom default template is optional. If you see chat formatting or system instruction issues, select 'N' to fall back to the models' built-in GGUF internal templates." -ForegroundColor Yellow
+$useDefaultTemplateInput = Get-UserInput "Apply default.jinja template to all local models? (Y/N)" -DefaultVal $defaultUseTemplate
+$config.use_default_template = ($useDefaultTemplateInput.ToUpper() -eq "Y")
 
 # Step 2.2: Automated Memory & Performance Optimization
 Write-Host "`nStep 2.2: Automatically tuning performance parameters for your system..." -ForegroundColor Cyan
@@ -411,7 +412,7 @@ if ($config.llama_repo_path) {
     Write-Host "    * Repo Path   : $($config.llama_repo_path)" -ForegroundColor White
 }
 Write-Host "    * Models Dir  : $($config.models_dir)" -ForegroundColor White
-Write-Host "    * Templates Dir: $($config.templates_dir)" -ForegroundColor White
+Write-Host "    * Default Template: $(if ($config.use_default_template) { 'Applied (default.jinja)' } else { 'Disabled (Using GGUF internal templates)' })" -ForegroundColor White
 Write-Host "`n  [Optimizations & Performance]" -ForegroundColor Cyan
 Write-Host "    * Flash Attention: $($config.flash_attn)" -ForegroundColor White
 Write-Host "    * KV Cache Type  : $($config.cache_type_k)" -ForegroundColor White
@@ -445,13 +446,97 @@ if ($apply.ToUpper() -eq "Y") {
 
     # Integration specific guidance or writing
     if ($config.integrations -contains "vscode") {
-        Write-Host "`n[VSCode Integration] Tasks and environment settings have been registered." -ForegroundColor Yellow
-        Write-Host "  You can start and stop the server directly from VSCode (Ctrl+Shift+B -> Select Task)." -ForegroundColor DarkGray
+        Write-Host "`n[VSCode Integration] Registering tasks and environment settings..." -ForegroundColor Yellow
+        try {
+            $vsCodeDir = Join-Path $ManagerDir ".vscode"
+            if (-not (Test-Path $vsCodeDir)) {
+                New-Item -ItemType Directory -Force -Path $vsCodeDir | Out-Null
+            }
+            
+            # Write tasks.json if not present
+            $tasksFile = Join-Path $vsCodeDir "tasks.json"
+            if (-not (Test-Path $tasksFile)) {
+                $tasksJson = @{
+                    version = "2.0.0"
+                    tasks = @(
+                        @{
+                            label = "Start LLM Server"
+                            type = "shell"
+                            command = "powershell.exe"
+                            args = @("-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/script/start-server.ps1")
+                            group = "none"
+                            presentation = @{ reveal = "always"; panel = "new"; focus = $true; close = $false }
+                            problemMatcher = @()
+                        },
+                        @{
+                            label = "Stop LLM Server"
+                            type = "shell"
+                            command = "powershell.exe"
+                            args = @("-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/script/stop-server.ps1")
+                            group = "none"
+                            presentation = @{ reveal = "always"; panel = "dedicated"; focus = $false; close = $true }
+                            problemMatcher = @()
+                        },
+                        @{
+                            label = "Audit Script Compatibility"
+                            type = "shell"
+                            command = "powershell.exe"
+                            args = @("-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/script/verify-scripts.ps1")
+                            group = "none"
+                            presentation = @{ reveal = "always"; panel = "new"; focus = $true; close = $false }
+                            problemMatcher = @()
+                        }
+                    )
+                }
+                $tasksJson | ConvertTo-Json -Depth 5 | Set-Content -Path $tasksFile -Encoding UTF8
+            }
+            
+            # Write/Update settings.json
+            $settingsFile = Join-Path $vsCodeDir "settings.json"
+            $settings = @{
+                "terminal.integrated.env.windows" = @{
+                    "LLAMA_BASE_URL" = "http://127.0.0.1:8080"
+                    "LLAMA_OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
+                    "OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
+                    "OPENAI_API_BASE" = "http://127.0.0.1:8080/v1"
+                    "OPENAI_API_KEY" = "local-key"
+                    "ANTHROPIC_BASE_URL" = "http://127.0.0.1:8080"
+                    "ANTHROPIC_AUTH_TOKEN" = "local"
+                    "ANTHROPIC_API_KEY" = "local-key"
+                    "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY" = "1"
+                    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" = "1"
+                }
+                "llmManager.integrationGuide" = @{
+                    "claudeCode" = "Run: `$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8080'; `$env:ANTHROPIC_AUTH_TOKEN='local'; `$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC='1'; claude"
+                    "continueExtension" = "Configure config.json with a provider of type 'openai' and apiBase 'http://127.0.0.1:8080/v1'"
+                    "cursor" = "Go to settings -> Models -> OpenAI -> Base URL: http://localhost:8080/v1, API Key: local-key"
+                }
+            }
+            $settings | ConvertTo-Json -Depth 5 | Set-Content -Path $settingsFile -Encoding UTF8
+            Write-Host "  [OK] VSCode workspace configuration updated successfully." -ForegroundColor Green
+            Write-Host "  You can start and stop the server directly from VSCode (Ctrl+Shift+B -> Select Task)." -ForegroundColor DarkGray
+        } catch {
+            Write-Host "  [WARNING] Failed to write VSCode workspace files: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
     }
     if ($config.integrations -contains "claude-code") {
         Write-Host "`n[Claude Code Integration] Recommended Environment Variables:" -ForegroundColor Yellow
-        Write-Host "  Set-Item env:OPENAI_API_KEY 'local-key'" -ForegroundColor DarkGray
+        Write-Host "  Set-Item env:ANTHROPIC_BASE_URL 'http://127.0.0.1:8080'" -ForegroundColor DarkGray
+        Write-Host "  Set-Item env:ANTHROPIC_AUTH_TOKEN 'local'" -ForegroundColor DarkGray
+        Write-Host "  Set-Item env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC '1'" -ForegroundColor DarkGray
+    }
+    if ($config.integrations -contains "cursor-continue") {
+        Write-Host "`n[Cursor / Continue Integration] Configuration Guidance:" -ForegroundColor Yellow
+        Write-Host "  * Cursor: Go to Settings -> Models -> OpenAI compatible:" -ForegroundColor DarkGray
+        Write-Host "    - Base URL: http://127.0.0.1:8080/v1" -ForegroundColor DarkGray
+        Write-Host "    - API Key:  local-key" -ForegroundColor DarkGray
+        Write-Host "  * Continue: Add the following block to your config.json 'models' array:" -ForegroundColor DarkGray
+        Write-Host "    {`n      `"title`": `"Local GGUF Model`",`n      `"provider`": `"openai`",`n      `"model`": `"any-model-name`",`n      `"apiBase`": `"http://127.0.0.1:8080/v1`",`n      `"apiKey`": `"local-key`"`n    }" -ForegroundColor DarkGray
+    }
+    if ($config.integrations -contains "other") {
+        Write-Host "`n[GitHub CLI & Other Client Integration] Recommended Environment Variables:" -ForegroundColor Yellow
         Write-Host "  Set-Item env:OPENAI_BASE_URL 'http://127.0.0.1:8080/v1'" -ForegroundColor DarkGray
+        Write-Host "  Set-Item env:OPENAI_API_KEY 'local-key'" -ForegroundColor DarkGray
     }
     
     # Run server prompt
@@ -471,8 +556,8 @@ if ($apply.ToUpper() -eq "Y") {
 elseif ($apply.ToUpper() -eq "UPDATE" -or $apply.ToUpper() -eq "U") {
     Write-Host "`nRestarting setup wizard..." -ForegroundColor Yellow
     Start-Sleep -Seconds 1
-    # Re-run the script
-    . $MyInvocation.MyCommand.Path
+    # Re-run the script in a fresh child scope using the call operator
+    & $MyInvocation.MyCommand.Path
 }
 else {
     Write-Host "`nSetup aborted. Configuration not saved." -ForegroundColor Yellow

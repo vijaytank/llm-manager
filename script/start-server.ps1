@@ -22,7 +22,9 @@ if (Test-Path $ConfigFile) {
         foreach ($k in $loaded.PSObject.Properties.Name) {
             $config[$k] = $loaded.$k
         }
-    } catch {}
+    } catch {
+        Write-Host "[WARNING] Failed to load configuration from llo-config.json: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($LlamaServer)) {
@@ -119,7 +121,7 @@ if ($models.Count -eq 0 -and $config.fallback_provider -ne "none") {
         $env:OPENAI_MODEL = if ($chosenModel) { $chosenModel } else { "llama3" }
         
         $env:ANTHROPIC_BASE_URL = $ollamaEndpoint
-        $env:ANTHROPIC_AUTH_TOKEN = "local-key"
+        $env:ANTHROPIC_AUTH_TOKEN = "local"
         $env:ANTHROPIC_MODEL = $env:OPENAI_MODEL
     }
     
@@ -133,7 +135,7 @@ if (-not (Test-Path $LlamaServer)) {
 }
 
 # 4. Construct command line arguments
-$args = @(
+$serverArgs = @(
     "--host", $HostAddr,
     "--port", "$Port",
     "--sleep-idle-seconds", "$($config.idle_timeout_sec)"
@@ -143,27 +145,27 @@ $defaultModelId = ""
 
 if ($models.Count -gt 0) {
     # Use the generated models preset config file
-    $args += @("--models-preset", $PresetFile)
-    $args += @("--models-max", "1") # Allow max 1 model in VRAM at a time to prevent RTX 5060 OOM
+    $serverArgs += @("--models-preset", $PresetFile)
+    $serverArgs += @("--models-max", "1") # Allow max 1 model in VRAM at a time to prevent RTX 5060 OOM
     $defaultModelId = $models[0].Alias
 } else {
     # Bootstrap download mode: No GGUFs and no cloud keys set. Run tiny local model from Hugging Face
     $bootstrapRepo = "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF:Q4_K_M"
     Write-Host "No GGUF models. Bootstrapping with lightweight model from Hugging Face: $bootstrapRepo" -ForegroundColor Yellow
-    $args += @("-hf", $bootstrapRepo)
+    $serverArgs += @("-hf", $bootstrapRepo)
     $defaultModelId = "qwen2-5-coder-1-5b-instruct"
 }
 
 # 4.1 Append custom CLI arguments if configured
 if ($config.custom_args) {
     $customList = $config.custom_args -split '\s+' | Where-Object { [string]::IsNullOrWhiteSpace($_) -eq $false }
-    $args += $customList
+    $serverArgs += $customList
 }
 
 Write-Host "Starting llama-server..." -ForegroundColor Cyan
-Write-Host "Command: $LlamaServer $($args -join ' ')" -ForegroundColor DarkGray
+Write-Host "Command: $LlamaServer $($serverArgs -join ' ')" -ForegroundColor DarkGray
 
-$proc = Start-Process -FilePath $LlamaServer -ArgumentList $args -WorkingDirectory $LlamaDir -PassThru -NoNewWindow
+$proc = Start-Process -FilePath $LlamaServer -ArgumentList $serverArgs -WorkingDirectory $LlamaDir -PassThru -NoNewWindow
 Write-Host "Server process launched (PID: $($proc.Id))" -ForegroundColor Green
 
 # Wait for server startup
@@ -196,7 +198,9 @@ $liveModels = @()
 try {
     $resp = Invoke-RestMethod -Uri "$openaiBase/models" -TimeoutSec 5
     $liveModels = @($resp.data | ForEach-Object { $_.id })
-} catch {}
+} catch {
+    Write-Host "[WARNING] Failed to retrieve active models list: $($_.Exception.Message)" -ForegroundColor Yellow
+}
 
 if ($liveModels.Count -gt 0) {
     $defaultModelId = $liveModels[0]
@@ -210,8 +214,9 @@ $env:OPENAI_API_BASE = $openaiBase
 $env:OPENAI_API_KEY = "local-key"
 
 $env:ANTHROPIC_BASE_URL = $localBase
-$env:ANTHROPIC_AUTH_TOKEN = "local-key"
+$env:ANTHROPIC_AUTH_TOKEN = "local"
 $env:ANTHROPIC_API_KEY = "local-key"
+$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1"
 
 $env:LLAMA_DEFAULT_MODEL = $defaultModelId
 $env:OPENAI_MODEL = $defaultModelId
@@ -229,3 +234,46 @@ if ($liveModels.Count -gt 0) {
 }
 Write-Host ""
 Write-Host "Client environment variables exported successfully." -ForegroundColor Green
+
+# 7. Optionally launch Claude Code CLI in a new window
+if ([Environment]::UserInteractive) {
+    $claudeCli = Get-Command "claude" -ErrorAction SilentlyContinue
+    if ($claudeCli) {
+        Write-Host "`n[Claude Code Integration]" -ForegroundColor Yellow
+        Write-Host "Would you like to launch Claude Code CLI in a new window now? (Y/N) [N]: " -NoNewline -ForegroundColor White
+        $ans = Read-Host
+        if ($ans -and $ans.Trim().ToUpper() -eq "Y") {
+            # Select model
+            Write-Host "`nSelect model to run with Claude Code:" -ForegroundColor Cyan
+            $modelsList = if ($liveModels.Count -gt 0) { $liveModels } else { @($defaultModelId) }
+            for ($i = 0; $i -lt $modelsList.Count; $i++) {
+                Write-Host "  $($i + 1)) $($modelsList[$i])" -ForegroundColor DarkGray
+            }
+            Write-Host "Select option [1]: " -NoNewline -ForegroundColor White
+            $sel = Read-Host
+            $idx = 0
+            if ($sel -match '^\d+$') {
+                $idx = [int]$sel - 1
+            }
+            if ($idx -lt 0 -or $idx -ge $modelsList.Count) { $idx = 0 }
+            $selectedModel = $modelsList[$idx]
+            
+            Write-Host "Launching Claude Code with model '$selectedModel' in a new window..." -ForegroundColor Green
+            
+            # Prepare the startup command for the new window
+            $startupCmds = @(
+                "`$env:ANTHROPIC_BASE_URL = '$localBase'",
+                "`$env:ANTHROPIC_AUTH_TOKEN = 'local'",
+                "`$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1'",
+                "claude --model $selectedModel"
+            ) -join "; "
+            
+            Start-Process powershell -ArgumentList "-NoExit", "-Command", "`"$startupCmds`""
+        }
+    } else {
+        Write-Host "`n[Claude Code Integration]" -ForegroundColor Yellow
+        Write-Host "Claude Code CLI not detected in your PATH." -ForegroundColor DarkGray
+        Write-Host "To use Claude Code locally, install it via: npm install -g @anthropic-ai/claude-code" -ForegroundColor DarkGray
+        Write-Host "And run: claude --model <model-name>" -ForegroundColor Yellow
+    }
+}

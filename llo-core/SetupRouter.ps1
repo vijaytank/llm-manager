@@ -47,6 +47,7 @@ $config = @{
     llama_repo_path = ""
     models_dir = ""
     templates_dir = ""
+    use_default_template = $false
     cache_type_k = "f16"
     cache_type_v = "f16"
     flash_attn = "auto"
@@ -74,15 +75,29 @@ if ($config.models_dir) {
 }
 if ($config.templates_dir) {
     $TemplatesDir = $config.templates_dir
+} else {
+    # Default: sibling 'templates' folder next to llm-manager root (not relative to ModelsDir)
+    $TemplatesDir = Join-Path $ManagerDir "templates"
 }
-
 
 # Ensure directories exist
-if (-not (Test-Path $ModelsDir)) {
+if ($ModelsDir -and -not (Test-Path $ModelsDir)) {
     New-Item -ItemType Directory -Force -Path $ModelsDir | Out-Null
 }
-if (-not (Test-Path $TemplatesDir)) {
+if ($TemplatesDir -and -not (Test-Path $TemplatesDir)) {
     New-Item -ItemType Directory -Force -Path $TemplatesDir | Out-Null
+}
+
+# Copy default.jinja from llm-manager package to active templates folder if missing
+$defaultDest = Join-Path $TemplatesDir "default.jinja"
+$packagedSource = Join-Path (Split-Path $PSScriptRoot) "templates\default.jinja"
+if (-not (Test-Path $defaultDest) -and (Test-Path $packagedSource)) {
+    try {
+        Copy-Item -Path $packagedSource -Destination $defaultDest -Force | Out-Null
+        Write-Host "Copied default chat template from package to: $defaultDest" -ForegroundColor Green
+    } catch {
+        Write-Host "[WARNING] Failed to copy default template: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
 }
 
 # 2. Scan for GGUF files
@@ -134,6 +149,11 @@ foreach ($gguf in $ggufs) {
     # Sizing checks
     $fileSizeMB = [math]::Round($gguf.Length / 1MB, 0)
     
+    # Check if GPU is present and model size exceeds safe VRAM budget
+    if ($hardware.GPU -and $hardware.GPU.BudgetVramMB -gt 0 -and $fileSizeMB -gt $hardware.GPU.BudgetVramMB) {
+        Write-Host "[WARNING] Model '$alias' ($([math]::Round($fileSizeMB/1024, 2)) GB) is larger than the safe VRAM budget ($([math]::Round($hardware.GPU.BudgetVramMB/1024, 2)) GB). Spilling to system RAM may occur!" -ForegroundColor Yellow
+    }
+    
     $modelEntries.Add([pscustomobject]@{
         Alias        = $alias
         Path         = $gguf.FullName
@@ -158,32 +178,45 @@ if ($config.enable_tools) {
 # Built-in fit features
 $presetLines.Add("fit = on")
 $presetLines.Add("fit-target = $($config.vram_margin_mb)")
+
+# Optimized KV Cache, Flash Attention, and Context Shift
+if ($config.flash_attn) {
+    $presetLines.Add("flash-attn = $($config.flash_attn)")
+}
+if ($config.cache_type_k) {
+    $presetLines.Add("cache-type-k = $($config.cache_type_k)")
+}
+if ($config.cache_type_v) {
+    $presetLines.Add("cache-type-v = $($config.cache_type_v)")
+}
+if ($null -ne $config.context_shift) {
+    if ($config.context_shift) {
+        $presetLines.Add("context-shift = 1")
+    } else {
+        $presetLines.Add("no-context-shift = 1")
+    }
+}
 $presetLines.Add("")
 
 if ($modelEntries.Count -gt 0) {
     Write-Host "Found $($modelEntries.Count) local GGUF model(s):" -ForegroundColor Cyan
+
     foreach ($m in $modelEntries) {
         Write-Host "  - $($m.Alias) ($([math]::Round($m.SizeMB/1024, 2)) GB)"
         
         $presetLines.Add("[$($m.Alias)]")
         $presetLines.Add("model = $($m.Path -replace '\\','/')")
         $presetLines.Add("ctx-size = $($config.default_context_size)")
+        
+        $defaultTemplatePath = Join-Path $TemplatesDir "default.jinja"
         if ($m.TemplateFile) {
             $presetLines.Add("chat-template-file = $($m.TemplateFile -replace '\\','/')")
             Write-Host "    -> Custom template mapped: $($m.TemplateFile)" -ForegroundColor DarkGray
+        } elseif ($config.use_default_template -and (Test-Path $defaultTemplatePath)) {
+            $presetLines.Add("chat-template-file = $($defaultTemplatePath -replace '\\','/')")
+            Write-Host "    -> Default template mapped: $defaultTemplatePath" -ForegroundColor DarkGray
         } else {
-            # Assign standard built-in templates to prevent errors in third-party API clients
-            $builtInTemplate = $null
-            if ($m.Alias -match "qwen") { $builtInTemplate = "chatml" }
-            elseif ($m.Alias -match "llama-3" -or $m.Alias -match "llama3" -or $m.Alias -match "llama4") { $builtInTemplate = "llama3" }
-            elseif ($m.Alias -match "gemma") { $builtInTemplate = "gemma" }
-            elseif ($m.Alias -match "deepseek") { $builtInTemplate = "deepseek" }
-            elseif ($m.Alias -match "mistral" -or $m.Alias -match "mixtral") { $builtInTemplate = "mistral-v3" }
-            
-            if ($builtInTemplate) {
-                $presetLines.Add("chat-template = $builtInTemplate")
-                Write-Host "    -> Auto-assigned built-in template: $builtInTemplate" -ForegroundColor DarkCyan
-            }
+            Write-Host "    -> No template parameter written (using GGUF internal template)" -ForegroundColor DarkCyan
         }
         $presetLines.Add("")
     }

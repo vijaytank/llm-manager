@@ -48,24 +48,34 @@ function Get-SystemHardwareProfile {
 
     try {
         # Query GPU name and VRAM via nvidia-smi
-        $smiOut = & $nvidiaSmi --query-gpu=name,memory.total,driver_version --format=csv,noheader,nounits 2>$null
-        if ($smiOut -and $smiOut -match ",") {
-            $parts = $smiOut -split ","
-            $gpuName = $parts[0].Trim()
-            $totalVramMB = [double]($parts[1].Trim())
-            $cudaVersion = $parts[2].Trim()
-            $vmmSupported = $true
+        $smiLines = & $nvidiaSmi --query-gpu=name,memory.total,driver_version --format=csv,noheader,nounits 2>$null
+        if ($smiLines) {
+            $smiOut = @($smiLines)[0]
+            if ($smiOut -match ",") {
+                $parts = $smiOut -split ","
+                $gpuName = $parts[0].Trim()
+                $totalVramMB = [double]($parts[1].Trim())
+                $cudaVersion = $parts[2].Trim()
+                $vmmSupported = $true
+            }
         }
     } catch {
         # Fallback to WMI for GPU name if nvidia-smi fails
         try {
-            $wmiGpu = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match "NVIDIA" } | Select-Object -First 1
+            $wmiGpu = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match "NVIDIA|AMD|Radeon|Intel|Arc" } | Select-Object -First 1
             if ($wmiGpu) {
                 $gpuName = $wmiGpu.Name
-                # WMI AdapterRAM is often reported incorrectly for modern cards, use basic 8GB heuristic if empty
-                $totalVramMB = if ($wmiGpu.AdapterRAM) { [math]::Round($wmiGpu.AdapterRAM / 1MB, 0) } else { 8192 }
+                # WMI AdapterRAM is often reported incorrectly or as a negative signed int for modern cards, use basic 8GB heuristic if empty or extremely small
+                $rawVram = $wmiGpu.AdapterRAM
+                if ($rawVram -and $rawVram -gt 1MB) {
+                    $totalVramMB = [math]::Round($rawVram / 1MB, 0)
+                } else {
+                    $totalVramMB = 8192
+                }
             }
-        } catch {}
+        } catch {
+            Write-Host "[WARNING] WMI GPU query failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
     }
 
     # Calculate VRAM budget: Reserve 1.5GB for OS/Display outputs

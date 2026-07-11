@@ -112,6 +112,37 @@ if (Test-Path $setupRouterScript) {
     Report-Result -TestName "SetupRouter Execution Test" -Success $false -Detail "SetupRouter.ps1 script is missing."
 }
 
+# Check 5: Live Server API Connectivity Check (Optional/Informational)
+Write-Host "`n[Check 5] Testing Active llama-server Connectivity..." -ForegroundColor Cyan
+$targetPort = 8080
+$openaiBaseUrl = "http://127.0.0.1:$targetPort/v1"
+$pingSuccess = $true
+$pingDetail = "Server is not running on port $targetPort (offline/normal)."
+
+try {
+    $tcpConnection = New-Object System.Net.Sockets.TcpClient
+    $connectionTask = $tcpConnection.BeginConnect("127.0.0.1", $targetPort, $null, $null)
+    $success = $connectionTask.AsyncWaitHandle.WaitOne(1000, $false)
+    if ($success) {
+        $tcpConnection.EndConnect($connectionTask)
+        $tcpConnection.Close()
+        
+        # Port is open, test API
+        $resp = Invoke-RestMethod -Uri "$openaiBaseUrl/models" -TimeoutSec 3
+        if ($resp -and $resp.data) {
+            $modelList = @($resp.data | ForEach-Object { $_.id }) -join ", "
+            $pingDetail = "Server is live! Available models: $modelList"
+        } else {
+            $pingDetail = "Port $targetPort is open, but API returned invalid response."
+            $pingSuccess = $false
+        }
+    }
+} catch {
+    $pingDetail = "Failed to query server: $($_.Exception.Message)"
+    $pingSuccess = $false
+}
+Report-Result -TestName "Live Server API Ping Check" -Success $pingSuccess -Detail $pingDetail
+
 # Final Health Verdict
 Write-Host "`n==========================================================" -ForegroundColor Green
 if ($globalPass) {
