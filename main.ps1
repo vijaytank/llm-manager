@@ -92,6 +92,7 @@ $config = @{
     fallback_api_key = ""
     enable_tools = $true
     fallback_endpoint = ""
+    claude_disable_telemetry = $true
 }
 
 # Load existing configuration if available
@@ -442,6 +443,15 @@ foreach ($c in $choices) {
 if ($selectedIntegrations.Count -eq 0) { $selectedIntegrations.Add("server-only") }
 $config.integrations = $selectedIntegrations.ToArray()
 
+# 4.1 Prompt for Claude Code Telemetry option if selected
+if ($config.integrations -contains "claude-code") {
+    Write-Host "`n[Claude Code Model Switching & Telemetry Option]" -ForegroundColor Cyan
+    Write-Host "To allow switching models dynamically via the '/model' command, Claude Code requires telemetry (non-essential traffic) to be enabled." -ForegroundColor White
+    $defaultSwitch = if ($config.ContainsKey("claude_disable_telemetry") -and $config.claude_disable_telemetry -eq $false) { "Y" } else { "N" }
+    $switchChoice = Get-UserInput "Enable dynamic local model switching (enables telemetry)? (Y/N)" -DefaultVal $defaultSwitch
+    $config.claude_disable_telemetry = if ($switchChoice.ToUpper() -eq "Y") { $false } else { $true }
+}
+
 # Step 4: Proposed Configuration Preview
 Write-Host "`nStep 4: Proposed Configuration Preview..." -ForegroundColor Cyan
 
@@ -580,7 +590,14 @@ if ($apply.ToUpper() -eq "Y") {
         Write-Host "`n[Claude Code Integration] Recommended Environment Variables:" -ForegroundColor Yellow
         Write-Host "  Set-Item env:ANTHROPIC_BASE_URL 'http://127.0.0.1:8080'" -ForegroundColor DarkGray
         Write-Host "  Set-Item env:ANTHROPIC_AUTH_TOKEN 'local'" -ForegroundColor DarkGray
-        Write-Host "  Set-Item env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC '1'" -ForegroundColor DarkGray
+        $disableTeleVal = if ($config.claude_disable_telemetry -eq $false) { "0" } else { "1" }
+        Write-Host "  Set-Item env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC '$disableTeleVal'" -ForegroundColor DarkGray
+        if ($disableTeleVal -eq "0") {
+            Write-Host "  Set-Item env:CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY '1'" -ForegroundColor DarkGray
+            Write-Host "    * Note: Telemetry is enabled (needed to use '/model' to switch models dynamically)." -ForegroundColor DarkYellow
+        } else {
+            Write-Host "    * Note: Telemetry is disabled (blocks dynamic model discovery/switching via '/model')." -ForegroundColor DarkYellow
+        }
     }
     if ($config.integrations -contains "cursor-continue") {
         Write-Host "`n[Cursor / Continue Integration] Configuration Guidance:" -ForegroundColor Yellow

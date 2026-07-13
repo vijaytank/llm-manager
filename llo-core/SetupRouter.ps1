@@ -73,13 +73,19 @@ if (Test-Path $ConfigFile) {
     Write-Host "Initialized configuration file at $ConfigFile" -ForegroundColor Cyan
 }
 
-# Normalize overrides to a plain hashtable (JSON deserializes to PSCustomObject)
-if ($config.overrides -is [System.Management.Automation.PSCustomObject]) {
+# normalize overrides to a plain hashtable (json deserializes to pscustomobject)
+if ($config.overrides -is [system.management.automation.pscustomobject]) {
     $ovr = @{}
-    foreach ($k in $config.overrides.PSObject.Properties.Name) { $ovr[$k] = $config.overrides.$k }
+    foreach ($k in $config.overrides.psobject.properties.name) { $ovr[$k] = $config.overrides.$k }
     $config.overrides = $ovr
 } elseif (-not ($config.overrides -is [hashtable])) {
     $config.overrides = @{}
+}
+
+# Enforce operational limits for Claude Code
+if ($config.integrations -contains "claude-code" -and $config.idle_timeout_sec -lt 600) {
+    $config.idle_timeout_sec = 600
+    Write-Host "    [Claude Code] Idle timeout upgraded to 600 seconds (10m) to prevent mid-task sleeps." -ForegroundColor Cyan
 }
 
 if ($config.models_dir)    { $ModelsDir    = $config.models_dir }
@@ -247,6 +253,14 @@ function Get-InferenceParams {
         }
     }
 
+    # Claude Code integration requires at least 2 parallel slots to avoid subagent deadlocks.
+    if ($config.integrations -contains "claude-code") {
+        if ($params.parallel -lt 2) {
+            $params.parallel = 2
+            Write-Host "    [Claude Code] Enforced parallel = 2 floor to prevent subagent deadlock." -ForegroundColor Cyan
+        }
+    }
+
     # ── Post-override validation ──────────────────────────────────────────────
     # Quantized KV cache (specifically V cache quantization) requires flash_attn
     # to be enabled. Force both to f16 if flash_attn is disabled to prevent crash.
@@ -282,21 +296,27 @@ function Get-SafeContextSize {
         [int]   $VramMB,
         [string]$GpuTier,
         [int]   $Parallel,
-        [string]$CacheTypeK
+        [string]$CacheTypeK,
+        [string[]]$Integrations = @()
     )
 
     $modelMB  = [math]::Round($ModelBytes / 1MB, 0)
     $parallel = [math]::Max($Parallel, 1)
 
-    # KV cache MB consumed per 1000 tokens (conservative estimate for 4B-class model).
-    # Real value depends on model architecture (n_layers, n_kv_heads, head_dim).
-    # These constants are intentionally conservative to preserve headroom.
+    # Dynamic KV cache estimation based on model size (parameters/layers scale with weight).
+    # ~12.0 MB per GB of model size is a conservative baseline for q8_0 KV Cache.
+    $modelGB = $modelMB / 1024.0
+    $baseKV = 12.0 * $modelGB
+    
     $kvMBPerKToken = switch ($CacheTypeK) {
-        "f16"  { 1.0 }
-        "q8_0" { 0.5 }
-        "q4_0" { 0.25 }
-        default { 0.5 }
+        "f16"   { $baseKV * 2.0 }   # f16 is double the size of q8_0
+        "q8_0"  { $baseKV }         # baseline
+        "q4_0"  { $baseKV * 0.5 }   # q4_0 is half the size of q8_0
+        default { $baseKV }
     }
+    
+    # Floor the estimate at a minimum of 5.0 MB per 1000 tokens for safety
+    $kvMBPerKToken = [math]::Max($kvMBPerKToken, 5.0)
     $kvMBPerKToken *= $parallel
 
     # RAM ceiling: subtract model weights + 512 MB runtime headroom, then divide by KV rate
@@ -305,28 +325,26 @@ function Get-SafeContextSize {
         [int]([math]::Floor($availRam / $kvMBPerKToken) * 1000)
     } else { 4096 }
 
-    # VRAM ceiling (GPU tiers only): same formula against VRAM budget
-    $maxCtxFromVram = $maxCtxFromRam
-    if ($GpuTier -ne "cpu" -and $VramMB -gt 0) {
-        $availVram      = $VramMB - $modelMB - 512
-        $maxCtxFromVram = if ($availVram -gt 0) {
-            [int]([math]::Floor($availVram / $kvMBPerKToken) * 1000)
-        } else { 4096 }
-    }
-
-    # Use the binding constraint (whichever runs out first)
-    $rawCtx = if ($GpuTier -eq "cpu") {
-        $maxCtxFromRam
-    } else {
-        [math]::Min($maxCtxFromRam, $maxCtxFromVram)
-    }
+    # The physical allocation ceiling is bounded by system RAM. 
+    # Because llama-server supports CPU offloading and mmap, VRAM tightness does not cause loading crashes;
+    # it only causes partial layer/cache offloading. Thus, RAM is the binding constraint for allocation.
+    $rawCtx = $maxCtxFromRam
 
     # Snap down to the nearest standard llama.cpp context value
-    $snaps  = @(4096, 8192, 16384, 32768, 65536)
+    $snaps  = @(4096, 8192, 16384, 32768, 65536, 131072, 262144)
     $chosen = 4096
     foreach ($s in $snaps) { if ($rawCtx -ge $s) { $chosen = $s } }
 
-    return [math]::Max($chosen, 4096)
+    # Integration-aware context floor:
+    # Claude Code needs a large context (> 24k) to launch its initial prompts.
+    $hasClaude = $Integrations -contains "claude-code"
+    $minFloor = if ($GpuTier -eq "cpu") {
+        if ($hasClaude) { 32768 } else { 4096 }
+    } else {
+        if ($hasClaude) { 65536 } else { 8192 }
+    }
+
+    return [math]::Max($chosen, $minFloor)
 }
 
 function Get-ValidatedSpecType {
@@ -437,12 +455,13 @@ foreach ($gguf in $ggufs) {
 
     # Compute safe context ceiling for this model on this hardware
     $ctxSize = Get-SafeContextSize `
-        -ModelBytes  $gguf.Length `
-        -RamMB       $hardware.RAM.BudgetMB `
-        -VramMB      $hardware.GPU.BudgetVramMB `
-        -GpuTier     $hardware.GPU.PerformanceTier `
-        -Parallel    $inferParams.parallel `
-        -CacheTypeK  $inferParams.cache_type_k
+        -ModelBytes   $gguf.Length `
+        -RamMB        $hardware.RAM.BudgetMB `
+        -VramMB       $hardware.GPU.BudgetVramMB `
+        -GpuTier      $hardware.GPU.PerformanceTier `
+        -Parallel     $inferParams.parallel `
+        -CacheTypeK   $inferParams.cache_type_k `
+        -Integrations $config.integrations
 
     # User ctx_size override takes absolute priority
     if ($config.overrides.ContainsKey("ctx_size")) {
@@ -522,6 +541,7 @@ if ($inferParams.spec_type -and $inferParams.spec_type -ne "none") {
     $presetLines.Add("spec-type = $($inferParams.spec_type)")
 }
 
+
 # Custom CLI args passthrough
 if ($config.custom_args) {
     $customList = $config.custom_args -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
@@ -542,7 +562,7 @@ if ($modelEntries.Count -gt 0) {
 
         $presetLines.Add("[$($m.Alias)]")
         $presetLines.Add("model = $($m.Path -replace '\\','/')")
-        $presetLines.Add("ctx-size = $($m.CtxSize)")
+        $presetLines.Add("ctx-size = $($m.CtxSize * $inferParams.parallel)")
 
         # Per-model spec-type override when validation result differs from global
         if ($modelSpecType -ne $inferParams.spec_type) {

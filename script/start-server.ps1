@@ -25,7 +25,14 @@ if (Test-Path $ConfigFile) {
     } catch {
         Write-Host "[WARNING] Failed to load configuration from llo-config.json: $($_.Exception.Message)" -ForegroundColor Yellow
     }
+    # Enforce operational limits for Claude Code
+    if ($config.integrations -contains "claude-code" -and $config.idle_timeout_sec -lt 600) {
+        $config.idle_timeout_sec = 600
+    }
 }
+
+$claudeDisableTelemetry = if ($config.ContainsKey("claude_disable_telemetry")) { $config.claude_disable_telemetry } else { $true }
+$disableTeleVal = if ($claudeDisableTelemetry) { "1" } else { "0" }
 
 if ([string]::IsNullOrWhiteSpace($LlamaServer)) {
     if ($config.llama_server_path) {
@@ -218,7 +225,7 @@ $env:OPENAI_API_KEY = "local-key"
 $env:ANTHROPIC_BASE_URL = $localBase
 $env:ANTHROPIC_AUTH_TOKEN = "local"
 $env:ANTHROPIC_API_KEY = "local-key"
-$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1"
+$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = $disableTeleVal
 
 $env:LLAMA_DEFAULT_MODEL = $defaultModelId
 $env:OPENAI_MODEL = $defaultModelId
@@ -266,7 +273,8 @@ if ([Environment]::UserInteractive) {
             $startupCmds = @(
                 "`$env:ANTHROPIC_BASE_URL = '$localBase'",
                 "`$env:ANTHROPIC_AUTH_TOKEN = 'local'",
-                "`$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1'",
+                "`$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '$disableTeleVal'",
+                "`$env:CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY = '1'",
                 "claude --model $selectedModel"
             ) -join "; "
             
