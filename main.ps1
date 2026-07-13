@@ -342,8 +342,8 @@ if ($hw) {
             $cacheType = "f16"    # High precision for high-end GPUs
         }
     } else {
-        # CPU-only: q8_0 reduces cache memory bandwidth significantly
-        $cacheType = "q8_0"
+        # CPU-only: Flash Attention is off on CPU, which strictly prevents KV cache quantization
+        $cacheType = "f16"
     }
 
     # 3. Heuristically select context size to balance VRAM and capacity

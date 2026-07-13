@@ -1,98 +1,232 @@
-# LLM Manager - System Architecture & Decision Engine Guide
+# LLM Manager - System Architecture & Decision Engine
 
-This document details the internal design, optimization formulas, and automated decision-making logic of **LLM Manager**. The system is built to profile hardware and automatically configure `llama.cpp` parameters to extract maximum performance while guaranteeing system stability.
+This document details the internal design, hardware classification model, optimization formulas, and automated decision-making logic of **LLM Manager**. Everything described here is implemented in `llo-core/Profile.ps1` and `llo-core/SetupRouter.ps1`.
 
 ---
 
-## 1. Decision Flow Overview
+## 1. Two-Step GPU Classification
 
-The diagram below shows the end-to-end decision path when configuring and launching the local server:
+The system classifies every GPU using two orthogonal dimensions. This avoids conflating hardware identity with inference policy — a 2 GB MX-class discrete GPU is still "dedicated" hardware, but it belongs to the "cpu" performance tier because its VRAM is too small for useful offload.
+
+### AdapterClass (hardware identity)
+
+| Value | Conditions |
+|---|---|
+| `none` | No GPU detected at all |
+| `integrated` | Intel UHD/Iris/HD Graphics, AMD Radeon without "RX" suffix (iGPU), or `AdapterRAM ≈ TotalPhysicalMemory` (shared-memory signature) |
+| `dedicated` | Discrete GPU with onboard VRAM confirmed by nvidia-smi or WMI non-shared memory |
+
+> **Note:** Intel Arc is **not** classified as integrated by name alone. Arc A-series cards can be discrete hardware and are classified by VRAM amount and backend availability, not the product name.
+
+Detection priority:
+1. **nvidia-smi** (preferred for NVIDIA) — queries all GPUs, selects the one with highest `memory.free` to handle multi-GPU and dual-GPU laptop configurations
+2. **WMI `Win32_VideoController`** fallback — filters to non-shared-memory adapters (avoids picking the iGPU on a laptop with both Intel and NVIDIA)
+
+### PerformanceTier (inference policy)
+
+| Tier | Conditions | Reason Printed |
+|---|---|---|
+| `cpu` | AdapterClass = `none` | "No GPU detected - CPU-only inference" |
+| `cpu` | AdapterClass = `integrated` | "Integrated/shared-memory GPU - CPU path delivers better throughput" |
+| `cpu` | `UsableForInference = false` | "No compatible backend (CUDA/Vulkan) found - CPU-only inference" |
+| `cpu` | Dedicated GPU but VRAM ≤ 2048 MB | "Dedicated GPU VRAM X GB is below 2 GB threshold - CPU-only avoids slow VRAM spill" |
+| `low` | Dedicated, 2049–4096 MB VRAM | "Dedicated GPU ~X GB VRAM - partial offload with fit-throttle" |
+| `mid` | Dedicated, 4097–8192 MB VRAM | "Dedicated GPU ~X GB VRAM - full offload for small-mid models" |
+| `high` | Dedicated, > 8192 MB VRAM | "Dedicated GPU ~X GB VRAM - full offload, large context available" |
+
+Every startup prints the detected tier and its reason so users can verify auto-tuning is correct.
+
+---
+
+## 2. Decision Flow
 
 ```mermaid
 graph TD
-    Start[Profile System Hardware] --> GetCPU[Query Physical Cores]
-    GetCPU --> SetThreads["Set Optimal Threads = Physical Cores"]
-    Start --> GetGPU[Query GPU & VRAM]
-    GetGPU --> CheckVRAM{GPU VRAM Available?}
-    
-    CheckVRAM -->|Yes| CalculateBudget["Compute VRAM Budget = VRAM - Margin (1024MB)"]
-    CalculateBudget --> SelectCache{VRAM Size?}
-    SelectCache -->|Under 6GB| CacheQ4["KV Cache Type = q4_0"]
-    SelectCache -->|6GB to 12GB| CacheQ8["KV Cache Type = q8_0"]
-    SelectCache -->|Over 12GB| CacheF16["KV Cache Type = f16"]
-    
-    CalculateBudget --> SelectContext{VRAM Size?}
-    SelectContext -->|Under 8GB| Ctx32["Context Size = 32k (32768)"]
-    SelectContext -->|8GB to 16GB| Ctx64["Context Size = 64k (65536)"]
-    SelectContext -->|Over 16GB| Ctx128["Context Size = 128k (131072)"]
-    
-    CheckVRAM -->|No CPU Only| CacheCPUPorts["KV Cache Type = q8_0 / Context Size = 32k"]
-    
-    SetThreads --> GenerateIni[Generate models-preset.ini]
-    CacheQ4 --> GenerateIni
-    CacheQ8 --> GenerateIni
-    CacheF16 --> GenerateIni
-    Ctx32 --> GenerateIni
-    Ctx64 --> GenerateIni
-    Ctx128 --> GenerateIni
-    CacheCPUPorts --> GenerateIni
-    
-    GenerateIni --> PortCheck{Target Port 8080 Occupied?}
-    PortCheck -->|Yes| ShiftPort[Increment Port +1]
+    Start[Profile System Hardware] --> DetectCPU[Query CPU Cores]
+    Start --> DetectGPU[nvidia-smi / WMI]
+
+    DetectGPU --> ClassifyAdapter{AdapterClass?}
+    ClassifyAdapter -->|none| TierCPU_None["Tier = cpu\nNo GPU detected"]
+    ClassifyAdapter -->|integrated| TierCPU_iGPU["Tier = cpu\niGPU - CPU path faster"]
+    ClassifyAdapter -->|dedicated| CheckBackend{UsableForInference?}
+
+    CheckBackend -->|false| TierCPU_NoBE["Tier = cpu\nNo CUDA/Vulkan backend"]
+    CheckBackend -->|true| CheckVRAM{Total VRAM?}
+
+    CheckVRAM -->|"≤ 2 GB"| TierCPU_LowV["Tier = cpu\nVRAM too small for offload"]
+    CheckVRAM -->|"2–4 GB"| TierLow["Tier = low\nPartial offload + fit-throttle"]
+    CheckVRAM -->|"4–8 GB"| TierMid["Tier = mid\nFull offload for small models"]
+    CheckVRAM -->|"> 8 GB"| TierHigh["Tier = high\nFull offload + large context"]
+
+    TierCPU_None & TierCPU_iGPU & TierCPU_NoBE & TierCPU_LowV --> GetParams_CPU["Get-InferenceParams\nn-gpu-layers=0\nflash-attn=off\nfit=off\nubatch=128\ncache=f16"]
+    TierLow --> GetParams_Low["Get-InferenceParams\nn-gpu-layers=-1\nfit=on target=512\nubatch=256\ncache=q8_0"]
+    TierMid --> GetParams_Mid["Get-InferenceParams\nn-gpu-layers=-1\nfit=on target=1024\nubatch=512\ncache=q8_0"]
+    TierHigh --> GetParams_High["Get-InferenceParams\nn-gpu-layers=-1\nfit=on target=1024\nubatch=1024\ncache=q8_0 or f16"]
+
+    DetectCPU --> SetThreads["threads = Physical Cores\ncapped at 8 for Intel Hybrid"]
+
+    GetParams_CPU & GetParams_Low & GetParams_Mid & GetParams_High --> ApplyOverrides["Apply config.overrides\nexplicit user values win"]
+    SetThreads --> ApplyOverrides
+
+    ApplyOverrides --> ScanModels[Scan models_dir for GGUFs]
+    ScanModels --> PerModel["Per model:\nGet-SafeContextSize\nGet-ValidatedSpecType\nAssign chat template"]
+
+    PerModel --> WritePreset[Write models-preset.ini]
+    WritePreset --> PortCheck{Port 8080 free?}
+    PortCheck -->|No| ShiftPort[Increment port]
     ShiftPort --> PortCheck
-    PortCheck -->|No| LaunchServer[Launch llama-server with Presets]
-    LaunchServer --> ExportEnv[Export Client URL Env Vars]
+    PortCheck -->|Yes| Launch[Launch llama-server with preset]
+    Launch --> ExportEnv[Export client env vars]
 ```
 
 ---
 
-## 2. Core Optimization Formulas & Deciders
+## 3. Core Formulas
 
 ### A. CPU Thread Allocation (`threads`)
-PowerShell queries the system's logical processors and physical cores. For CPU-bound inference execution, running threads on hyper-threaded (logical) cores or efficiency cores (E-cores) causes context-switching overhead and severely degrades performance.
-* **Formula**: 
-  $$Optimal\ Threads = Physical\ Cores$$
-* **Laptop Hybrid Layouts**: In modern chips (e.g. Intel Core Ultra 7), it budgets threads matching the physical Performance cores (P-cores) to prevent scheduling threads on E-cores.
 
-### B. VRAM Memory Budgeting (`fit-target`)
-Running out of VRAM causes the operating system to move memory to system RAM (unified memory). In local LLMs, this causes token speeds to drop by up to 90%.
-* **Formula**:
-  $$VRAM_{budget} = VRAM_{total} - VRAM_{margin}$$
-* **Default Margin**: The system reserves a strict $VRAM_{margin} = 1024\text{ MB}$ (1 GB) for Windows Desktop display outputs and background services, allocating the remainder (`fit-target`) to the model layers and KV cache.
+For LLM inference, hyper-threaded logical cores and E-cores (Intel hybrid) add context-switching overhead. The system targets physical P-cores only.
+
+```
+OptimalThreads = PhysicalCores
+              capped at 8 for Intel CPUs with > 8 physical cores (P-core sweet spot)
+              floored at 4 minimum
+```
+
+### B. VRAM Budget (`fit-target`)
+
+VRAM overflow silently spills model layers to system RAM via PCIe, dropping token speed by up to 90%. The `--fit` + `--fit-target` mechanism in llama.cpp automatically throttles `n-gpu-layers` downward until the model fits within the budget.
+
+```
+BudgetVRAM = TotalVRAM - 1024 MB (reserved for OS/display driver)
+fit-target = BudgetVRAM  (MB; llama.cpp --fit will not exceed this)
+```
+
+`--fit` is **only written for GPU tiers** (`low / mid / high`). On `cpu` tier it is omitted entirely — there is no VRAM budget to enforce and the setting produces misleading warnings.
 
 ### C. KV Cache Quantization (`cache-type-k` / `cache-type-v`)
-The VRAM footprint of the model's Key-Value (KV) cache grows linearly with context size. At 128k context, the KV cache can easily exceed 8 GB.
-* **GPU-Bound Heuristic**:
-  * **Low VRAM (< 6 GB)**: Configures cache type to **`q4_0`** (saves 75% cache VRAM) to prevent crash-on-load.
-  * **Medium VRAM (6 - 12 GB)**: Configures cache type to **`q8_0`** (saves 50% cache VRAM, zero quality degradation) to fit larger contexts safely.
-  * **High VRAM ($\ge$ 12 GB)**: Kept at **`f16`** (maximum quality).
-* **CPU-Bound Heuristic**: 
-  * If no GPU is present, memory bandwidth is the primary bottleneck. The system configures the cache to **`q8_0`** to compress memory bandwidth and increase prompt evaluation speeds on CPUs.
 
-### D. Context Size Heuristic (`ctx-size`)
-* **VRAM $\le$ 8 GB**: Defaults to **`32768` (32k)**. Restricting the context window on 8GB cards ensures that model layers remain fully offloaded to VRAM.
-* **8 GB < VRAM < 16 GB**: Defaults to **`65536` (64k)**.
-* **VRAM $\ge$ 16 GB**: Defaults to **`131072` (128k)**.
+KV cache VRAM grows linearly with context size. At 64k tokens the KV cache for a 4B model can consume 2–4 GB depending on quantization.
+
+| Scenario | K type | V type | Rationale |
+|---|---|---|---|
+| CPU tier | `f16` | `f16` | CPU/integrated has `flash-attn = off`, which strictly prevents KV cache quantization |
+| Low GPU (2–4 GB) | `q8_0` | `q8_0` | Safe compromise; q4_0 reserved for emergency only |
+| Mid GPU (4–8 GB) | `q8_0` | `q8_0` | Headroom for longer contexts |
+| High GPU (> 8 GB) | `q8_0` | `q8_0` | Default; upgrades to `f16` when VRAM > 12 GB |
+
+> **Flash Attention Dependency:** In `llama.cpp`, quantized KV cache formats (e.g. `q8_0`, `q4_0`) strictly require Flash Attention to be enabled (`--flash-attn` or `-fa`). Because CPU and integrated graphics cards do not support or run Flash Attention efficiently, the manager automatically disables it and falls back to full `f16` precision for both K and V caches to prevent loading failures.
+
+> `q4_0` is intentionally **not** a default for any tier. It is available as a manual override (`config.overrides`) for emergency memory-saving scenarios only.
+
+### D. Per-Model Context Size Formula (`ctx-size`)
+
+Context size is computed as a **ceiling** — start from the hardware maximum, clamp downward by binding constraints. It is never used as a floor.
+
+```
+KV_MB_per_1k_tokens = { f16: 1.0, q8_0: 0.5, q4_0: 0.25 } × parallel_slots
+
+availRAM   = BudgetRAM_MB  - ModelSize_MB - 512 MB (runtime headroom)
+availVRAM  = BudgetVRAM_MB - ModelSize_MB - 512 MB (runtime headroom)
+
+maxCtxRAM  = floor(availRAM  / KV_MB_per_1k_tokens) × 1000 tokens
+maxCtxVRAM = floor(availVRAM / KV_MB_per_1k_tokens) × 1000 tokens
+
+rawCtx = if cpu-tier: maxCtxRAM
+         else:        min(maxCtxRAM, maxCtxVRAM)   ← binding constraint
+
+ctxSize = largest of { 4096, 8192, 16384, 32768, 65536 } that fits within rawCtx
+          floored at 4096
+```
+
+User can override via `config.overrides.ctx_size`.
+
+### E. Parallel Slots (`parallel`)
+
+Concurrent slots multiply KV cache pressure. The system defaults to `1` for all tiers and only upgrades to `2` for `mid` and `high` when both conditions hold:
+
+```
+parallel = 2  only if:
+    RAM_BudgetMB > 16384 MB  AND
+    VRAM_BudgetMB > 4096 MB
+```
+
+### F. Speculative Decoding Gate (`spec-type`)
+
+`ngram-simple` gives ~10–15% throughput boost by predicting future tokens from context n-grams. It is enabled for `cpu / mid / high` tiers but validated per-model before writing:
+
+```
+incompatible patterns: moe, mixture, vision, llava, clip, phi-3-v, qwen.*vl, minicpm-v, cogvlm
+→ if model alias matches any pattern: spec-type = none (with a warning)
+→ otherwise: spec-type = ngram-simple
+```
 
 ---
 
-## 3. Dynamic Runtime Decisions
+## 4. Override Policy
+
+`config.overrides` is the single source of explicit user intent. Keys present here take absolute priority over all hardware-derived values.
+
+```json
+{
+  "overrides": {
+    "n_gpu_layers": 0,
+    "ctx_size": 32768,
+    "ubatch_size": 256,
+    "parallel": 1,
+    "cache_type_k": "q4_0"
+  }
+}
+```
+
+Auto-derived values fill all keys not present in `overrides`. This design means future default changes (e.g. a new tier threshold) never silently reinterpret old configs.
+
+---
+
+## 5. Dynamic Runtime Decisions
 
 ### A. Port Collision Auto-Scanner
-At launch, the start script queries active TCP listeners:
-1. It retrieves system TCP listener states via `.NET` (`[System.Net.NetworkInformation.IPGlobalProperties]`).
-2. If the default port `8080` is open, it binds.
-3. If occupied, the scanner loops upward ($Port + 1$) until it finds an unoccupied socket.
-4. Once bound, all exported client environment URLs are updated dynamically to route VSCode or Claude Code queries to the correct endpoint without failure.
+At launch, `start-server.ps1` checks active TCP listeners via .NET `IPGlobalProperties`. If port `8080` is occupied by another process, it scans upward (`port + 1`) until a free socket is found. All exported client environment URLs are updated to the resolved port.
 
 ### B. Chat Template Heuristic Mapping
-To prevent formatting errors in API clients, the preset setup scans GGUF file names for keywords and auto-maps native jinja templates:
-* `qwen` $\rightarrow$ `chatml`
-* `llama3` / `llama4` $\rightarrow$ `llama3`
-* `gemma` $\rightarrow$ `gemma`
-* `deepseek` $\rightarrow$ `deepseek`
-* `mistral` / `mixtral` $\rightarrow$ `mistral-v3`
-* Others fallback to the GGUF file's internal metadata.
+`SetupRouter.ps1` scans GGUF file names (normalized to lowercase, hyphen-separated alias) and matches against `.jinja` files in the templates directory. An alias is matched when the template basename is a substring of the alias or vice versa. If no match is found, `use_default_template = true` in config applies `default.jinja`; otherwise the GGUF's internal template is used.
+
+### C. Fallback & Bootstrap Routing
+When `$models.Count -eq 0` after scanning:
+- If `fallback_provider != "none"`: routes client env vars directly to the configured cloud provider (Anthropic, OpenAI, NVIDIA NIM, or Ollama). No llama-server is started.
+- If no fallback is configured: bootstraps a lightweight model from Hugging Face (`Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF`) via llama-server's `-hf` flag.
+
+### D. Upstream Compatibility Guard
+`llo-core/ParseHelp.ps1` and `llo-core/GitDiff.ps1` parse the current llama-server binary's `--help` output and compare it against the previous known-good argument set after a `git pull`. Deprecated or renamed flags are flagged before they cause a silent startup failure. 
+- **Two-Pass Parsing Heuristic**: `ParseHelp.ps1` matches any help line starting with a flag token, then runs a regex matcher to extract all long aliases (e.g. `--n-gpu-layers` and its shorthand `-ngl`) from the same line. Each matched alias is individually registered in the allowlist.
+- **Verification Exclusion**: `verify-scripts.ps1` excludes external command flags (like `git`, `nvidia-smi`) and PowerShell general flags (e.g., `-ExecutionPolicy`, `--help`, `--version`) to avoid false-positive mismatches.
+
+### E. Client Integrations & Environment Provisioning
+To minimize integration friction, the manager provisions settings and environmental variables dynamically:
+- **VSCode Workspace generation**: `main.ps1` dynamically creates a `.vscode` folder containing:
+  - `tasks.json`: Registers automation tasks for starting/stopping the local server and running script compatibility audits.
+  - `settings.json`: Injects the necessary env keys into `terminal.integrated.env.windows` so every terminal launched inside the workspace is pre-routed to the local server.
+- **Claude Code CLI Proxying**: Sets `ANTHROPIC_BASE_URL` to the active server endpoint, configures `ANTHROPIC_AUTH_TOKEN = local`, and exports `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = 1` to disable remote telemetry. An interactive picker is offered at launch to start Claude Code directly on the selected local model.
+- **Active Port Propagation**: When the port auto-scanner increments the target port, the new port is propagated to all environment definitions dynamically, ensuring clients connect seamlessly regardless of port collision events.
 
 ---
-**Tags & Keywords**: `#llama.cpp-architecture` `#performance-tuning` `#hardware-budgeting` `#vram-calculation` `#port-collision-algorithm` `#local-llm-router`
+
+## 6. File Map
+
+| File | Role |
+|---|---|
+| `main.ps1` | Interactive setup wizard — collects paths, writes `llo-config.json`, runs SetupRouter |
+| `llo-core/Profile.ps1` | Hardware profiler — CPU/RAM/GPU detection, AdapterClass + PerformanceTier classification |
+| `llo-core/SetupRouter.ps1` | Parameter derivation + `models-preset.ini` generator |
+| `llo-core/ParseHelp.ps1` | llama-server `--help` parser for upstream compatibility checks |
+| `llo-core/GitDiff.ps1` | Detects argument changes after `git pull` |
+| `script/start-server.ps1` | Terminates old instances, invokes SetupRouter, launches llama-server, exports env vars |
+| `script/stop-server.ps1` | Gracefully stops the running llama-server process |
+| `script/test-health.ps1` | Integrity tests: syntax, config schema, profiler, SetupRouter, live server ping |
+| `templates/` | Jinja chat templates; matched to model aliases by SetupRouter |
+| `llo-config.json` | Persistent configuration: model paths, cloud fallback, `overrides` block |
+| `models-preset.ini` | Generated at startup; consumed directly by llama-server `--models-preset` |
+
+---
+
+**Tags**: `#llama.cpp-architecture` `#hardware-adaptive-inference` `#gpu-tier-classification` `#kv-cache-formula` `#context-size-budget` `#vram-fit-throttle` `#cpu-thread-scheduling` `#local-llm-router`

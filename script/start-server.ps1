@@ -51,7 +51,9 @@ if (-not (Test-Path $setupScript)) {
 }
 
 # Run setup and capture returned GGUF models list
-$models = . $setupScript
+# Wrap in @() to prevent PowerShell from unrolling a single-element array into a scalar,
+# which would make $models.Count return $null instead of 1 and fall through to bootstrap mode.
+$models = @(. $setupScript)
 
 # 2. Stop any existing llama-server on the port
 $running = @(Get-CimInstance Win32_Process | Where-Object {
