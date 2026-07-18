@@ -25,10 +25,10 @@ We enforce the **Conventional Commits** specification. Commit messages must be s
 
 ## 2. Pull Request & Merging Rules
 * **No Hardcoded Absolute Paths**: All file paths must be dynamically resolved relative to `$PSScriptRoot` or loaded configurations. Never hardcode absolute drives like `C:\` or `F:\`.
-* **Privacy & Credentials**: Ensure no personal system profiles (`docs/SYSTEM_COMMANDS.md`), credentials, private API keys, or active presets (`llo-config.json`, `models-preset.ini`) are added to the pull request.
+* **Privacy & Credentials**: Ensure no personal system profiles (`docs\SYSTEM_COMMANDS.md`), credentials, private API keys, or active presets (`llo-config.json`, `models-preset.ini`) are added to the pull request.
 * **Mandatory Testing**: Before submitting a PR, you must run the health verification script:
   ```powershell
-  powershell -File script/test-health.ps1
+  powershell -File script\test-health.ps1
   ```
   Pull requests with failing syntax, broken JSON configurations, or invalid hardware profilers will be automatically blocked.
 * **Target Branch**: Submit all pull requests to the `master` branch (or `main` depending on your repository's primary branch).

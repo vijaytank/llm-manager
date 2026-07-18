@@ -98,8 +98,8 @@ OptimalThreads = PhysicalCores
 VRAM overflow silently spills model layers to system RAM via PCIe, dropping token speed by up to 90%. The `--fit` + `--fit-target` mechanism in llama.cpp automatically throttles `n-gpu-layers` downward until the model fits within the budget.
 
 ```
-BudgetVRAM = TotalVRAM - 1024 MB (reserved for OS/display driver)
-fit-target = BudgetVRAM  (MB; llama.cpp --fit will not exceed this)
+fit-target = 512 MB  (for low GPU tier)
+             1024 MB (for mid and high GPU tiers)
 ```
 
 `--fit` is **only written for GPU tiers** (`low / mid / high`). On `cpu` tier it is omitted entirely — there is no VRAM budget to enforce and the setting produces misleading warnings.
@@ -121,25 +121,29 @@ KV cache VRAM grows linearly with context size. At 64k tokens the KV cache for a
 
 ### D. Per-Model Context Size Formula (`ctx-size`)
 
-Context size is computed as a **ceiling** — start from the hardware maximum, clamp downward by binding constraints. It is never used as a floor.
+Context size is computed dynamically as a **ceiling** target: start from the hardware maximum and clamp downward based on the system RAM constraint. (Since `llama-server` supports CPU offloading and mmap, VRAM tightness does not cause loading crashes, only partial layer/cache offloading; thus, RAM is the binding constraint for allocation).
 
 ```
-KV_MB_per_1k_tokens = { f16: 1.0, q8_0: 0.5, q4_0: 0.25 } × parallel_slots
+modelGB = ModelSize_MB / 1024.0
+baseKV  = 12.0 × modelGB   (estimated base KV Cache size in MB per 1k tokens)
 
-availRAM   = BudgetRAM_MB  - ModelSize_MB - 512 MB (runtime headroom)
-availVRAM  = BudgetVRAM_MB - ModelSize_MB - 512 MB (runtime headroom)
+kvMBPerKToken = { f16: baseKV × 2.0, q8_0: baseKV, q4_0: baseKV × 0.5 }
+                floored at 5.0 MB minimum for safety
+                multiplied by parallel_slots
 
-maxCtxRAM  = floor(availRAM  / KV_MB_per_1k_tokens) × 1000 tokens
-maxCtxVRAM = floor(availVRAM / KV_MB_per_1k_tokens) × 1000 tokens
+availRAM = BudgetRAM_MB - ModelSize_MB - 512 MB (runtime headroom)
 
-rawCtx = if cpu-tier: maxCtxRAM
-         else:        min(maxCtxRAM, maxCtxVRAM)   ← binding constraint
+maxCtxFromRam = floor(availRAM / kvMBPerKToken) × 1000 tokens (floored at 4096)
 
-ctxSize = largest of { 4096, 8192, 16384, 32768, 65536 } that fits within rawCtx
-          floored at 4096
+ctxSize = largest of { 4096, 8192, 16384, 32768, 65536, 131072, 262144 } that fits within maxCtxFromRam
 ```
 
-User can override via `config.overrides.ctx_size`.
+#### Integration-Aware Context Floor
+To prevent client initialization failures, a context floor is enforced if the **Claude Code** integration is active:
+* **CPU tier**: Floored at `32768` tokens
+* **GPU tiers (low / mid / high)**: Floored at `65536` tokens
+
+User overrides via `config.overrides.ctx_size` take absolute priority and bypass the above formula.
 
 ### E. Parallel Slots (`parallel`)
 
@@ -151,9 +155,9 @@ parallel = 2  only if:
     VRAM_BudgetMB > 4096 MB
 ```
 
-### F. Speculative Decoding Gate (`spec-type`)
+`ngram-simple` gives ~10–15% throughput boost by predicting future tokens from context n-grams. It is enabled for `cpu / mid / high` tiers but validated per-model before writing.
 
-`ngram-simple` gives ~10–15% throughput boost by predicting future tokens from context n-grams. It is enabled for `cpu / mid / high` tiers but validated per-model before writing:
+> **Low Performance Tier Exception**: Speculative decoding is disabled on the `low` tier (`spec-type = none`) to minimize additional memory overhead and avoid Out-Of-Memory (OOM) crashes on low VRAM GPUs.
 
 ```
 incompatible patterns: moe, mixture, vision, llava, clip, phi-3-v, qwen.*vl, minicpm-v, cogvlm
@@ -207,6 +211,9 @@ To minimize integration friction, the manager provisions settings and environmen
   - `tasks.json`: Registers automation tasks for starting/stopping the local server and running script compatibility audits.
   - `settings.json`: Injects the necessary env keys into `terminal.integrated.env.windows` so every terminal launched inside the workspace is pre-routed to the local server.
 - **Claude Code CLI Proxying**: Sets `ANTHROPIC_BASE_URL` to the active server endpoint, configures `ANTHROPIC_AUTH_TOKEN = local`, and exports `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = 1` to disable remote telemetry. An interactive picker is offered at launch to start Claude Code directly on the selected local model.
+- **Claude Code Operational Limits**: If the `claude-code` integration is active:
+  - Enforces `parallel = 2` (minimum floor) to prevent client deadlocks when invoking subagents.
+  - Enforces `idle_timeout_sec` of at least `600` seconds (10 minutes) to prevent the server from going to sleep mid-task.
 - **Active Port Propagation**: When the port auto-scanner increments the target port, the new port is propagated to all environment definitions dynamically, ensuring clients connect seamlessly regardless of port collision events.
 
 ---
@@ -222,7 +229,8 @@ To minimize integration friction, the manager provisions settings and environmen
 | `llo-core/GitDiff.ps1` | Detects argument changes after `git pull` |
 | `script/start-server.ps1` | Terminates old instances, invokes SetupRouter, launches llama-server, exports env vars |
 | `script/stop-server.ps1` | Gracefully stops the running llama-server process |
-| `script/test-health.ps1` | Integrity tests: syntax, config schema, profiler, SetupRouter, live server ping |
+| `script/test-health.ps1` | End-to-end and health checks: schema validation, syntax check, live server ping |
+| `script/verify-scripts.ps1` | Flag compatibility checker: parses llama-server help output and verifies script args |
 | `templates/` | Jinja chat templates; matched to model aliases by SetupRouter |
 | `llo-config.json` | Persistent configuration: model paths, cloud fallback, `overrides` block |
 | `models-preset.ini` | Generated at startup; consumed directly by llama-server `--models-preset` |

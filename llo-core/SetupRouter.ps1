@@ -542,11 +542,6 @@ if ($inferParams.spec_type -and $inferParams.spec_type -ne "none") {
 }
 
 
-# Custom CLI args passthrough
-if ($config.custom_args) {
-    $customList = $config.custom_args -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-    foreach ($arg in $customList) { $presetLines.Add($arg) }
-}
 
 $presetLines.Add("")
 

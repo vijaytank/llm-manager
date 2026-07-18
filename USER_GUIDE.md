@@ -26,7 +26,11 @@ If you are using `llama.cpp` to run models locally, this manager will automatica
    * **Installation Path**: Copy and paste the path to your `llama-server.exe` (or the folder where you compiled it). You can copy this directly from Windows File Explorer (e.g. by using "Copy as path").
    * **Models Directory**: Tell the wizard where you store your `.gguf` model files. If the directory doesn't exist, the script can create it for you.
    * **Chat Templates (Optional)**: If you have custom chat prompt templates, specify the directory. If not, just press **Enter** to skip; the server will automatically use the high-quality templates built directly inside your models.
+   * **Speculative Decoding (Optional)**: Enable `ngram-simple` speculative decoding (helps coding models run ~10-15% faster).
+   * **Custom Arguments (Optional)**: Provide additional command line arguments to pass to the server. If a value is already saved, press **Enter** to keep it, or type **`none`** or **`clear`** to remove it.
    * **Integration Preferences**: Choose where you want to use your models (e.g. Claude Code, VSCode, or just a REST API server).
+   * **Claude Code Telemetry (Optional)**: If Claude Code is selected, choose whether to enable dynamic model switching (which requires telemetry).
+   * **Configuration Review**: At the preview screen, type **`Y`** to save, **`N`** to cancel without saving, or **`Update`** to re-run the wizard prompts.
 
 ### Step 2: Auto-Optimization (Hands-off)
 The script will analyze your system:
@@ -80,7 +84,11 @@ During server startup, the script automatically exports the necessary environmen
 
 ## 5. Troubleshooting & Tips
 * **Slow Responses / Lag**: Ensure your GGUF models are not too large for your GPU. If you load a 14B model on an 8GB VRAM card, parts of it will spill over to system RAM, causing slow-downs. Try models in the 3B to 9B range (like `qwen3.5-4b`, `gemma-2-9b`, etc.) for optimal speed.
-* **Checking Status**: You can audit your scripts and see if any settings are outdated by running:
+* **Upstream Flag Compatibility**: If you have recently run `git pull` on `llama.cpp` and the server fails to start, you can audit your local scripts against the current `llama-server` binary options by running:
   ```powershell
   powershell -File script\verify-scripts.ps1
+  ```
+* **Full E2E Health Verification**: To test all configuration schemas, local PowerShell script syntax, system hardware profiling values, and execute a live REST API ping to see if the server is healthy, run:
+  ```powershell
+  powershell -File script\test-health.ps1
   ```

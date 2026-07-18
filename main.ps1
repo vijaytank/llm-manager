@@ -414,7 +414,15 @@ $config.spec_type = if ($enableSpec.ToUpper() -eq "Y") { "ngram-simple" } else {
 # 4. Optional Custom Arguments Override
 $defaultCustom = if ($config.custom_args) { $config.custom_args } else { "" }
 Write-Host "`nAdvanced users: You can add specific parameters to pass to llama-server (e.g. -ngl 70 -c 65536)." -ForegroundColor White
+if ($defaultCustom) {
+    Write-Host "Current custom args: $defaultCustom" -ForegroundColor DarkGray
+    Write-Host "Press Enter to keep current value, type 'none' to clear, or enter new arguments." -ForegroundColor DarkGray
+}
 $customArgsInput = Get-UserInput "Enter any custom arguments to append (press Enter for none)" -DefaultVal $defaultCustom
+# Allow user to explicitly clear custom args by typing 'none' or 'clear'
+if ($customArgsInput -and $customArgsInput.Trim().ToLower() -in @("none", "clear")) {
+    $customArgsInput = ""
+}
 $config.custom_args = $customArgsInput
 
 # Step 3: Integrations & Usage
