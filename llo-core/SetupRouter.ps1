@@ -98,7 +98,7 @@ if ($TemplatesDir -and -not (Test-Path $TemplatesDir)) { New-Item -ItemType Dire
 
 # Copy default.jinja from package if missing in templates dir
 $defaultDest     = Join-Path $TemplatesDir "default.jinja"
-$packagedSource  = Join-Path (Split-Path $PSScriptRoot) "templates\default.jinja"
+$packagedSource  = Join-Path (Split-Path $PSScriptRoot -Parent) "templates" | Join-Path -ChildPath "default.jinja"
 if (-not (Test-Path $defaultDest) -and (Test-Path $packagedSource)) {
     try {
         Copy-Item -Path $packagedSource -Destination $defaultDest -Force | Out-Null

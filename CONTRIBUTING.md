@@ -27,10 +27,17 @@ We enforce the **Conventional Commits** specification. Commit messages must be s
 * **No Hardcoded Absolute Paths**: All file paths must be dynamically resolved relative to `$PSScriptRoot` or loaded configurations. Never hardcode absolute drives like `C:\` or `F:\`.
 * **Privacy & Credentials**: Ensure no personal system profiles (`docs\SYSTEM_COMMANDS.md`), credentials, private API keys, or active presets (`llo-config.json`, `models-preset.ini`) are added to the pull request.
 * **Mandatory Testing**: Before submitting a PR, you must run the health verification script:
+
+  **macOS / Linux:**
+  ```bash
+  pwsh -File script/test-health.ps1
+  ```
+  **Windows:**
   ```powershell
   powershell -File script\test-health.ps1
   ```
   Pull requests with failing syntax, broken JSON configurations, or invalid hardware profilers will be automatically blocked.
+* **Cross-Platform Compatibility**: All new code must run on Windows (PowerShell 5.1+), macOS (`pwsh`), and Linux (`pwsh`). Use `$IsWindows`, `$IsMacOS`, `$IsLinux` guards for OS-specific logic. Never add Windows-only APIs (e.g. `Get-CimInstance Win32_*`) without an equivalent macOS/Linux branch.
 * **Target Branch**: Submit all pull requests to the `master` branch (or `main` depending on your repository's primary branch).
 
 ---

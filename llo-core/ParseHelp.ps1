@@ -31,7 +31,8 @@ function Get-LlamaServerFlags {
     param([string]$ServerPath)
 
     if (-not (Test-Path $ServerPath)) {
-        throw "llama-server.exe not found at: $ServerPath"
+        $binaryName = if ($IsWindows) { "llama-server.exe" } else { "llama-server" }
+        throw "$binaryName not found at: $ServerPath"
     }
 
     Write-Host "Running $ServerPath --help to extract options..." -ForegroundColor Cyan

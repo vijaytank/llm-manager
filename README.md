@@ -1,11 +1,28 @@
 # LLM Manager
 
-[![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%20%7C%207%2B-blue.svg)](https://learn.microsoft.com/en-us/powershell/)
-[![Platform](https://img.shields.io/badge/platform-windows-lightgrey.svg)](https://www.microsoft.com/windows)
+[![PowerShell Version](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)](https://learn.microsoft.com/en-us/powershell/)
+[![Platform](https://img.shields.io/badge/platform-windows%20%7C%20macOS%20%7C%20linux-lightgrey.svg)](#platform-requirements)
 [![llama.cpp Compatibility](https://img.shields.io/badge/llama.cpp-compatible-blueviolet.svg)](https://github.com/ggerganov/llama.cpp)
 [![Optimization Status](https://img.shields.io/badge/optimization-hardware--adaptive-orange.svg)](#)
 
 LLM Manager is a hardware-adaptive inference orchestrator built on top of **llama.cpp**. It profiles your system at startup, classifies your GPU, and derives every inference parameter — GPU offload layers, KV cache precision, context size, batch size, speculative decoding — automatically from the live hardware state. No manual configuration is needed for a typical deployment.
+
+---
+
+## 🖥️ Platform Requirements
+
+LLM Manager runs on **Windows, macOS, and Linux** via [PowerShell 7+](https://learn.microsoft.com/en-us/powershell/).
+
+| Platform | Requirement | Install |
+|---|---|---|
+| **Windows** | PowerShell 5.1+ (built-in) or PowerShell 7 | Built-in / [Download](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows) |
+| **macOS** | PowerShell 7 (`pwsh`) | `brew install powershell` |
+| **Linux (Ubuntu/Debian)** | PowerShell 7 (`pwsh`) | `sudo apt install powershell` |
+| **Linux (Fedora/RHEL)** | PowerShell 7 (`pwsh`) | `sudo dnf install powershell` |
+
+> **Windows users**: Use `powershell -File main.ps1` as before — nothing changes.  
+> **macOS/Linux users**: Use `pwsh -File main.ps1` or the convenience script `./run-setup.sh`.
+
 
 ---
 
@@ -72,10 +89,10 @@ When no local GGUF models are found and no GPU is available, falls back to a lig
 
 LLM Manager automatically configures environment parameters and settings files to bridge local models to popular development tools:
 
-- **VSCode Task Integration**: Automatically generates `.vscode/tasks.json` and `.vscode/settings.json` during wizard execution to let you start, stop, and audit the LLM server directly via `Ctrl+Shift+B` (Build Task) inside the workspace directory.
+- **VSCode Task Integration**: Automatically generates `.vscode/tasks.json` and `.vscode/settings.json` during wizard execution to let you start, stop, and audit the LLM server directly via `Ctrl+Shift+B` (Build Task) inside the workspace directory. Environment variables are injected for **Windows** (`terminal.integrated.env.windows`), **macOS** (`terminal.integrated.env.osx`), and **Linux** (`terminal.integrated.env.linux`) terminals.
 - **Claude Code CLI Integration**: Start the server and launch the interactive Claude Code CLI launcher. It auto-configures `ANTHROPIC_BASE_URL`, sets `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = 1` to prevent unnecessary remote telemetry/routing, and sets `ANTHROPIC_AUTH_TOKEN = local` for a fully offline loop.
 - **Cursor & Continue Setup**: Dynamically outputs configured JSON blocks and API endpoints (`http://127.0.0.1:<PORT>/v1`) for easy copy-paste setup in your client configuration.
-- **Auditing & Test Suite**: The health script (`script/test-health.ps1`) verifies local PowerShell syntax, config schemas, hardware profiling limits, and conducts live TCP/REST API connectivity checks to ensure llama-server is healthy.
+- **Auditing & Test Suite**: The health script (`script/test-health.ps1`) verifies local PowerShell syntax, config schemas, hardware profiling limits, and conducts live TCP/REST API connectivity checks to ensure llama-server is healthy. Run via `pwsh -File script/test-health.ps1` (all platforms) or `powershell -File script\test-health.ps1` (Windows).
 
 ---
 

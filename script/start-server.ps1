@@ -63,15 +63,54 @@ if (-not (Test-Path $setupScript)) {
 $models = @(. $setupScript)
 
 # 2. Stop any existing llama-server on the port
-$running = @(Get-CimInstance Win32_Process | Where-Object {
-    $_.Name -eq "llama-server.exe" -and $_.CommandLine -match [regex]::Escape("--port $Port")
-})
-if ($running) {
-    Write-Host "Stopping existing llama-server on port $Port..." -ForegroundColor Yellow
-    $running | ForEach-Object {
-        try { Stop-Process -Id $_.ProcessId -Force } catch {}
+if ($IsWindows) {
+    # Windows: use WMI Win32_Process (original Windows codepath — unchanged)
+    $running = @(Get-CimInstance Win32_Process | Where-Object {
+        $_.Name -eq "llama-server.exe" -and $_.CommandLine -match [regex]::Escape("--port $Port")
+    })
+    if ($running) {
+        Write-Host "Stopping existing llama-server on port $Port..." -ForegroundColor Yellow
+        $running | ForEach-Object {
+            try { Stop-Process -Id $_.ProcessId -Force } catch {}
+        }
+        Start-Sleep -Seconds 2
     }
-    Start-Sleep -Seconds 2
+} else {
+    # macOS / Linux: find the process via lsof (macOS) or ss/fuser (Linux)
+    $existingPids = @()
+    if ($IsMacOS) {
+        try {
+            $lsofOut = & lsof -ti ":$Port" 2>$null
+            if ($lsofOut) {
+                $existingPids = @($lsofOut -split "`n" | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ })
+            }
+        } catch {}
+    } elseif ($IsLinux) {
+        try {
+            $ssOut = & ss -tlnp "sport = :$Port" 2>$null
+            if ($ssOut) {
+                $pidMatches = [regex]::Matches($ssOut, 'pid=(\d+)')
+                $existingPids = @($pidMatches | ForEach-Object { [int]$_.Groups[1].Value })
+            }
+        } catch {}
+        if ($existingPids.Count -eq 0) {
+            try {
+                $fuserOut = & fuser "${Port}/tcp" 2>$null
+                if ($fuserOut) {
+                    $existingPids = @($fuserOut.Trim() -split '\s+' | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ })
+                }
+            } catch {}
+        }
+    }
+    $existingPids = @($existingPids | ForEach-Object {
+        $proc = Get-Process -Id $_ -ErrorAction SilentlyContinue
+        if ($proc -and $proc.Name -match 'llama.?server') { $_ }
+    })
+    if ($existingPids.Count -gt 0) {
+        Write-Host "Stopping existing llama-server on port $Port..." -ForegroundColor Yellow
+        $existingPids | ForEach-Object { try { Stop-Process -Id $_ -Force } catch {} }
+        Start-Sleep -Seconds 2
+    }
 }
 
 # 2.1 Scan for a free port if the target port is in use by another application
@@ -140,7 +179,8 @@ if ($models.Count -eq 0 -and $config.fallback_provider -ne "none") {
 
 # LOCAL INFRASTRUCTURE MODE
 if (-not (Test-Path $LlamaServer)) {
-    throw "llama-server.exe not found at: $LlamaServer. Please compile the binary or adjust paths."
+    $binaryName = if ($IsWindows) { "llama-server.exe" } else { "llama-server" }
+    throw "$binaryName not found at: $LlamaServer. Please compile the binary or adjust paths."
 }
 
 # 4. Construct command line arguments
@@ -278,7 +318,12 @@ if ([Environment]::UserInteractive) {
                 "claude --model $selectedModel"
             ) -join "; "
             
-            Start-Process powershell -ArgumentList "-NoExit", "-Command", "`"$startupCmds`""
+            if ($IsWindows) {
+                Start-Process powershell -ArgumentList "-NoExit", "-Command", "`"$startupCmds`""
+            } else {
+                # macOS/Linux: PowerShell 7 binary is 'pwsh'
+                Start-Process pwsh -ArgumentList "-NoExit", "-Command", "`"$startupCmds`""
+            }
         }
     } else {
         Write-Host "`n[Claude Code Integration]" -ForegroundColor Yellow

@@ -128,11 +128,12 @@ if ($config.installation_type -eq "winget") {
 }
 
 Write-Host "Step 1: How is llama.cpp installed on your system?" -ForegroundColor Cyan
-Write-Host "  1) Pre-built package (installed via Winget / in PATH)" -ForegroundColor DarkGray
+Write-Host "  1) Pre-built package (Winget, Homebrew, apt, or in PATH)" -ForegroundColor DarkGray
 Write-Host "  2) Manual build (compiled from GitHub repository)" -ForegroundColor DarkGray
 Write-Host "  3) Custom path (provide binary location directly)" -ForegroundColor DarkGray
 
-$choice = Get-UserInput "Select option (1-3) or paste path to llama-server.exe / repository folder" -DefaultVal $defaultChoice
+$binaryLabel = if ($IsWindows) { "llama-server.exe" } else { "llama-server" }
+$choice = Get-UserInput "Select option (1-3) or paste path to $binaryLabel / repository folder" -DefaultVal $defaultChoice
 
 $llamaServerPath = ""
 $llamaRepoPath = ""
@@ -204,12 +205,22 @@ elseif ($config.installation_type -eq "github") {
     
     if (-not $llamaServerPath) {
         # Scan for compiled binary inside build outputs
+        # Windows paths
         $scanPaths = @(
             "build\bin\Release\llama-server.exe",
             "build\bin\Debug\llama-server.exe",
             "build\bin\llama-server.exe",
             "bin\llama-server.exe"
         )
+        # macOS / Linux paths (forward-slash, no .exe)
+        if (-not $IsWindows) {
+            $scanPaths = @(
+                "build/bin/Release/llama-server",
+                "build/bin/Debug/llama-server",
+                "build/bin/llama-server",
+                "bin/llama-server"
+            )
+        }
         $foundBinary = ""
         foreach ($sp in $scanPaths) {
             $fullSp = Join-Path $llamaRepoPath $sp
@@ -230,7 +241,7 @@ elseif ($config.installation_type -eq "github") {
         
         if (-not $llamaServerPath) {
             while ($true) {
-                $pathInput = Get-UserInput "Please enter the path to llama-server.exe manually" -DefaultVal $config.llama_server_path
+                $pathInput = Get-UserInput "Please enter the path to $binaryLabel manually" -DefaultVal $config.llama_server_path
                 if (Test-Path $pathInput -PathType Leaf) {
                     $llamaServerPath = [System.IO.Path]::GetFullPath($pathInput)
                     break
@@ -243,7 +254,7 @@ elseif ($config.installation_type -eq "github") {
 else {
     if (-not $llamaServerPath) {
         while ($true) {
-            $pathInput = Get-UserInput "`nPlease enter the full path to llama-server.exe" -DefaultVal $config.llama_server_path
+            $pathInput = Get-UserInput "`nPlease enter the full path to $binaryLabel" -DefaultVal $config.llama_server_path
             if (Test-Path $pathInput -PathType Leaf) {
                 $llamaServerPath = [System.IO.Path]::GetFullPath($pathInput)
                 break
@@ -531,14 +542,17 @@ if ($apply.ToUpper() -eq "Y") {
             # Write tasks.json if not present
             $tasksFile = Join-Path $vsCodeDir "tasks.json"
             if (-not (Test-Path $tasksFile)) {
+                # Use the appropriate PowerShell command for each platform
+                $psCmd = if ($IsWindows) { "powershell.exe" } else { "pwsh" }
+                $psCmdArgs = if ($IsWindows) { @("-ExecutionPolicy", "Bypass", "-File") } else { @("-File") }
                 $tasksJson = @{
                     version = "2.0.0"
                     tasks = @(
                         @{
                             label = "Start LLM Server"
                             type = "shell"
-                            command = "powershell.exe"
-                            args = @("-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/script/start-server.ps1")
+                            command = $psCmd
+                            args = $psCmdArgs + @("${workspaceFolder}/script/start-server.ps1")
                             group = "none"
                             presentation = @{ reveal = "always"; panel = "new"; focus = $true; close = $false }
                             problemMatcher = @()
@@ -546,8 +560,8 @@ if ($apply.ToUpper() -eq "Y") {
                         @{
                             label = "Stop LLM Server"
                             type = "shell"
-                            command = "powershell.exe"
-                            args = @("-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/script/stop-server.ps1")
+                            command = $psCmd
+                            args = $psCmdArgs + @("${workspaceFolder}/script/stop-server.ps1")
                             group = "none"
                             presentation = @{ reveal = "always"; panel = "dedicated"; focus = $false; close = $true }
                             problemMatcher = @()
@@ -555,8 +569,8 @@ if ($apply.ToUpper() -eq "Y") {
                         @{
                             label = "Audit Script Compatibility"
                             type = "shell"
-                            command = "powershell.exe"
-                            args = @("-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/script/verify-scripts.ps1")
+                            command = $psCmd
+                            args = $psCmdArgs + @("${workspaceFolder}/script/verify-scripts.ps1")
                             group = "none"
                             presentation = @{ reveal = "always"; panel = "new"; focus = $true; close = $false }
                             problemMatcher = @()
@@ -570,6 +584,30 @@ if ($apply.ToUpper() -eq "Y") {
             $settingsFile = Join-Path $vsCodeDir "settings.json"
             $settings = @{
                 "terminal.integrated.env.windows" = @{
+                    "LLAMA_BASE_URL" = "http://127.0.0.1:8080"
+                    "LLAMA_OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
+                    "OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
+                    "OPENAI_API_BASE" = "http://127.0.0.1:8080/v1"
+                    "OPENAI_API_KEY" = "local-key"
+                    "ANTHROPIC_BASE_URL" = "http://127.0.0.1:8080"
+                    "ANTHROPIC_AUTH_TOKEN" = "local"
+                    "ANTHROPIC_API_KEY" = "local-key"
+                    "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY" = "1"
+                    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" = "1"
+                }
+                "terminal.integrated.env.osx" = @{
+                    "LLAMA_BASE_URL" = "http://127.0.0.1:8080"
+                    "LLAMA_OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
+                    "OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
+                    "OPENAI_API_BASE" = "http://127.0.0.1:8080/v1"
+                    "OPENAI_API_KEY" = "local-key"
+                    "ANTHROPIC_BASE_URL" = "http://127.0.0.1:8080"
+                    "ANTHROPIC_AUTH_TOKEN" = "local"
+                    "ANTHROPIC_API_KEY" = "local-key"
+                    "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY" = "1"
+                    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" = "1"
+                }
+                "terminal.integrated.env.linux" = @{
                     "LLAMA_BASE_URL" = "http://127.0.0.1:8080"
                     "LLAMA_OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
                     "OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
@@ -625,10 +663,15 @@ if ($apply.ToUpper() -eq "Y") {
     $startNow = Get-UserInput "`nWould you like to start the llama-server now? (Y/N)" -DefaultVal "Y"
     if ($startNow.ToUpper() -eq "Y") {
         Write-Host "`nStarting server..." -ForegroundColor Cyan
-        $startServerScript = Join-Path $ManagerDir "script\start-server.ps1"
+        $startServerScript = Join-Path $ManagerDir "script" | Join-Path -ChildPath "start-server.ps1"
         if (Test-Path $startServerScript) {
             # Start-Process in new window so it runs persistently without blocking the setup console
-            Start-Process powershell -ArgumentList "-NoExit", "-File", "`"$startServerScript`""
+            if ($IsWindows) {
+                Start-Process powershell -ArgumentList "-NoExit", "-File", "`"$startServerScript`""
+            } else {
+                # macOS/Linux: PowerShell 7 binary is 'pwsh'
+                Start-Process pwsh -ArgumentList "-NoExit", "-File", "`"$startServerScript`""
+            }
             Write-Host "[OK] llama-server has been launched in a new window." -ForegroundColor Green
         } else {
             Write-Host "[ERROR] start-server.ps1 not found in script/." -ForegroundColor Red

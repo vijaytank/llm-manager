@@ -7,6 +7,11 @@
 # PerformanceTier drives the inference parameter policy in SetupRouter.ps1.
 # These are intentionally orthogonal: a 2 GB MX card is "dedicated" class
 # but "cpu" tier (dedicated hw, but too little VRAM for useful offload).
+#
+# Platform support:
+#   Windows : WMI (Win32_Processor/ComputerSystem/VideoController) + nvidia-smi
+#   macOS   : sysctl + system_profiler (Apple Silicon unified memory or discrete GPU)
+#   Linux   : /proc/cpuinfo, /proc/meminfo, nvidia-smi, rocm-smi, /sys/class/drm
 
 $ErrorActionPreference = "Stop"
 
@@ -14,10 +19,39 @@ function Get-SystemHardwareProfile {
     Write-Host "Profiling system hardware..." -ForegroundColor Cyan
 
     # ── 1. CPU ────────────────────────────────────────────────────────────────
-    $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1 Name, NumberOfCores, NumberOfLogicalProcessors
-    $cpuName       = $cpu.Name.Trim()
-    $logicalCores  = $cpu.NumberOfLogicalProcessors
-    $physicalCores = $cpu.NumberOfCores
+    $cpuName       = "Unknown"
+    $logicalCores  = 1
+    $physicalCores = 1
+
+    if ($IsWindows) {
+        $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1 Name, NumberOfCores, NumberOfLogicalProcessors
+        $cpuName       = $cpu.Name.Trim()
+        $logicalCores  = $cpu.NumberOfLogicalProcessors
+        $physicalCores = $cpu.NumberOfCores
+    } elseif ($IsMacOS) {
+        try {
+            $cpuName      = (sysctl -n machdep.cpu.brand_string 2>$null).Trim()
+            if ([string]::IsNullOrWhiteSpace($cpuName)) { $cpuName = (sysctl -n hw.model 2>$null).Trim() }
+            $physicalCores = [int](sysctl -n hw.physicalcpu 2>$null)
+            $logicalCores  = [int](sysctl -n hw.logicalcpu  2>$null)
+        } catch {
+            Write-Host "[WARNING] macOS CPU detection failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    } elseif ($IsLinux) {
+        try {
+            $cpuInfo = Get-Content /proc/cpuinfo -ErrorAction SilentlyContinue
+            if ($cpuInfo) {
+                $modelLine = $cpuInfo | Where-Object { $_ -match '^model name' } | Select-Object -First 1
+                if ($modelLine -match ':\s*(.+)') { $cpuName = $Matches[1].Trim() }
+                $physicalCoresLine = $cpuInfo | Where-Object { $_ -match '^cpu cores' } | Select-Object -First 1
+                if ($physicalCoresLine -match ':\s*(\d+)') { $physicalCores = [int]$Matches[1] }
+                $logicalCores = @($cpuInfo | Where-Object { $_ -match '^processor\s+:' }).Count
+                if ($logicalCores -lt 1) { $logicalCores = $physicalCores }
+            }
+        } catch {
+            Write-Host "[WARNING] Linux CPU detection failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
 
     # Intel Hybrid Architecture heuristic (Core Ultra, Alder Lake+):
     # Recommend P-core count only, capped at 8, to avoid E-core scheduling overhead.
@@ -28,8 +62,29 @@ function Get-SystemHardwareProfile {
     if ($optimalThreads -lt 4) { $optimalThreads = 4 }
 
     # ── 2. RAM ────────────────────────────────────────────────────────────────
-    $cs            = Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory
-    $totalRamBytes = $cs.TotalPhysicalMemory
+    $totalRamBytes = 0
+
+    if ($IsWindows) {
+        $cs            = Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory
+        $totalRamBytes = $cs.TotalPhysicalMemory
+    } elseif ($IsMacOS) {
+        try {
+            $totalRamBytes = [long](sysctl -n hw.memsize 2>$null)
+        } catch {
+            Write-Host "[WARNING] macOS RAM detection failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    } elseif ($IsLinux) {
+        try {
+            $memInfo = Get-Content /proc/meminfo -ErrorAction SilentlyContinue
+            $memTotalLine = $memInfo | Where-Object { $_ -match '^MemTotal' } | Select-Object -First 1
+            if ($memTotalLine -match ':\s*(\d+)\s*kB') {
+                $totalRamBytes = [long]$Matches[1] * 1024
+            }
+        } catch {
+            Write-Host "[WARNING] Linux RAM detection failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
+
     $totalRamMB    = [math]::Round($totalRamBytes / 1MB, 0)
     $totalRamGB    = [math]::Round($totalRamBytes / 1GB, 1)
 
@@ -53,16 +108,32 @@ function Get-SystemHardwareProfile {
 
     # Locate nvidia-smi (prefer explicit paths, fall back to PATH lookup)
     $nvidiaSmi = $null
-    $smiCandidates = @(
-        "C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
-        "C:\Windows\System32\nvidia-smi.exe"
-    )
-    foreach ($p in $smiCandidates) {
-        if (Test-Path $p) { $nvidiaSmi = $p; break }
-    }
-    if (-not $nvidiaSmi) {
-        $found = Get-Command "nvidia-smi.exe" -ErrorAction SilentlyContinue
-        if ($found) { $nvidiaSmi = $found.Source }
+    if ($IsWindows) {
+        $smiCandidates = @(
+            "C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
+            "C:\Windows\System32\nvidia-smi.exe"
+        )
+        foreach ($p in $smiCandidates) {
+            if (Test-Path $p) { $nvidiaSmi = $p; break }
+        }
+        if (-not $nvidiaSmi) {
+            $found = Get-Command "nvidia-smi.exe" -ErrorAction SilentlyContinue
+            if ($found) { $nvidiaSmi = $found.Source }
+        }
+    } else {
+        # macOS / Linux: nvidia-smi lives in standard Unix paths
+        $smiCandidates = @(
+            "/usr/bin/nvidia-smi",
+            "/usr/local/bin/nvidia-smi",
+            "/opt/homebrew/bin/nvidia-smi"
+        )
+        foreach ($p in $smiCandidates) {
+            if (Test-Path $p) { $nvidiaSmi = $p; break }
+        }
+        if (-not $nvidiaSmi) {
+            $found = Get-Command "nvidia-smi" -ErrorAction SilentlyContinue
+            if ($found) { $nvidiaSmi = $found.Source }
+        }
     }
 
     # ── nvidia-smi path (NVIDIA CUDA) ─────────────────────────────────────────
@@ -118,8 +189,8 @@ function Get-SystemHardwareProfile {
         }
     }
 
-    # ── WMI fallback (Intel/AMD/Arc or NVIDIA when smi failed) ────────────────
-    if (-not $hasNvidiaSmi -or $totalVramMB -eq 0) {
+    # ── WMI fallback (Intel/AMD/Arc or NVIDIA when smi failed) — Windows only ──
+    if ($IsWindows -and (-not $hasNvidiaSmi -or $totalVramMB -eq 0)) {
         try {
             $allControllers = @(Get-CimInstance Win32_VideoController |
                 Where-Object { $_.Name -match "NVIDIA|AMD|Radeon|Intel|Arc" })
@@ -171,6 +242,123 @@ function Get-SystemHardwareProfile {
             }
         } catch {
             Write-Host "[WARNING] WMI GPU query failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
+
+    # ── macOS GPU fallback (Apple Silicon or discrete GPU via system_profiler) ──
+    if ($IsMacOS -and -not $hasNvidiaSmi) {
+        try {
+            # Use system_profiler JSON output for reliable parsing
+            $spRaw = & system_profiler SPDisplaysDataType -json 2>$null | ConvertFrom-Json
+            $displays = $spRaw.SPDisplaysDataType
+
+            if ($displays -and $displays.Count -gt 0) {
+                $gpuEntry = $displays[0]
+                $gpuName  = $gpuEntry.sppci_model
+                if ([string]::IsNullOrWhiteSpace($gpuName)) { $gpuName = $gpuEntry._name }
+
+                # Apple Silicon (M-series): GPU shares system RAM (unified memory).
+                # The entire RAM budget is available for inference — treat as dedicated-class.
+                $isAppleSilicon = ($gpuName -match "Apple M" -or $gpuName -match "Apple GPU")
+
+                if ($isAppleSilicon) {
+                    # Unified memory: use system RAM as the VRAM budget
+                    $totalVramMB        = $totalRamMB
+                    $freeVramMB         = $totalRamMB
+                    $adapterClass       = "dedicated"   # M-series GPU is discrete in performance terms
+                    $usableForInference = $true
+                    $hasCudaBackend     = $false        # Metal, not CUDA
+                    $hasVulkanBackend   = $false
+                    Write-Host "  [Apple Silicon] Unified memory GPU detected: $gpuName ($([math]::Round($totalVramMB/1024,1)) GB)" -ForegroundColor Cyan
+                } else {
+                    # Discrete AMD/NVIDIA GPU on an Intel Mac
+                    $vramStr = $gpuEntry.sppci_vram
+                    if ($vramStr -match '(\d+)\s*MB') {
+                        $totalVramMB = [int]$Matches[1]
+                        $freeVramMB  = $totalVramMB
+                    } elseif ($vramStr -match '(\d+)\s*GB') {
+                        $totalVramMB = [int]$Matches[1] * 1024
+                        $freeVramMB  = $totalVramMB
+                    }
+                    $adapterClass       = if ($totalVramMB -gt 0) { "dedicated" } else { "integrated" }
+                    $usableForInference = ($adapterClass -eq "dedicated" -and $totalVramMB -gt 0)
+                }
+            }
+        } catch {
+            Write-Host "[WARNING] macOS GPU detection failed: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
+
+    # ── Linux GPU fallback (AMD rocm-smi or sysfs when nvidia-smi not available) ─
+    if ($IsLinux -and -not $hasNvidiaSmi) {
+        # Try rocm-smi for AMD GPUs
+        $rocmSmi = Get-Command "rocm-smi" -ErrorAction SilentlyContinue
+        if ($rocmSmi) {
+            try {
+                $rocmJson = & rocm-smi --showmeminfo vram --json 2>$null | ConvertFrom-Json
+                if ($rocmJson) {
+                    # rocm-smi JSON structure: { "card0": { "VRAM Total Memory (B)": "...", "VRAM Total Used Memory (B)": "..." } }
+                    $firstCard = $rocmJson.PSObject.Properties | Select-Object -First 1
+                    if ($firstCard) {
+                        $vramTotalBytes = [long]($firstCard.Value.'VRAM Total Memory (B)')
+                        $vramUsedBytes  = [long]($firstCard.Value.'VRAM Total Used Memory (B)')
+                        if ($vramTotalBytes -gt 0) {
+                            $totalVramMB        = [math]::Round($vramTotalBytes / 1MB, 0)
+                            $freeVramMB         = [math]::Round(($vramTotalBytes - $vramUsedBytes) / 1MB, 0)
+                            $adapterClass       = "dedicated"
+                            $usableForInference = $true
+                            # Read GPU name from rocm-smi --showproductname
+                            $nameRaw = & rocm-smi --showproductname 2>$null
+                            if ($nameRaw -match 'Card series:\s*(.+)') { $gpuName = $Matches[1].Trim() }
+                            elseif ($nameRaw -match 'GPU\[\d+\].*?:\s*(.+)') { $gpuName = $Matches[1].Trim() }
+                            Write-Host "  [AMD ROCm] Detected: $gpuName ($([math]::Round($totalVramMB/1024,1)) GB VRAM)" -ForegroundColor Cyan
+                        }
+                    }
+                }
+            } catch {
+                Write-Host "[WARNING] rocm-smi query failed: $($_.Exception.Message)" -ForegroundColor Yellow
+            }
+        }
+
+        # sysfs fallback for any GPU (DRM subsystem exposes VRAM sizes)
+        if ($totalVramMB -eq 0) {
+            try {
+                $drmCards = Get-ChildItem /sys/class/drm -Filter 'card*' -Directory -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Name -match '^card\d+$' }
+                foreach ($card in $drmCards) {
+                    $vramFile = Join-Path $card.FullName "device/mem_info_vram_total"
+                    if (Test-Path $vramFile) {
+                        $vramBytes = [long](Get-Content $vramFile -Raw).Trim()
+                        if ($vramBytes -gt 0) {
+                            $totalVramMB        = [math]::Round($vramBytes / 1MB, 0)
+                            $freeVramMB         = $totalVramMB   # sysfs total only
+                            $adapterClass       = "dedicated"
+                            $usableForInference = ($totalVramMB -ge 2048)
+                            # Try to get GPU name from vendor/uevent
+                            $ueventFile = Join-Path $card.FullName "device/uevent"
+                            if (Test-Path $ueventFile) {
+                                $uevent = Get-Content $ueventFile -Raw
+                                if ($uevent -match 'PCI_ID=([0-9A-Fa-f:]+)') { $gpuName = "GPU (PCI $($Matches[1]))" }
+                            }
+                            break
+                        }
+                    }
+                }
+            } catch {
+                Write-Host "[WARNING] Linux sysfs GPU detection failed: $($_.Exception.Message)" -ForegroundColor Yellow
+            }
+        }
+
+        # Intel integrated GPU detection on Linux (no VRAM file, CPU-tier)
+        if ($totalVramMB -eq 0) {
+            try {
+                $i915 = Get-ChildItem /sys/class/drm -Filter 'card*' -Directory -ErrorAction SilentlyContinue |
+                    Where-Object { Test-Path (Join-Path $_.FullName "device/driver/module/drivers/pci:i915") }
+                if ($i915) {
+                    $gpuName      = "Intel Integrated Graphics"
+                    $adapterClass = "integrated"
+                }
+            } catch {}
         }
     }
 

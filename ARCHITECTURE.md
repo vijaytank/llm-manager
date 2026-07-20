@@ -20,7 +20,12 @@ The system classifies every GPU using two orthogonal dimensions. This avoids con
 
 Detection priority:
 1. **nvidia-smi** (preferred for NVIDIA) — queries all GPUs, selects the one with highest `memory.free` to handle multi-GPU and dual-GPU laptop configurations
-2. **WMI `Win32_VideoController`** fallback — filters to non-shared-memory adapters (avoids picking the iGPU on a laptop with both Intel and NVIDIA)
+   - **Windows**: Probes `C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe` and `C:\Windows\System32\nvidia-smi.exe`
+   - **macOS / Linux**: Probes `/usr/bin/nvidia-smi`, `/usr/local/bin/nvidia-smi`, and PATH
+2. **WMI `Win32_VideoController`** fallback — **Windows only** — filters to non-shared-memory adapters (avoids picking the iGPU on a laptop with both Intel and NVIDIA)
+3. **`system_profiler SPDisplaysDataType`** — **macOS only** — detects Apple Silicon (M-series unified memory) and discrete GPUs on Intel Macs
+4. **`rocm-smi`** — **Linux only** — detects AMD GPUs via ROCm when installed
+5. **`/sys/class/drm` sysfs** — **Linux only** — fallback for any GPU, reads `mem_info_vram_total` from the DRM subsystem
 
 ### PerformanceTier (inference policy)
 
@@ -208,8 +213,8 @@ When `$models.Count -eq 0` after scanning:
 ### E. Client Integrations & Environment Provisioning
 To minimize integration friction, the manager provisions settings and environmental variables dynamically:
 - **VSCode Workspace generation**: `main.ps1` dynamically creates a `.vscode` folder containing:
-  - `tasks.json`: Registers automation tasks for starting/stopping the local server and running script compatibility audits.
-  - `settings.json`: Injects the necessary env keys into `terminal.integrated.env.windows` so every terminal launched inside the workspace is pre-routed to the local server.
+  - `tasks.json`: Registers automation tasks for starting/stopping the local server and running script compatibility audits. Uses `powershell.exe` on Windows and `pwsh` on macOS/Linux.
+  - `settings.json`: Injects the necessary env keys into `terminal.integrated.env.windows`, `terminal.integrated.env.osx`, and `terminal.integrated.env.linux` so every terminal launched inside the workspace on any OS is pre-routed to the local server.
 - **Claude Code CLI Proxying**: Sets `ANTHROPIC_BASE_URL` to the active server endpoint, configures `ANTHROPIC_AUTH_TOKEN = local`, and exports `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = 1` to disable remote telemetry. An interactive picker is offered at launch to start Claude Code directly on the selected local model.
 - **Claude Code Operational Limits**: If the `claude-code` integration is active:
   - Enforces `parallel = 2` (minimum floor) to prevent client deadlocks when invoking subagents.
@@ -223,12 +228,15 @@ To minimize integration friction, the manager provisions settings and environmen
 | File | Role |
 |---|---|
 | `main.ps1` | Interactive setup wizard — collects paths, writes `llo-config.json`, runs SetupRouter |
-| `llo-core/Profile.ps1` | Hardware profiler — CPU/RAM/GPU detection, AdapterClass + PerformanceTier classification |
+| `run-setup.sh` | Bash convenience entry point for macOS/Linux (wraps `pwsh -File main.ps1`) |
+| `llo-core/Profile.ps1` | Hardware profiler — CPU/RAM/GPU detection for Windows (WMI), macOS (sysctl/system_profiler), Linux (/proc, nvidia-smi, rocm-smi, sysfs) |
 | `llo-core/SetupRouter.ps1` | Parameter derivation + `models-preset.ini` generator |
 | `llo-core/ParseHelp.ps1` | llama-server `--help` parser for upstream compatibility checks |
 | `llo-core/GitDiff.ps1` | Detects argument changes after `git pull` |
 | `script/start-server.ps1` | Terminates old instances, invokes SetupRouter, launches llama-server, exports env vars |
-| `script/stop-server.ps1` | Gracefully stops the running llama-server process |
+| `script/start-server.sh` | Bash wrapper for macOS/Linux (invokes `start-server.ps1` via `pwsh`) |
+| `script/stop-server.ps1` | Gracefully stops the running llama-server process (Windows: Win32_Process; macOS/Linux: lsof/ss) |
+| `script/stop-server.sh` | Bash wrapper for macOS/Linux (invokes `stop-server.ps1` via `pwsh`) |
 | `script/test-health.ps1` | End-to-end and health checks: schema validation, syntax check, live server ping |
 | `script/verify-scripts.ps1` | Flag compatibility checker: parses llama-server help output and verifies script args |
 | `templates/` | Jinja chat templates; matched to model aliases by SetupRouter |

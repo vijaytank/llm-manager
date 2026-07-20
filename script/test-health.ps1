@@ -94,8 +94,9 @@ $setupRouterScript = Join-Path $ManagerDir "llo-core\SetupRouter.ps1"
 if (Test-Path $setupRouterScript) {
     try {
         # Run SetupRouter inside a dry-run/mock context (temporary outputs)
-        $tempPreset = Join-Path $env:TEMP "models-preset-test.ini"
-        $tempConfig = Join-Path $env:TEMP "llo-config-test.json"
+        $tempDir = if ($env:TEMP) { $env:TEMP } elseif ($env:TMPDIR) { $env:TMPDIR } else { '/tmp' }
+        $tempPreset = Join-Path $tempDir "models-preset-test.ini"
+        $tempConfig = Join-Path $tempDir "llo-config-test.json"
         if (Test-Path $ConfigFile) { Copy-Item $ConfigFile $tempConfig }
         
         $modelsList = & $setupRouterScript -PresetFile $tempPreset -ConfigFile $tempConfig
