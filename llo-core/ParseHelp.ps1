@@ -38,7 +38,11 @@ function Get-LlamaServerFlags {
     Write-Host "Running $ServerPath --help to extract options..." -ForegroundColor Cyan
 
     # Execute and capture stdout+stderr. Some llama-server versions write help to stderr.
-    $helpLines = & $ServerPath --help 2>&1 | Out-String
+    # Use ErrorActionPreference = Continue and ForEach-Object to capture stderr as strings without triggering Stop errors or formatting them as Multi-line ErrorRecords.
+    $oldEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $helpLines = & $ServerPath --help 2>&1 | ForEach-Object { $_.ToString() } | Out-String
+    $ErrorActionPreference = $oldEAP
     $lines = $helpLines -split "`r?`n"
 
     $flags = New-Object System.Collections.Generic.List[object]

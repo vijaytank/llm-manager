@@ -33,8 +33,11 @@ function Get-LlamaGitStatus {
 
     try {
         Write-Host "Fetching latest updates from llama.cpp remote..." -ForegroundColor Cyan
-        # Run git fetch silently
-        git fetch origin 2>&1 | Out-Null
+        # Run git fetch silently (suppress NativeCommandError under ErrorActionPreference = Stop)
+        $oldEAP = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        git fetch origin 2>$null | Out-Null
+        $ErrorActionPreference = $oldEAP
 
         # Check branch status
         $status = (git status -uno) -join "`n"
@@ -63,7 +66,13 @@ function Get-LlamaGitStatus {
         $isPullDiff = $false
 
         # Check if we have ORIG_HEAD (meaning we just pulled/merged)
-        if (git rev-parse --verify ORIG_HEAD 2>$null) {
+        $oldEAP = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        git rev-parse --verify ORIG_HEAD 2>$null | Out-Null
+        $hasOrigHead = ($LastExitCode -eq 0)
+        $ErrorActionPreference = $oldEAP
+
+        if ($hasOrigHead) {
             $origHead = (git rev-parse ORIG_HEAD).Substring(0, 8)
             $head = (git rev-parse HEAD).Substring(0, 8)
             if ($origHead -ne $head) {
