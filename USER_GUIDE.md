@@ -1,4 +1,4 @@
-﻿# LLM Manager - Easy Setup & User Guide
+# LLM Manager - Easy Setup & User Guide
 
 Welcome to **LLM Manager**! This tool is designed to take the complexity out of running local Large Language Models (LLMs) on your computer. 
 
@@ -64,7 +64,10 @@ LLM Manager is written in PowerShell and runs on **Windows, macOS, and Linux**.
      - macOS (Homebrew): just press **Enter** — it is found automatically in PATH
      - Linux: e.g. `/home/yourname/llama.cpp/build/bin/llama-server`
    * **Models Directory**: Tell the wizard where you store your `.gguf` model files. If the directory doesn't exist, the script can create it for you.
-   * **Chat Templates (Optional)**: If you have custom chat prompt templates, specify the directory. If not, just press **Enter** to skip; the server will automatically use the high-quality templates built directly inside your models.
+   * **Chat Templates & Grammars (Automatic)**: The wizard automatically fetches the complete `models/templates` and `grammars` from `llama.cpp`'s upstream repository.
+     - If you are online, files are downloaded once and cached using SHA checks (downloading only new/changed files on subsequent runs).
+     - If you are offline and have no templates, you can choose to apply a bundled `default.jinja` fallback or run without a template (GGUF internal default).
+     - The router matches your models to the downloaded templates using a priority search algorithm.
    * **Speculative Decoding (Optional)**: Enable `ngram-simple` speculative decoding (helps coding models run ~10-15% faster).
    * **Custom Arguments (Optional)**: Provide additional command line arguments to pass to the server. If a value is already saved, press **Enter** to keep it, or type **`none`** or **`clear`** to remove it.
    * **Integration Preferences**: Choose where you want to use your models (e.g. Claude Code, VSCode, or just a REST API server).

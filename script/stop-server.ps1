@@ -66,11 +66,11 @@ if ($IsWindows) {
 
     # Filter to only llama-server processes (avoid killing unrelated port users)
     $targetPids = @()
-    foreach ($pid in $pids) {
+    foreach ($p in $pids) {
         try {
-            $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+            $proc = Get-Process -Id $p -ErrorAction SilentlyContinue
             if ($proc -and $proc.Name -match 'llama.?server') {
-                $targetPids += $pid
+                $targetPids += $p
             }
         } catch {}
     }
@@ -83,12 +83,12 @@ if ($IsWindows) {
 
     if ($targetPids.Count -gt 0) {
         Write-Host "Found $($targetPids.Count) running server process(es). Terminating..." -ForegroundColor Yellow
-        foreach ($pid in $targetPids) {
+        foreach ($p in $targetPids) {
             try {
-                Stop-Process -Id $pid -Force
-                Write-Host "  Terminated PID: $pid" -ForegroundColor DarkGray
+                Stop-Process -Id $p -Force
+                Write-Host "  Terminated PID: $p" -ForegroundColor DarkGray
             } catch {
-                Write-Host "  Failed to stop PID $pid`: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "  Failed to stop PID ${p}: $($_.Exception.Message)" -ForegroundColor Red
             }
         }
         Start-Sleep -Seconds 1

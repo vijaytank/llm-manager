@@ -1,4 +1,4 @@
-# LLM Manager Main Setup Wizard (main.ps1)
+﻿# LLM Manager Main Setup Wizard (main.ps1)
 # Interactive setup entry point.
 
 $ErrorActionPreference = "Stop"
@@ -70,6 +70,7 @@ $config = @{
     llama_repo_path = ""
     models_dir = ""
     templates_dir = ""                 # resolved dynamically during setup
+    grammars_dir = ""                  # resolved dynamically during setup
     use_default_template = $false
     cache_type_k = "f16"
     cache_type_v = "f16"
@@ -298,34 +299,77 @@ while ($true) {
 }
 $config.models_dir = $modelsDir
 
-# Step 2.1: Jinja Chat Template Configuration
-Write-Host "`nStep 2.1: Jinja Chat Template Configuration..." -ForegroundColor Cyan
-# Templates live alongside the llm-manager folder, not derived from the models directory
+# Step 2.1: Sync Chat Templates & Grammars from llama.cpp
+Write-Host "`nStep 2.1: Syncing Chat Templates & Grammars..." -ForegroundColor Cyan
+
+$fetchScript = Join-Path $ManagerDir "llo-core\FetchAssets.ps1"
+if (Test-Path $fetchScript) {
+    . $fetchScript
+}
+
+$manifestPath = Join-Path $ManagerDir ".assets-manifest.json"
+$manifest = Read-AssetsManifest -ManifestPath $manifestPath
+
 $templatesDir = Join-Path $ManagerDir "templates"
-if (-not (Test-Path $templatesDir)) {
-    try {
-        New-Item -ItemType Directory -Path $templatesDir -Force | Out-Null
-    } catch {}
-}
+$grammarsDir  = Join-Path $ManagerDir "grammars"
+
+if (-not (Test-Path $templatesDir)) { New-Item -ItemType Directory -Path $templatesDir -Force | Out-Null }
+if (-not (Test-Path $grammarsDir))  { New-Item -ItemType Directory -Path $grammarsDir -Force | Out-Null }
+
 $config.templates_dir = $templatesDir
+$config.grammars_dir  = $grammarsDir
 
-# Copy packaged default.jinja to active templates folder if missing
-$defaultTemplateDest = Join-Path $templatesDir "default.jinja"
-$packagedTemplateSource = Join-Path $ManagerDir "templates\default.jinja"
-if (-not (Test-Path $defaultTemplateDest) -and (Test-Path $packagedTemplateSource)) {
-    try {
-        Copy-Item -Path $packagedTemplateSource -Destination $defaultTemplateDest -Force | Out-Null
-        Write-Host "  [OK] Copied default template to: $defaultTemplateDest" -ForegroundColor Green
-    } catch {
-        Write-Host "  [WARNING] Failed to copy default template: $($_.Exception.Message)" -ForegroundColor Yellow
+$templateResult = Sync-GitHubFolder `
+    -ApiUrl "https://api.github.com/repos/ggml-org/llama.cpp/contents/models/templates" `
+    -DestDir $templatesDir `
+    -ManifestKey "templates" `
+    -Manifest $manifest `
+    -SkipNames @("README.md")
+
+$grammarResult = Sync-GitHubFolder `
+    -ApiUrl "https://api.github.com/repos/ggml-org/llama.cpp/contents/grammars" `
+    -DestDir $grammarsDir `
+    -ManifestKey "grammars" `
+    -Manifest $manifest `
+    -SkipNames @("README.md")
+
+Write-AssetsManifest -ManifestPath $manifestPath -Manifest $manifest
+
+# Check available downloaded templates (excluding default.jinja)
+$downloadedTemplates = @(Get-ChildItem -Path $templatesDir -Filter *.jinja -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne "default.jinja" })
+
+if ($templateResult.NetworkError -and $downloadedTemplates.Count -eq 0) {
+    Write-Host "  [!] Could not reach GitHub and no templates were previously downloaded." -ForegroundColor Yellow
+    Write-Host "  A bundled default template (default.jinja) is available." -ForegroundColor White
+    $useFallback = Get-UserInput "Use bundled default.jinja as fallback template? (Y/N)" -DefaultVal "N"
+    $config.use_default_template = ($useFallback.ToUpper() -eq "Y")
+    if ($config.use_default_template) {
+        Write-Host "  [OK] Using bundled default.jinja for all models." -ForegroundColor Green
+    } else {
+        Write-Host "  [OK] No template applied - models will use their GGUF internal templates." -ForegroundColor DarkCyan
     }
-}
+} else {
+    $tDownloaded = $templateResult.Downloaded
+    $tSkipped    = $templateResult.Skipped
+    if ($tDownloaded -gt 0) {
+        Write-Host "  [OK] Downloaded $tDownloaded template file(s) from llama.cpp." -ForegroundColor Green
+    } elseif ($tSkipped -gt 0) {
+        Write-Host "  [OK] Templates are up to date ($tSkipped templates)." -ForegroundColor Green
+    }
 
-$defaultUseTemplate = if ($null -ne $config.use_default_template) { if ($config.use_default_template) { "Y" } else { "N" } } else { "N" }
-Write-Host "A default chat template (default.jinja) is available in $templatesDir." -ForegroundColor White
-Write-Host "[WARNING] Using a custom default template is optional. If you see chat formatting or system instruction issues, select 'N' to fall back to the models' built-in GGUF internal templates." -ForegroundColor Yellow
-$useDefaultTemplateInput = Get-UserInput "Apply default.jinja template to all local models? (Y/N)" -DefaultVal $defaultUseTemplate
-$config.use_default_template = ($useDefaultTemplateInput.ToUpper() -eq "Y")
+    $gDownloaded = $grammarResult.Downloaded
+    $gSkipped    = $grammarResult.Skipped
+    if ($gDownloaded -gt 0) {
+        Write-Host "  [OK] Downloaded $gDownloaded grammar file(s) from llama.cpp." -ForegroundColor Green
+    } elseif ($gSkipped -gt 0) {
+        Write-Host "  [OK] Grammars are up to date ($gSkipped grammars)." -ForegroundColor Green
+    }
+
+    $defaultUseTemplate = if ($null -ne $config.use_default_template) { if ($config.use_default_template) { "Y" } else { "N" } } else { "Y" }
+    Write-Host "Auto-matching maps model aliases to appropriate Jinja chat templates." -ForegroundColor White
+    $useDefaultTemplateInput = Get-UserInput "Auto-match chat templates to your models? (Y/N)" -DefaultVal $defaultUseTemplate
+    $config.use_default_template = ($useDefaultTemplateInput.ToUpper() -eq "Y")
+}
 
 # Step 2.2: Automated Memory & Performance Optimization
 Write-Host "`nStep 2.2: Automatically tuning performance parameters for your system..." -ForegroundColor Cyan
@@ -407,9 +451,10 @@ Write-Host "  -> Flash Attention    : $flashAttn" -ForegroundColor Green
 Write-Host "  -> KV Cache Type      : $cacheType" -ForegroundColor Green
 Write-Host "  -> Context Size       : $defaultCtxSize tokens" -ForegroundColor Green
 Write-Host "  -> Context Shift      : Enabled" -ForegroundColor Green
-Write-Host "  -> Fit Ctx Floor      : $fitCtxMin tokens (--fit will not go below this)" -ForegroundColor Green
+Write-Host "  -> Fit Ctx Floor      : $fitCtxMin tokens (fit will not go below this)" -ForegroundColor Green
 Write-Host "  -> UBatch Size        : $ubatchSize tokens/kernel" -ForegroundColor Green
-Write-Host "  -> Parallel Slots     : $(if ($parallelSlots -eq -1) { 'Auto' } else { $parallelSlots })" -ForegroundColor Green
+$parallelDisplay = if ($parallelSlots -eq -1) { 'Auto' } else { $parallelSlots }
+Write-Host "  -> Parallel Slots     : $parallelDisplay" -ForegroundColor Green
 Write-Host "  -> KV Cache Reuse     : Enabled ($cacheReuseChunk token prefix threshold)" -ForegroundColor Green
 Write-Host "  -> Idle Slot Caching  : Enabled" -ForegroundColor Green
 
@@ -492,18 +537,26 @@ if ($config.llama_repo_path) {
     Write-Host "    * Repo Path   : $($config.llama_repo_path)" -ForegroundColor White
 }
 Write-Host "    * Models Dir  : $($config.models_dir)" -ForegroundColor White
-Write-Host "    * Default Template: $(if ($config.use_default_template) { 'Applied (default.jinja)' } else { 'Disabled (Using GGUF internal templates)' })" -ForegroundColor White
+$tmplDisp = if ($config.use_default_template) { 'Applied (default.jinja)' } else { 'Disabled (Using GGUF internal templates)' }
+$ctxShiftDisp = if ($config.context_shift) { 'Enabled' } else { 'Disabled' }
+$parallelDisp = if ($config.parallel_slots -eq -1) { 'Auto' } elseif ($config.parallel_slots -eq 1) { '1 (Safe mode - prevents OOM)' } else { $config.parallel_slots }
+$reuseChunk = $config.cache_reuse_chunk
+$reuseDisp = if ($reuseChunk -gt 0) { "Enabled ($reuseChunk token chunks)" } else { 'Disabled' }
+$idleSlotDisp = if ($config.cache_idle_slots) { 'Enabled' } else { 'Disabled' }
+$specDisp = if ($config.spec_type -ne 'none') { $config.spec_type } else { 'Disabled' }
+
+Write-Host "    * Default Template: $tmplDisp" -ForegroundColor White
 Write-Host "`n  [Optimizations & Performance]" -ForegroundColor Cyan
 Write-Host "    * Flash Attention : $($config.flash_attn)" -ForegroundColor White
 Write-Host "    * KV Cache Type   : $($config.cache_type_k)" -ForegroundColor White
 Write-Host "    * Context Size    : $($config.default_context_size) tokens" -ForegroundColor White
-Write-Host "    * Context Shift   : $(if ($config.context_shift) { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
+Write-Host "    * Context Shift   : $ctxShiftDisp" -ForegroundColor White
 Write-Host "    * Fit Ctx Floor   : $($config.fit_ctx_min) tokens" -ForegroundColor White
 Write-Host "    * UBatch Size     : $($config.ubatch_size) tokens" -ForegroundColor White
-Write-Host "    * Parallel Slots  : $(if ($config.parallel_slots -eq -1) { 'Auto' } elseif ($config.parallel_slots -eq 1) { '1 (Safe mode - prevents OOM)' } else { $config.parallel_slots })" -ForegroundColor White
-Write-Host "    * KV Cache Reuse  : $(if ($config.cache_reuse_chunk -gt 0) { "Enabled ($($config.cache_reuse_chunk) token chunks)" } else { 'Disabled' })" -ForegroundColor White
-Write-Host "    * Idle Slot Cache : $(if ($config.cache_idle_slots) { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
-Write-Host "    * Speculative Dec : $(if ($config.spec_type -ne 'none') { $config.spec_type } else { 'Disabled' })" -ForegroundColor White
+Write-Host "    * Parallel Slots  : $parallelDisp" -ForegroundColor White
+Write-Host "    * KV Cache Reuse  : $reuseDisp" -ForegroundColor White
+Write-Host "    * Idle Slot Cache : $idleSlotDisp" -ForegroundColor White
+Write-Host "    * Speculative Dec : $specDisp" -ForegroundColor White
 if ($config.custom_args) {
     Write-Host "    * Custom Args     : $($config.custom_args)" -ForegroundColor White
 }

@@ -15,19 +15,21 @@
 # fallback_provider, etc.) continue to be read from the flat config as before.
 
 param(
-    [string]$ModelsDir   = "",
+    [string]$ModelsDir    = "",
     [string]$TemplatesDir = "",
-    [string]$PresetFile  = "",
-    [string]$ConfigFile  = ""
+    [string]$GrammarsDir  = "",
+    [string]$PresetFile   = "",
+    [string]$ConfigFile   = ""
 )
 
 $ErrorActionPreference = "Stop"
 
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 if ([string]::IsNullOrWhiteSpace($ConfigFile))   { $ConfigFile   = Join-Path $ManagerDir "llo-config.json" }
-if ([string]::IsNullOrWhiteSpace($PresetFile))    { $PresetFile   = Join-Path $ManagerDir "models-preset.ini" }
-if ([string]::IsNullOrWhiteSpace($ModelsDir))     { $ModelsDir    = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\models")) }
-if ([string]::IsNullOrWhiteSpace($TemplatesDir))  { $TemplatesDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\templates")) }
+if ([string]::IsNullOrWhiteSpace($PresetFile))   { $PresetFile   = Join-Path $ManagerDir "models-preset.ini" }
+if ([string]::IsNullOrWhiteSpace($ModelsDir))    { $ModelsDir    = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\models")) }
+if ([string]::IsNullOrWhiteSpace($TemplatesDir)) { $TemplatesDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\templates")) }
+if ([string]::IsNullOrWhiteSpace($GrammarsDir))  { $GrammarsDir  = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\grammars")) }
 
 # ── Load Hardware Profiler ─────────────────────────────────────────────────────
 $profileScript = Join-Path $PSScriptRoot "Profile.ps1"
@@ -92,21 +94,14 @@ if ($config.models_dir)    { $ModelsDir    = $config.models_dir }
 if ($config.templates_dir) { $TemplatesDir = $config.templates_dir }
 else                       { $TemplatesDir = Join-Path $ManagerDir "templates" }
 
+if ($config.grammars_dir)  { $GrammarsDir  = $config.grammars_dir }
+else                       { $GrammarsDir  = Join-Path $ManagerDir "grammars" }
+
 # Ensure directories exist
 if ($ModelsDir    -and -not (Test-Path $ModelsDir))    { New-Item -ItemType Directory -Force -Path $ModelsDir    | Out-Null }
 if ($TemplatesDir -and -not (Test-Path $TemplatesDir)) { New-Item -ItemType Directory -Force -Path $TemplatesDir | Out-Null }
+if ($GrammarsDir  -and -not (Test-Path $GrammarsDir))  { New-Item -ItemType Directory -Force -Path $GrammarsDir  | Out-Null }
 
-# Copy default.jinja from package if missing in templates dir
-$defaultDest     = Join-Path $TemplatesDir "default.jinja"
-$packagedSource  = Join-Path (Split-Path $PSScriptRoot -Parent) "templates" | Join-Path -ChildPath "default.jinja"
-if (-not (Test-Path $defaultDest) -and (Test-Path $packagedSource)) {
-    try {
-        Copy-Item -Path $packagedSource -Destination $defaultDest -Force | Out-Null
-        Write-Host "Copied default chat template to: $defaultDest" -ForegroundColor Green
-    } catch {
-        Write-Host "[WARNING] Failed to copy default template: $($_.Exception.Message)" -ForegroundColor Yellow
-    }
-}
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # HARDWARE-ADAPTIVE PARAMETER DERIVATION
@@ -429,12 +424,42 @@ function Find-MatchingTemplate {
     param([string]$Alias)
     if (-not (Test-Path $TemplatesDir)) { return $null }
     $files = Get-ChildItem -Path $TemplatesDir -Filter *.jinja
+    if ($files.Count -eq 0) { return $null }
+
+    $normalizedAlias = $Alias.ToLowerInvariant() -replace '[^a-z0-9]+', '-'
+
+    # Priority 1: Exact base-name match (normalized)
     foreach ($f in $files) {
+        if ($f.Name -eq "default.jinja") { continue }
         $templateBase = $f.BaseName.ToLowerInvariant() -replace '[^a-z0-9]+', '-'
-        if ($Alias -match $templateBase -or $templateBase -match $Alias) {
-            return $f.FullName
+        if ($templateBase -eq $normalizedAlias) { return $f.FullName }
+    }
+
+    # Priority 2: Substring token match scoring
+    $bestMatch = $null
+    $bestScore = 0
+    $aliasTokens = $normalizedAlias -split '-' | Where-Object {
+        $_.Length -gt 1 -and $_ -notmatch '^\d+$' -and $_ -ne 'gguf' -and $_ -ne 'q4' -and $_ -ne 'q5' -and $_ -ne 'q8' -and $_ -ne 'k' -and $_ -ne 'm' -and $_ -ne 's' -and $_ -ne 'l'
+    }
+    if ($aliasTokens.Count -gt 0) {
+        foreach ($f in $files) {
+            if ($f.Name -eq "default.jinja") { continue }
+            $templateBase = $f.BaseName.ToLowerInvariant() -replace '[^a-z0-9]+', '-'
+            $matchCount = 0
+            foreach ($t in $aliasTokens) {
+                if ($templateBase -match [regex]::Escape($t)) {
+                    $matchCount++
+                }
+            }
+            $score = $matchCount / $aliasTokens.Count
+            if ($score -gt $bestScore -and $score -ge 0.4) {
+                $bestScore = $score
+                $bestMatch = $f.FullName
+            }
         }
     }
+    if ($bestMatch) { return $bestMatch }
+
     return $null
 }
 

@@ -197,8 +197,16 @@ Auto-derived values fill all keys not present in `overrides`. This design means 
 ### A. Port Collision Auto-Scanner
 At launch, `start-server.ps1` checks active TCP listeners via .NET `IPGlobalProperties`. If port `8080` is occupied by another process, it scans upward (`port + 1`) until a free socket is found. All exported client environment URLs are updated to the resolved port.
 
-### B. Chat Template Heuristic Mapping
-`SetupRouter.ps1` scans GGUF file names (normalized to lowercase, hyphen-separated alias) and matches against `.jinja` files in the templates directory. An alias is matched when the template basename is a substring of the alias or vice versa. If no match is found, `use_default_template = true` in config applies `default.jinja`; otherwise the GGUF's internal template is used.
+### B. Chat Template & Grammar Dynamic Syncing
+To avoid outdated static prompt formats and grammar errors, the wizard dynamically retrieves the complete `models/templates` and `grammars` directories from the upstream `ggml-org/llama.cpp` GitHub repository.
+- **SHA-Based Smart Caching**: Files are synced via `FetchAssets.ps1`. Downstream runs fetch only the directory listing (lightweight REST API call) and check file SHA hashes against `.assets-manifest.json` to download only new/updated files, preventing redundant network requests.
+- **Offline Fallback**: If offline during setup and no templates are downloaded, the system prompts the user to optionally apply a bundled `default.jinja` template to all models.
+- **Priority-Based Mapping**: `SetupRouter.ps1` matches local GGUF models to templates in `templates/` using a multi-step priority algorithm:
+  1. Exact normalized name match (e.g., `qwen3.5-4b` -> `Qwen3.5-4B.jinja`).
+  2. Token substring match (scoring overlaps of model/version tokens).
+  3. Default template (`default.jinja`) if enabled via `use_default_template = true`.
+  4. Fallback to GGUF's internal metadata template if no matches exist.
+- **Grammar Constraints**: Dynamic `.gbnf` files (like `json.gbnf`, `json_arr.gbnf`) are placed in the `grammars/` directory, preventing structural output errors on client requests.
 
 ### C. Fallback & Bootstrap Routing
 When `$models.Count -eq 0` after scanning:
@@ -238,10 +246,15 @@ To minimize integration friction, the manager provisions settings and environmen
 | `script/stop-server.ps1` | Gracefully stops the running llama-server process (Windows: Win32_Process; macOS/Linux: lsof/ss) |
 | `script/stop-server.sh` | Bash wrapper for macOS/Linux (invokes `stop-server.ps1` via `pwsh`) |
 | `script/test-health.ps1` | End-to-end and health checks: schema validation, syntax check, live server ping |
+| `script/test-health.sh` | Bash wrapper for macOS/Linux (invokes `test-health.ps1` via `pwsh`) |
 | `script/verify-scripts.ps1` | Flag compatibility checker: parses llama-server help output and verifies script args |
-| `templates/` | Jinja chat templates; matched to model aliases by SetupRouter |
+| `script/verify-scripts.sh` | Bash wrapper for macOS/Linux (invokes `verify-scripts.ps1` via `pwsh`) |
+| `llo-core/FetchAssets.ps1` | Handles downloading and smart SHA-caching of upstream templates/grammars |
+| `templates/` | Jinja chat templates; dynamically synced from llama.cpp |
+| `grammars/` | GBNF grammar files; dynamically synced from llama.cpp |
 | `llo-config.json` | Persistent configuration: model paths, cloud fallback, `overrides` block |
 | `models-preset.ini` | Generated at startup; consumed directly by llama-server `--models-preset` |
+| `.assets-manifest.json` | Tracks downloaded files' SHA hashes to prevent redundant network requests |
 
 ---
 
