@@ -191,6 +191,11 @@ $serverArgs = @(
 )
 
 $defaultModelId = ""
+$logPath = Join-Path $ManagerDir "llama-server.log"
+$errPath = Join-Path $ManagerDir "llama-server.err.log"
+
+if (Test-Path $logPath) { Remove-Item $logPath -Force }
+if (Test-Path $errPath) { Remove-Item $errPath -Force }
 
 if ($models.Count -gt 0) {
     # Use the generated models preset config file
@@ -231,8 +236,10 @@ if ($config.custom_args) {
 Write-Host "Starting llama-server..." -ForegroundColor Cyan
 Write-Host "Command: $LlamaServer $($serverArgs -join ' ')" -ForegroundColor DarkGray
 
-$proc = Start-Process -FilePath $LlamaServer -ArgumentList $serverArgs -WorkingDirectory $LlamaDir -PassThru -NoNewWindow
+$proc = Start-Process -FilePath $LlamaServer -ArgumentList $serverArgs -WorkingDirectory $LlamaDir -PassThru -NoNewWindow -RedirectStandardOutput $logPath -RedirectStandardError $errPath
 Write-Host "Server process launched (PID: $($proc.Id))" -ForegroundColor Green
+Write-Host "llama-server stdout log: $logPath" -ForegroundColor DarkGray
+Write-Host "llama-server stderr log: $errPath" -ForegroundColor DarkGray
 
 # Wait for server startup
 Write-Host "Waiting for endpoint to become ready..." -NoNewline -ForegroundColor Cyan

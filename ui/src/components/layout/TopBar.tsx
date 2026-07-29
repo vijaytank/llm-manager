@@ -1,13 +1,40 @@
 import React from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { Play, Square, Activity, Minus } from 'lucide-react';
+import { Play, Square, Activity } from 'lucide-react';
 import { useServerStore } from '../../store/serverStore';
 import './TopBar.css';
 
 interface TopBarProps {
   title: string;
 }
+
+interface HealthReportLike {
+  passedCount?: number;
+  totalCount?: number;
+}
+
+export const buildHealthLogEntry = (report?: HealthReportLike | null, error?: unknown) => {
+  if (error) {
+    const message = error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : (error as { message?: string } | undefined)?.message ?? 'Unknown error';
+
+    return {
+      level: 'ERROR' as const,
+      message: `Health check error: ${message}`,
+    };
+  }
+
+  const passedCount = typeof report?.passedCount === 'number' ? report.passedCount : '?';
+  const totalCount = typeof report?.totalCount === 'number' ? report.totalCount : '?';
+
+  return {
+    level: 'INFO' as const,
+    message: `Health check completed: ${passedCount}/${totalCount} checks passed`,
+  };
+};
 
 export const TopBar: React.FC<TopBarProps> = ({ title }) => {
   const { status, port } = useServerStore();
@@ -30,14 +57,21 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
 
   const handleHealth = async () => {
     try {
-      await invoke('run_health_check');
+      const report = await invoke<HealthReportLike>('run_health_check');
+      const entry = buildHealthLogEntry(report);
+      useServerStore.getState().addLog({
+        timestamp: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+        level: entry.level,
+        message: entry.message,
+      });
     } catch (e) {
-      console.error(e);
+      const entry = buildHealthLogEntry(undefined, e);
+      useServerStore.getState().addLog({
+        timestamp: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+        level: entry.level,
+        message: entry.message,
+      });
     }
-  };
-
-  const handleMinimizeToTray = async () => {
-    await getCurrentWindow().hide();
   };
 
   return (
@@ -64,13 +98,6 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
         )}
         <button className="btn btn-outline" onClick={handleHealth}>
           <Activity size={16} /> Run Health Check
-        </button>
-        <button
-          className="btn btn-outline"
-          onClick={handleMinimizeToTray}
-          title="Minimize to system tray"
-        >
-          <Minus size={16} /> Hide to Tray
         </button>
       </div>
     </header>

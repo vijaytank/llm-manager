@@ -17,16 +17,26 @@ export const OverviewPage: React.FC = () => {
   const { status, port, logs } = useServerStore();
   const { models } = useModelsStore();
   const { assessments } = useValidationStore();
+  const [backendModelInfo, setBackendModelInfo] = useState<{ active_model?: string; models_preset_path?: string } | null>(null);
 
   useEffect(() => {
     fetchHardware();
   }, [fetchHardware]);
+
+  useEffect(() => {
+    invoke('get_active_model_info')
+      .then((result) => setBackendModelInfo(result as { active_model?: string; models_preset_path?: string }))
+      .catch((error) => {
+        console.warn('Failed to fetch active model info from backend:', error);
+      });
+  }, []);
 
   const [selectedModelFilename, setSelectedModelFilename] = useState<string>(
     models.length > 0 ? models[0].filename : ''
   );
 
   const selectedModel = models.find((m) => m.filename === selectedModelFilename) || models[0] || null;
+  const activeModel = models.find((m) => m.name === config?.active_model);
   const launchCheck = validateModelLaunch(selectedModel, config || ({} as any), profile);
 
   const handleStart = async () => {
@@ -77,6 +87,21 @@ export const OverviewPage: React.FC = () => {
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                   {launchCheck.message}
                 </div>
+                {activeModel && (
+                  <div style={{ marginTop: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span className="badge badge-info">Configured Active Model</span>
+                    <span className="font-mono">{activeModel.name}</span>
+                    {activeModel.isMmproj && (
+                      <span className="badge badge-warning">mmproj selected</span>
+                    )}
+                  </div>
+                )}
+                {backendModelInfo?.active_model && (
+                  <div style={{ marginTop: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span className="badge badge-outline">Backend Active Model</span>
+                    <span className="font-mono">{backendModelInfo.active_model}</span>
+                  </div>
+                )}
               </div>
             </div>
 

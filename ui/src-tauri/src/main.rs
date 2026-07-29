@@ -7,7 +7,7 @@ mod tray;
 
 use commands::config::{load_config, save_config};
 use commands::profile::detect_hardware;
-use commands::server::{start_server, stop_server, get_server_status, launch_claude_terminal};
+use commands::server::{start_server, stop_server, get_server_status, get_active_model_info, launch_claude_terminal};
 use commands::models::scan_models;
 use commands::health::{run_health_check, audit_scripts};
 use commands::gguf::read_gguf_info;
@@ -36,6 +36,7 @@ fn main() {
             start_server,
             stop_server,
             get_server_status,
+            get_active_model_info,
             launch_claude_terminal,
             scan_models,
             run_health_check,

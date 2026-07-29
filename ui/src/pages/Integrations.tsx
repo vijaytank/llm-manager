@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { PageShell } from '../components/layout/PageShell';
 import { Code, Terminal, Sparkles, Globe, Copy, Check } from 'lucide-react';
-import { Command } from '@tauri-apps/plugin-shell';
+import { invoke } from '@tauri-apps/api/core';
+import { useConfigStore } from '../store/configStore';
 import { useServerStore } from '../store/serverStore';
 import './Integrations.css';
 
 export const IntegrationsPage: React.FC = () => {
   const { port } = useServerStore();
+  const { config } = useConfigStore();
   const baseUrl = `http://127.0.0.1:${port}`;
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
@@ -18,8 +20,8 @@ export const IntegrationsPage: React.FC = () => {
 
   const handleLaunchClaudeCode = async () => {
     try {
-      const cmd = Command.create('cmd', ['/c', 'start', 'cmd', '/k', `set ANTHROPIC_BASE_URL=${baseUrl}&& set ANTHROPIC_AUTH_TOKEN=local&& claude`]);
-      await cmd.spawn();
+      const model = config?.active_model?.trim() || 'local';
+      await invoke('launch_claude_terminal', { port, model });
     } catch (e) {
       console.error(e);
     }
