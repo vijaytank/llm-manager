@@ -1,0 +1,1313 @@
+{
+  "nodes": [
+    {
+      "id": "USER_GUIDE.md",
+      "label": "USER_GUIDE.md",
+      "type": "file"
+    },
+    {
+      "id": "README.md",
+      "label": "README.md",
+      "type": "file"
+    },
+    {
+      "id": "CLAUDE.md",
+      "label": "CLAUDE.md",
+      "type": "file"
+    },
+    {
+      "id": "ARCHITECTURE.md",
+      "label": "ARCHITECTURE.md",
+      "type": "file"
+    },
+    {
+      "id": "AGENTS.md",
+      "label": "AGENTS.md",
+      "type": "file"
+    },
+    {
+      "id": "AdapterClass",
+      "label": "AdapterClass",
+      "type": "stub"
+    },
+    {
+      "id": "Apple",
+      "label": "Apple",
+      "type": "stub"
+    },
+    {
+      "id": "Apply",
+      "label": "Apply",
+      "type": "stub"
+    },
+    {
+      "id": "ApplyOverrides",
+      "label": "ApplyOverrides",
+      "type": "stub"
+    },
+    {
+      "id": "Arguments",
+      "label": "Arguments",
+      "type": "stub"
+    },
+    {
+      "id": "Auto",
+      "label": "Auto",
+      "type": "stub"
+    },
+    {
+      "id": "Automatic",
+      "label": "Automatic",
+      "type": "stub"
+    },
+    {
+      "id": "BudgetRAM_MB",
+      "label": "BudgetRAM_MB",
+      "type": "stub"
+    },
+    {
+      "id": "CPUs",
+      "label": "CPUs",
+      "type": "stub"
+    },
+    {
+      "id": "CUDA",
+      "label": "CUDA",
+      "type": "stub"
+    },
+    {
+      "id": "Cache",
+      "label": "Cache",
+      "type": "stub"
+    },
+    {
+      "id": "Chat",
+      "label": "Chat",
+      "type": "stub"
+    },
+    {
+      "id": "CheckBackend",
+      "label": "CheckBackend",
+      "type": "stub"
+    },
+    {
+      "id": "CheckVRAM",
+      "label": "CheckVRAM",
+      "type": "stub"
+    },
+    {
+      "id": "Choose",
+      "label": "Choose",
+      "type": "stub"
+    },
+    {
+      "id": "ClassifyAdapter",
+      "label": "ClassifyAdapter",
+      "type": "stub"
+    },
+    {
+      "id": "Claude",
+      "label": "Claude",
+      "type": "stub"
+    },
+    {
+      "id": "Code",
+      "label": "Code",
+      "type": "stub"
+    },
+    {
+      "id": "Configuration",
+      "label": "Configuration",
+      "type": "stub"
+    },
+    {
+      "id": "Copy",
+      "label": "Copy",
+      "type": "stub"
+    },
+    {
+      "id": "Cores",
+      "label": "Cores",
+      "type": "stub"
+    },
+    {
+      "id": "Custom",
+      "label": "Custom",
+      "type": "stub"
+    },
+    {
+      "id": "Decoding",
+      "label": "Decoding",
+      "type": "stub"
+    },
+    {
+      "id": "DetectCPU",
+      "label": "DetectCPU",
+      "type": "stub"
+    },
+    {
+      "id": "DetectGPU",
+      "label": "DetectGPU",
+      "type": "stub"
+    },
+    {
+      "id": "Directory",
+      "label": "Directory",
+      "type": "stub"
+    },
+    {
+      "id": "Enable",
+      "label": "Enable",
+      "type": "stub"
+    },
+    {
+      "id": "Enter",
+      "label": "Enter",
+      "type": "stub"
+    },
+    {
+      "id": "Export",
+      "label": "Export",
+      "type": "stub"
+    },
+    {
+      "id": "ExportEnv",
+      "label": "ExportEnv",
+      "type": "stub"
+    },
+    {
+      "id": "File",
+      "label": "File",
+      "type": "stub"
+    },
+    {
+      "id": "Follow",
+      "label": "Follow",
+      "type": "stub"
+    },
+    {
+      "id": "GGUF",
+      "label": "GGUF",
+      "type": "stub"
+    },
+    {
+      "id": "GGUFs",
+      "label": "GGUFs",
+      "type": "stub"
+    },
+    {
+      "id": "GetParams_CPU",
+      "label": "GetParams_CPU",
+      "type": "stub"
+    },
+    {
+      "id": "GetParams_High",
+      "label": "GetParams_High",
+      "type": "stub"
+    },
+    {
+      "id": "GetParams_Low",
+      "label": "GetParams_Low",
+      "type": "stub"
+    },
+    {
+      "id": "GetParams_Mid",
+      "label": "GetParams_Mid",
+      "type": "stub"
+    },
+    {
+      "id": "GitDiff",
+      "label": "GitDiff",
+      "type": "stub"
+    },
+    {
+      "id": "Grammars",
+      "label": "Grammars",
+      "type": "stub"
+    },
+    {
+      "id": "Hands",
+      "label": "Hands",
+      "type": "stub"
+    },
+    {
+      "id": "Hardware",
+      "label": "Hardware",
+      "type": "stub"
+    },
+    {
+      "id": "Homebrew",
+      "label": "Homebrew",
+      "type": "stub"
+    },
+    {
+      "id": "Hybrid",
+      "label": "Hybrid",
+      "type": "stub"
+    },
+    {
+      "id": "Increment",
+      "label": "Increment",
+      "type": "stub"
+    },
+    {
+      "id": "InferenceParams",
+      "label": "InferenceParams",
+      "type": "stub"
+    },
+    {
+      "id": "Installation",
+      "label": "Installation",
+      "type": "stub"
+    },
+    {
+      "id": "Integration",
+      "label": "Integration",
+      "type": "stub"
+    },
+    {
+      "id": "Intel",
+      "label": "Intel",
+      "type": "stub"
+    },
+    {
+      "id": "Launch",
+      "label": "Launch",
+      "type": "stub"
+    },
+    {
+      "id": "Linux",
+      "label": "Linux",
+      "type": "stub"
+    },
+    {
+      "id": "Local",
+      "label": "Local",
+      "type": "stub"
+    },
+    {
+      "id": "Managing",
+      "label": "Managing",
+      "type": "stub"
+    },
+    {
+      "id": "ModelSize_MB",
+      "label": "ModelSize_MB",
+      "type": "stub"
+    },
+    {
+      "id": "Models",
+      "label": "Models",
+      "type": "stub"
+    },
+    {
+      "id": "Navigate",
+      "label": "Navigate",
+      "type": "stub"
+    },
+    {
+      "id": "Open",
+      "label": "Open",
+      "type": "stub"
+    },
+    {
+      "id": "OptimalThreads",
+      "label": "OptimalThreads",
+      "type": "stub"
+    },
+    {
+      "id": "Optimization",
+      "label": "Optimization",
+      "type": "stub"
+    },
+    {
+      "id": "Option",
+      "label": "Option",
+      "type": "stub"
+    },
+    {
+      "id": "Optional",
+      "label": "Optional",
+      "type": "stub"
+    },
+    {
+      "id": "PATH",
+      "label": "PATH",
+      "type": "stub"
+    },
+    {
+      "id": "Path",
+      "label": "Path",
+      "type": "stub"
+    },
+    {
+      "id": "PerModel",
+      "label": "PerModel",
+      "type": "stub"
+    },
+    {
+      "id": "Physical",
+      "label": "Physical",
+      "type": "stub"
+    },
+    {
+      "id": "PhysicalCores",
+      "label": "PhysicalCores",
+      "type": "stub"
+    },
+    {
+      "id": "Port",
+      "label": "Port",
+      "type": "stub"
+    },
+    {
+      "id": "PortCheck",
+      "label": "PortCheck",
+      "type": "stub"
+    },
+    {
+      "id": "Preferences",
+      "label": "Preferences",
+      "type": "stub"
+    },
+    {
+      "id": "Profile",
+      "label": "Profile",
+      "type": "stub"
+    },
+    {
+      "id": "Proposed",
+      "label": "Proposed",
+      "type": "stub"
+    },
+    {
+      "id": "Provide",
+      "label": "Provide",
+      "type": "stub"
+    },
+    {
+      "id": "Query",
+      "label": "Query",
+      "type": "stub"
+    },
+    {
+      "id": "RAM_BudgetMB",
+      "label": "RAM_BudgetMB",
+      "type": "stub"
+    },
+    {
+      "id": "REST",
+      "label": "REST",
+      "type": "stub"
+    },
+    {
+      "id": "Release",
+      "label": "Release",
+      "type": "stub"
+    },
+    {
+      "id": "Review",
+      "label": "Review",
+      "type": "stub"
+    },
+    {
+      "id": "SafeContextSize",
+      "label": "SafeContextSize",
+      "type": "stub"
+    },
+    {
+      "id": "Scan",
+      "label": "Scan",
+      "type": "stub"
+    },
+    {
+      "id": "ScanModels",
+      "label": "ScanModels",
+      "type": "stub"
+    },
+    {
+      "id": "Server",
+      "label": "Server",
+      "type": "stub"
+    },
+    {
+      "id": "SetThreads",
+      "label": "SetThreads",
+      "type": "stub"
+    },
+    {
+      "id": "ShiftPort",
+      "label": "ShiftPort",
+      "type": "stub"
+    },
+    {
+      "id": "Silicon",
+      "label": "Silicon",
+      "type": "stub"
+    },
+    {
+      "id": "Speculative",
+      "label": "Speculative",
+      "type": "stub"
+    },
+    {
+      "id": "Start",
+      "label": "Start",
+      "type": "stub"
+    },
+    {
+      "id": "Starting",
+      "label": "Starting",
+      "type": "stub"
+    },
+    {
+      "id": "Step",
+      "label": "Step",
+      "type": "stub"
+    },
+    {
+      "id": "Stopping",
+      "label": "Stopping",
+      "type": "stub"
+    },
+    {
+      "id": "System",
+      "label": "System",
+      "type": "stub"
+    },
+    {
+      "id": "Telemetry",
+      "label": "Telemetry",
+      "type": "stub"
+    },
+    {
+      "id": "Tell",
+      "label": "Tell",
+      "type": "stub"
+    },
+    {
+      "id": "Templates",
+      "label": "Templates",
+      "type": "stub"
+    },
+    {
+      "id": "Terminal",
+      "label": "Terminal",
+      "type": "stub"
+    },
+    {
+      "id": "Tier",
+      "label": "Tier",
+      "type": "stub"
+    },
+    {
+      "id": "TierCPU_LowV",
+      "label": "TierCPU_LowV",
+      "type": "stub"
+    },
+    {
+      "id": "TierCPU_NoBE",
+      "label": "TierCPU_NoBE",
+      "type": "stub"
+    },
+    {
+      "id": "TierCPU_None",
+      "label": "TierCPU_None",
+      "type": "stub"
+    },
+    {
+      "id": "TierCPU_iGPU",
+      "label": "TierCPU_iGPU",
+      "type": "stub"
+    },
+    {
+      "id": "TierHigh",
+      "label": "TierHigh",
+      "type": "stub"
+    },
+    {
+      "id": "TierLow",
+      "label": "TierLow",
+      "type": "stub"
+    },
+    {
+      "id": "TierMid",
+      "label": "TierMid",
+      "type": "stub"
+    },
+    {
+      "id": "Total",
+      "label": "Total",
+      "type": "stub"
+    },
+    {
+      "id": "Update",
+      "label": "Update",
+      "type": "stub"
+    },
+    {
+      "id": "UsableForInference",
+      "label": "UsableForInference",
+      "type": "stub"
+    },
+    {
+      "id": "Users",
+      "label": "Users",
+      "type": "stub"
+    },
+    {
+      "id": "VRAM",
+      "label": "VRAM",
+      "type": "stub"
+    },
+    {
+      "id": "VRAM_BudgetMB",
+      "label": "VRAM_BudgetMB",
+      "type": "stub"
+    },
+    {
+      "id": "VSCode",
+      "label": "VSCode",
+      "type": "stub"
+    },
+    {
+      "id": "ValidatedSpecType",
+      "label": "ValidatedSpecType",
+      "type": "stub"
+    },
+    {
+      "id": "Vulkan",
+      "label": "Vulkan",
+      "type": "stub"
+    },
+    {
+      "id": "Windows",
+      "label": "Windows",
+      "type": "stub"
+    },
+    {
+      "id": "Write",
+      "label": "Write",
+      "type": "stub"
+    },
+    {
+      "id": "WritePreset",
+      "label": "WritePreset",
+      "type": "stub"
+    },
+    {
+      "id": "Your",
+      "label": "Your",
+      "type": "stub"
+    },
+    {
+      "id": "YourName",
+      "label": "YourName",
+      "type": "stub"
+    }
+  ],
+  "edges": [
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Apple",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Arguments",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Auto",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Automatic",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Chat",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Choose",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Claude",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Code",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Configuration",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Copy",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Custom",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Decoding",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Directory",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Enable",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Enter",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "File",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Follow",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "GGUF",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Grammars",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Hands",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Homebrew",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Installation",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Integration",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Linux",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Local",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Managing",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Models",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Navigate",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Open",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Optimization",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Option",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Optional",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "PATH",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Path",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Preferences",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Proposed",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Provide",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "REST",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Release",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Review",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Server",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Silicon",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Speculative",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Starting",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Step",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Stopping",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Telemetry",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Tell",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Templates",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Terminal",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Update",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Users",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "VRAM",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "VSCode",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Windows",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "Your",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "USER_GUIDE.md",
+      "target": "YourName",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "CLAUDE.md",
+      "target": "GitDiff",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "AdapterClass",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Apply",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "ApplyOverrides",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "BudgetRAM_MB",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "CPUs",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "CUDA",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Cache",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "CheckBackend",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "CheckVRAM",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "ClassifyAdapter",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Cores",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "DetectCPU",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "DetectGPU",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Export",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "ExportEnv",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "GGUFs",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "GetParams_CPU",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "GetParams_High",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "GetParams_Low",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "GetParams_Mid",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Hardware",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Hybrid",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Increment",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "InferenceParams",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Intel",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Launch",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "ModelSize_MB",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "OptimalThreads",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "PerModel",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Physical",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "PhysicalCores",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Port",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "PortCheck",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Profile",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Query",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "RAM_BudgetMB",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "SafeContextSize",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Scan",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "ScanModels",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "SetThreads",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "ShiftPort",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Start",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "System",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Tier",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "TierCPU_LowV",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "TierCPU_NoBE",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "TierCPU_None",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "TierCPU_iGPU",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "TierHigh",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "TierLow",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "TierMid",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Total",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "UsableForInference",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "VRAM",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "VRAM_BudgetMB",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "ValidatedSpecType",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Vulkan",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "Write",
+      "type": "reference",
+      "weight": 0.5
+    },
+    {
+      "source": "ARCHITECTURE.md",
+      "target": "WritePreset",
+      "type": "reference",
+      "weight": 0.5
+    }
+  ]
+}
