@@ -80,8 +80,17 @@ $config = @{
     fit_ctx_min = 8192          # minimum context --fit is allowed to reduce to
     cache_reuse_chunk = 256     # min prefix chunk size for KV cache reuse (0=off)
     ubatch_size = 512           # physical GPU batch size per kernel call
-    parallel_slots = 1          # max concurrent request slots
-    cache_idle_slots = $true    # cache KV state of idle slots between requests
+    parallel_slots = -1          # max concurrent request slots (-1 = auto)
+    threads = 0                  # CPU thread count (0 = auto)
+    numa = ""
+    cache_ram = 0
+    temperature = ""
+    top_k = ""
+    top_p = ""
+    samplers = ""
+    dynatemp_range = ""
+    dynatemp_exp = ""
+    mmproj_auto = $null
     spec_type = "none"          # speculative decoding type (none | ngram-simple)
     custom_args = ""
     integrations = @()
@@ -109,12 +118,16 @@ if (Test-Path $ConfigFile) {
     }
 }
 
-# Run hardware profiling first so it is available for auto-tuning defaults
-Write-Host "Profiling system hardware..." -ForegroundColor Cyan
+# Start hardware profiling in the background while the wizard continues
+Write-Host "Starting background hardware profiling..." -ForegroundColor Cyan
 $profileScript = Join-Path $ManagerDir "llo-core\Profile.ps1"
+$hwProfileJob = $null
 if (Test-Path $profileScript) {
-    . $profileScript
-    $hw = Get-SystemHardwareProfile
+    $hwProfileJob = Start-Job -ScriptBlock {
+        param($profileScriptPath)
+        . $profileScriptPath
+        Get-SystemHardwareProfile
+    } -ArgumentList $profileScript -Name "HWProfile"
 } else {
     Write-Host "[WARNING] Profile.ps1 not found in llo-core/." -ForegroundColor Yellow
     $hw = $null
@@ -372,6 +385,14 @@ if ($templateResult.NetworkError -and $downloadedTemplates.Count -eq 0) {
 }
 
 # Step 2.2: Automated Memory & Performance Optimization
+if ($hwProfileJob -ne $null) {
+    Write-Host "`nWaiting for hardware profiling to finish..." -ForegroundColor DarkGray
+    Wait-Job -Job $hwProfileJob
+    $hw = Receive-Job -Job $hwProfileJob
+    Remove-Job -Job $hwProfileJob
+    $hwProfileJob = $null
+    Write-Host "Hardware profiling complete." -ForegroundColor Green
+}
 Write-Host "`nStep 2.2: Automatically tuning performance parameters for your system..." -ForegroundColor Cyan
 
 $flashAttn = "auto"
@@ -467,6 +488,23 @@ $defaultSpecChoice = if ($config.spec_type -and $config.spec_type -ne "none") { 
 $enableSpec = Get-UserInput "Enable ngram-simple speculative decoding? (Y/N)" -DefaultVal $defaultSpecChoice
 $config.spec_type = if ($enableSpec.ToUpper() -eq "Y") { "ngram-simple" } else { "none" }
 
+# Optional advanced generation and platform tuning
+Write-Host "`n[Optional] Advanced generation and memory tuning" -ForegroundColor Yellow
+$advancedChoice = Get-UserInput "Configure advanced options? (Y/N)" -DefaultVal "N"
+if ($advancedChoice.ToUpper() -eq "Y") {
+    $config.temperature = Get-UserInput "Temperature (0.0-1.5, blank to skip)" -DefaultVal $config.temperature
+    $config.top_k = Get-UserInput "Top-K sampling (0 = disabled, blank to skip)" -DefaultVal $config.top_k
+    $config.top_p = Get-UserInput "Top-P sampling (0.0-1.0, blank to skip)" -DefaultVal $config.top_p
+    $config.samplers = Get-UserInput "Sampler sequence (blank to keep llama.cpp default)" -DefaultVal $config.samplers
+    $config.dynatemp_range = Get-UserInput "Dynamic temperature range (0.0=disabled, blank to skip)" -DefaultVal $config.dynatemp_range
+    $config.dynatemp_exp = Get-UserInput "Dynamic temperature exponent (blank to skip)" -DefaultVal $config.dynatemp_exp
+    $config.numa = Get-UserInput "NUMA mode (distribute|isolate|numactl or blank to skip)" -DefaultVal $config.numa
+    $config.cache_ram = Get-UserInput "Cache RAM limit in MB (0 disables custom limit, blank to skip)" -DefaultVal $config.cache_ram
+    $config.threads = Get-UserInput "Threads count (0 = auto, blank to keep recommended)" -DefaultVal $config.threads
+    $mmprojAutoChoice = Get-UserInput "Enable mmproj-auto if available? (Y/N/blank to keep current)" -DefaultVal ""
+    if ($mmprojAutoChoice -match '^(?i)y(es)?$') { $config.mmproj_auto = $true } elseif ($mmprojAutoChoice -match '^(?i)n(o)?$') { $config.mmproj_auto = $false }
+}
+
 # 4. Optional Custom Arguments Override
 $defaultCustom = if ($config.custom_args) { $config.custom_args } else { "" }
 Write-Host "`nAdvanced users: You can add specific parameters to pass to llama-server (e.g. -ngl 70 -c 65536)." -ForegroundColor White
@@ -540,6 +578,7 @@ Write-Host "    * Models Dir  : $($config.models_dir)" -ForegroundColor White
 $tmplDisp = if ($config.use_default_template) { 'Applied (default.jinja)' } else { 'Disabled (Using GGUF internal templates)' }
 $ctxShiftDisp = if ($config.context_shift) { 'Enabled' } else { 'Disabled' }
 $parallelDisp = if ($config.parallel_slots -eq -1) { 'Auto' } elseif ($config.parallel_slots -eq 1) { '1 (Safe mode - prevents OOM)' } else { $config.parallel_slots }
+$threadsDisp = if ($config.threads -eq 0) { 'Auto' } else { $config.threads }
 $reuseChunk = $config.cache_reuse_chunk
 $reuseDisp = if ($reuseChunk -gt 0) { "Enabled ($reuseChunk token chunks)" } else { 'Disabled' }
 $idleSlotDisp = if ($config.cache_idle_slots) { 'Enabled' } else { 'Disabled' }
@@ -554,6 +593,7 @@ Write-Host "    * Context Shift   : $ctxShiftDisp" -ForegroundColor White
 Write-Host "    * Fit Ctx Floor   : $($config.fit_ctx_min) tokens" -ForegroundColor White
 Write-Host "    * UBatch Size     : $($config.ubatch_size) tokens" -ForegroundColor White
 Write-Host "    * Parallel Slots  : $parallelDisp" -ForegroundColor White
+Write-Host "    * Threads         : $threadsDisp" -ForegroundColor White
 Write-Host "    * KV Cache Reuse  : $reuseDisp" -ForegroundColor White
 Write-Host "    * Idle Slot Cache : $idleSlotDisp" -ForegroundColor White
 Write-Host "    * Speculative Dec : $specDisp" -ForegroundColor White

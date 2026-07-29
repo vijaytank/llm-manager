@@ -53,6 +53,17 @@ $config = @{
     templates_dir        = ""
     use_default_template = $false
     cache_idle_slots     = $true
+    parallel_slots       = -1
+    threads             = 0
+    numa                = ""
+    cache_ram           = 0
+    temperature         = ""
+    top_k               = ""
+    top_p               = ""
+    samplers            = ""
+    dynatemp_range      = ""
+    dynatemp_exp        = ""
+    mmproj_auto         = $null
     custom_args          = ""
     integrations         = @()
 
@@ -61,10 +72,12 @@ $config = @{
     overrides            = @{}
 }
 
+$loadedKeys = @()
 if (Test-Path $ConfigFile) {
     try {
         $loaded = Get-Content $ConfigFile -Raw | ConvertFrom-Json
-        foreach ($k in $loaded.PSObject.Properties.Name) {
+        $loadedKeys = @($loaded.PSObject.Properties.Name)
+        foreach ($k in $loadedKeys) {
             $config[$k] = $loaded.$k
         }
     } catch {
@@ -78,11 +91,39 @@ if (Test-Path $ConfigFile) {
 # normalize overrides to a plain hashtable (json deserializes to pscustomobject)
 if ($config.overrides -is [system.management.automation.pscustomobject]) {
     $ovr = @{}
-    foreach ($k in $config.overrides.psobject.properties.name) { $ovr[$k] = $config.overrides.$k }
+    foreach ($prop in $config.overrides.psobject.properties) {
+        $ovr[$prop.Name] = $config.overrides.$($prop.Name)
+    }
     $config.overrides = $ovr
 } elseif (-not ($config.overrides -is [hashtable])) {
     $config.overrides = @{}
 }
+
+function Map-LegacyConfigKeyToOverride {
+    param(
+        [string]$LegacyKey,
+        [string]$OverrideKey
+    )
+    if ($config.ContainsKey($LegacyKey) -and -not $config.overrides.ContainsKey($OverrideKey) -and $loadedKeys -contains $LegacyKey) {
+        $value = $config[$LegacyKey]
+        if ($null -ne $value -and $value -ne "") {
+            $config.overrides[$OverrideKey] = $value
+            Write-Host "  [legacy] '$LegacyKey' mapped to config.overrides.$OverrideKey" -ForegroundColor Yellow
+        }
+    }
+}
+
+Map-LegacyConfigKeyToOverride "parallel_slots" "parallel"
+Map-LegacyConfigKeyToOverride "cache_type_k" "cache_type_k"
+Map-LegacyConfigKeyToOverride "cache_type_v" "cache_type_v"
+Map-LegacyConfigKeyToOverride "ubatch_size" "ubatch_size"
+Map-LegacyConfigKeyToOverride "fit_ctx_min" "fit_ctx_min"
+Map-LegacyConfigKeyToOverride "spec_type" "spec_type"
+Map-LegacyConfigKeyToOverride "context_shift" "context_shift"
+Map-LegacyConfigKeyToOverride "mmap" "mmap"
+Map-LegacyConfigKeyToOverride "cache_idle_slots" "cache_idle_slots"
+Map-LegacyConfigKeyToOverride "n_gpu_layers" "n_gpu_layers"
+Map-LegacyConfigKeyToOverride "flash_attn" "flash_attn"
 
 # Enforce operational limits for Claude Code
 if ($config.integrations -contains "claude-code" -and $config.idle_timeout_sec -lt 600) {
@@ -248,6 +289,12 @@ function Get-InferenceParams {
         }
     }
 
+    # Support legacy top-level config key mapping for parallel slots.
+    if (-not $Overrides.ContainsKey("parallel") -and $config.ContainsKey("parallel_slots") -and [int]$config.parallel_slots -gt 0) {
+        $params.parallel = [int]$config.parallel_slots
+        Write-Host "  [override] parallel = $($params.parallel)  (from config.parallel_slots)" -ForegroundColor DarkYellow
+    }
+
     # Claude Code integration requires at least 2 parallel slots to avoid subagent deadlocks.
     if ($config.integrations -contains "claude-code") {
         if ($params.parallel -lt 2) {
@@ -325,10 +372,22 @@ function Get-SafeContextSize {
     # it only causes partial layer/cache offloading. Thus, RAM is the binding constraint for allocation.
     $rawCtx = $maxCtxFromRam
 
-    # Snap down to the nearest standard llama.cpp context value
-    $snaps  = @(4096, 8192, 16384, 32768, 65536, 131072, 262144)
-    $chosen = 4096
-    foreach ($s in $snaps) { if ($rawCtx -ge $s) { $chosen = $s } }
+    # Snap down to the nearest standard llama.cpp context value (O(1) bitwise calculation)
+    if ($rawCtx -le 0) { $chosen = 4096 } else {
+        # Calculate the largest power of two less than or equal to rawCtx
+        $exponent = [math]::Floor([math]::Log($rawCtx) / [math]::Log(2))
+        $chosen = [math]::Pow(2, $exponent)
+    }
+
+    # Upper bounds by tier to avoid aggressive context sizes on mid/low VRAM.
+    $tierMaxCtx = switch ($GpuTier) {
+        "cpu"  { 16384 }
+        "low"  { 32768 }
+        "mid"  { 65536 }
+        "high" { 131072 }
+        default { 65536 }
+    }
+    $chosen = [math]::Min($chosen, $tierMaxCtx)
 
     # Integration-aware context floor:
     # Claude Code needs a large context (> 24k) to launch its initial prompts.
@@ -365,6 +424,17 @@ function Get-ValidatedSpecType {
 
 # ── Derive all parameters from hardware ───────────────────────────────────────
 $inferParams = Get-InferenceParams -Hardware $hardware -Overrides $config.overrides
+
+function Add-OptionalPresetEntry {
+    param(
+        [string]$Name,
+        $Value
+    )
+
+    if ($null -eq $Value) { return }
+    if ($Value -is [string] -and [string]::IsNullOrWhiteSpace($Value)) { return }
+    $presetLines.Add("$Name = $Value")
+}
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # HARDWARE SUMMARY (printed before model scan so users can verify auto-tuning)
@@ -517,9 +587,23 @@ $presetLines = New-Object System.Collections.Generic.List[string]
 
 # ── [*] Global defaults (apply to all models unless overridden per-model) ──────
 $presetLines.Add("[*]")
-$presetLines.Add("mmap = $($inferParams.mmap)")
+if ($config.ContainsKey('mmap') -and $config.mmap -ne $null -and $config.mmap -ne "") {
+    if ($config.mmap -eq 0 -or $config.mmap -eq '0') {
+        $presetLines.Add("no-mmap = 1")
+    } else {
+        $presetLines.Add("mmap = 1")
+    }
+} else {
+    $presetLines.Add("mmap = $($inferParams.mmap)")
+}
+
+if ($config.ContainsKey('threads') -and $config.threads -ne $null -and $config.threads -ne 0 -and $config.threads -ne "") {
+    $presetLines.Add("threads = $($config.threads)")
+} else {
+    $presetLines.Add("threads = $($hardware.CPU.OptimalThreads)")
+}
+
 $presetLines.Add("n-gpu-layers = $($inferParams.n_gpu_layers)")
-$presetLines.Add("threads = $($hardware.CPU.OptimalThreads)")
 $presetLines.Add("sleep-idle-seconds = $($config.idle_timeout_sec)")
 
 if ($config.enable_tools) {
@@ -561,6 +645,39 @@ if ($config.cache_idle_slots) {
 
 $presetLines.Add("parallel = $($inferParams.parallel)")
 
+# Optional advanced tuning flags
+if ($config.ContainsKey('numa') -and $config.numa -and -not [string]::IsNullOrWhiteSpace($config.numa)) {
+    $presetLines.Add("numa = $($config.numa)")
+}
+if ($config.ContainsKey('cache_ram') -and $config.cache_ram -ne $null -and $config.cache_ram -ne 0) {
+    $presetLines.Add("cache-ram = $($config.cache_ram)")
+}
+if ($config.ContainsKey('temperature') -and $config.temperature -and -not [string]::IsNullOrWhiteSpace($config.temperature)) {
+    $presetLines.Add("temperature = $($config.temperature)")
+}
+if ($config.ContainsKey('top_k') -and $config.top_k -and -not [string]::IsNullOrWhiteSpace($config.top_k)) {
+    $presetLines.Add("top-k = $($config.top_k)")
+}
+if ($config.ContainsKey('top_p') -and $config.top_p -and -not [string]::IsNullOrWhiteSpace($config.top_p)) {
+    $presetLines.Add("top-p = $($config.top_p)")
+}
+if ($config.ContainsKey('samplers') -and $config.samplers -and -not [string]::IsNullOrWhiteSpace($config.samplers)) {
+    $presetLines.Add("samplers = $($config.samplers)")
+}
+if ($config.ContainsKey('dynatemp_range') -and $config.dynatemp_range -and -not [string]::IsNullOrWhiteSpace($config.dynatemp_range)) {
+    $presetLines.Add("dynatemp-range = $($config.dynatemp_range)")
+}
+if ($config.ContainsKey('dynatemp_exp') -and $config.dynatemp_exp -and -not [string]::IsNullOrWhiteSpace($config.dynatemp_exp)) {
+    $presetLines.Add("dynatemp-exp = $($config.dynatemp_exp)")
+}
+if ($config.ContainsKey('mmproj_auto') -and $null -ne $config.mmproj_auto) {
+    if ($config.mmproj_auto) {
+        $presetLines.Add("mmproj-auto = 1")
+    } else {
+        $presetLines.Add("no-mmproj-auto = 1")
+    }
+}
+
 # Global spec-type default (may be overridden per-model by validation gate)
 if ($inferParams.spec_type -and $inferParams.spec_type -ne "none") {
     $presetLines.Add("spec-type = $($inferParams.spec_type)")
@@ -582,7 +699,7 @@ if ($modelEntries.Count -gt 0) {
 
         $presetLines.Add("[$($m.Alias)]")
         $presetLines.Add("model = $($m.Path -replace '\\','/')")
-        $presetLines.Add("ctx-size = $($m.CtxSize * $inferParams.parallel)")
+        $presetLines.Add("ctx-size = $($m.CtxSize)")
 
         # Per-model spec-type override when validation result differs from global
         if ($modelSpecType -ne $inferParams.spec_type) {
