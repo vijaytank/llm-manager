@@ -1,1312 +1,1176 @@
 {
   "nodes": [
     {
-      "id": "USER_GUIDE.md",
-      "label": "USER_GUIDE.md",
+      "id": "ui/src/pages/Overview.tsx",
+      "label": "Overview.tsx",
       "type": "file"
     },
     {
-      "id": "README.md",
-      "label": "README.md",
+      "id": "ui/src/components/layout/Sidebar.tsx",
+      "label": "Sidebar.tsx",
       "type": "file"
     },
     {
-      "id": "CLAUDE.md",
-      "label": "CLAUDE.md",
+      "id": "ui/src/store/configStore.ts",
+      "label": "configStore.ts",
       "type": "file"
     },
     {
-      "id": "ARCHITECTURE.md",
-      "label": "ARCHITECTURE.md",
+      "id": "ui/src/main.tsx",
+      "label": "main.tsx",
       "type": "file"
     },
     {
-      "id": "AGENTS.md",
-      "label": "AGENTS.md",
+      "id": "ui/src/store/__tests__/configStore.test.ts",
+      "label": "configStore.test.ts",
       "type": "file"
     },
     {
-      "id": "AdapterClass",
-      "label": "AdapterClass",
-      "type": "stub"
-    },
-    {
-      "id": "Apple",
-      "label": "Apple",
-      "type": "stub"
-    },
-    {
-      "id": "Apply",
-      "label": "Apply",
-      "type": "stub"
-    },
-    {
-      "id": "ApplyOverrides",
-      "label": "ApplyOverrides",
-      "type": "stub"
-    },
-    {
-      "id": "Arguments",
-      "label": "Arguments",
-      "type": "stub"
-    },
-    {
-      "id": "Auto",
-      "label": "Auto",
-      "type": "stub"
-    },
-    {
-      "id": "Automatic",
-      "label": "Automatic",
-      "type": "stub"
-    },
-    {
-      "id": "BudgetRAM_MB",
-      "label": "BudgetRAM_MB",
-      "type": "stub"
-    },
-    {
-      "id": "CPUs",
-      "label": "CPUs",
-      "type": "stub"
-    },
-    {
-      "id": "CUDA",
-      "label": "CUDA",
-      "type": "stub"
-    },
-    {
-      "id": "Cache",
-      "label": "Cache",
-      "type": "stub"
-    },
-    {
-      "id": "Chat",
-      "label": "Chat",
-      "type": "stub"
-    },
-    {
-      "id": "CheckBackend",
-      "label": "CheckBackend",
-      "type": "stub"
-    },
-    {
-      "id": "CheckVRAM",
-      "label": "CheckVRAM",
-      "type": "stub"
-    },
-    {
-      "id": "Choose",
-      "label": "Choose",
-      "type": "stub"
-    },
-    {
-      "id": "ClassifyAdapter",
-      "label": "ClassifyAdapter",
-      "type": "stub"
-    },
-    {
-      "id": "Claude",
-      "label": "Claude",
-      "type": "stub"
-    },
-    {
-      "id": "Code",
-      "label": "Code",
-      "type": "stub"
-    },
-    {
-      "id": "Configuration",
-      "label": "Configuration",
-      "type": "stub"
-    },
-    {
-      "id": "Copy",
-      "label": "Copy",
-      "type": "stub"
-    },
-    {
-      "id": "Cores",
-      "label": "Cores",
-      "type": "stub"
-    },
-    {
-      "id": "Custom",
-      "label": "Custom",
-      "type": "stub"
-    },
-    {
-      "id": "Decoding",
-      "label": "Decoding",
-      "type": "stub"
-    },
-    {
-      "id": "DetectCPU",
-      "label": "DetectCPU",
-      "type": "stub"
-    },
-    {
-      "id": "DetectGPU",
-      "label": "DetectGPU",
-      "type": "stub"
-    },
-    {
-      "id": "Directory",
-      "label": "Directory",
-      "type": "stub"
-    },
-    {
-      "id": "Enable",
-      "label": "Enable",
-      "type": "stub"
-    },
-    {
-      "id": "Enter",
-      "label": "Enter",
-      "type": "stub"
-    },
-    {
-      "id": "Export",
-      "label": "Export",
-      "type": "stub"
-    },
-    {
-      "id": "ExportEnv",
-      "label": "ExportEnv",
-      "type": "stub"
-    },
-    {
-      "id": "File",
-      "label": "File",
-      "type": "stub"
-    },
-    {
-      "id": "Follow",
-      "label": "Follow",
-      "type": "stub"
-    },
-    {
-      "id": "GGUF",
-      "label": "GGUF",
-      "type": "stub"
-    },
-    {
-      "id": "GGUFs",
-      "label": "GGUFs",
-      "type": "stub"
-    },
-    {
-      "id": "GetParams_CPU",
-      "label": "GetParams_CPU",
-      "type": "stub"
-    },
-    {
-      "id": "GetParams_High",
-      "label": "GetParams_High",
-      "type": "stub"
-    },
-    {
-      "id": "GetParams_Low",
-      "label": "GetParams_Low",
-      "type": "stub"
-    },
-    {
-      "id": "GetParams_Mid",
-      "label": "GetParams_Mid",
-      "type": "stub"
-    },
-    {
-      "id": "GitDiff",
-      "label": "GitDiff",
-      "type": "stub"
-    },
-    {
-      "id": "Grammars",
-      "label": "Grammars",
-      "type": "stub"
-    },
-    {
-      "id": "Hands",
-      "label": "Hands",
-      "type": "stub"
-    },
-    {
-      "id": "Hardware",
-      "label": "Hardware",
-      "type": "stub"
-    },
-    {
-      "id": "Homebrew",
-      "label": "Homebrew",
-      "type": "stub"
-    },
-    {
-      "id": "Hybrid",
-      "label": "Hybrid",
-      "type": "stub"
-    },
-    {
-      "id": "Increment",
-      "label": "Increment",
-      "type": "stub"
-    },
-    {
-      "id": "InferenceParams",
-      "label": "InferenceParams",
-      "type": "stub"
-    },
-    {
-      "id": "Installation",
-      "label": "Installation",
-      "type": "stub"
-    },
-    {
-      "id": "Integration",
-      "label": "Integration",
-      "type": "stub"
-    },
-    {
-      "id": "Intel",
-      "label": "Intel",
-      "type": "stub"
-    },
-    {
-      "id": "Launch",
-      "label": "Launch",
-      "type": "stub"
-    },
-    {
-      "id": "Linux",
-      "label": "Linux",
-      "type": "stub"
-    },
-    {
-      "id": "Local",
-      "label": "Local",
-      "type": "stub"
-    },
-    {
-      "id": "Managing",
-      "label": "Managing",
-      "type": "stub"
-    },
-    {
-      "id": "ModelSize_MB",
-      "label": "ModelSize_MB",
-      "type": "stub"
+      "id": "ui/src/components/ImpactBanner.tsx",
+      "label": "ImpactBanner.tsx",
+      "type": "file"
     },
     {
-      "id": "Models",
-      "label": "Models",
-      "type": "stub"
-    },
-    {
-      "id": "Navigate",
-      "label": "Navigate",
-      "type": "stub"
-    },
-    {
-      "id": "Open",
-      "label": "Open",
-      "type": "stub"
-    },
-    {
-      "id": "OptimalThreads",
-      "label": "OptimalThreads",
-      "type": "stub"
-    },
-    {
-      "id": "Optimization",
-      "label": "Optimization",
-      "type": "stub"
-    },
-    {
-      "id": "Option",
-      "label": "Option",
-      "type": "stub"
-    },
-    {
-      "id": "Optional",
-      "label": "Optional",
-      "type": "stub"
-    },
-    {
-      "id": "PATH",
-      "label": "PATH",
-      "type": "stub"
-    },
-    {
-      "id": "Path",
-      "label": "Path",
-      "type": "stub"
-    },
-    {
-      "id": "PerModel",
-      "label": "PerModel",
-      "type": "stub"
+      "id": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
+      "label": "AllScreensAndActions.test.ts",
+      "type": "file"
     },
     {
-      "id": "Physical",
-      "label": "Physical",
-      "type": "stub"
+      "id": "ui/src/pages/Models.tsx",
+      "label": "Models.tsx",
+      "type": "file"
     },
     {
-      "id": "PhysicalCores",
-      "label": "PhysicalCores",
-      "type": "stub"
+      "id": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "label": "OverviewFlow.test.ts",
+      "type": "file"
     },
     {
-      "id": "Port",
-      "label": "Port",
-      "type": "stub"
+      "id": "ui/src/store/__tests__/hardwareStore.test.ts",
+      "label": "hardwareStore.test.ts",
+      "type": "file"
     },
     {
-      "id": "PortCheck",
-      "label": "PortCheck",
-      "type": "stub"
+      "id": "ui/src/store/modelsStore.ts",
+      "label": "modelsStore.ts",
+      "type": "file"
     },
     {
-      "id": "Preferences",
-      "label": "Preferences",
-      "type": "stub"
+      "id": "ui/src/pages/Setup.tsx",
+      "label": "Setup.tsx",
+      "type": "file"
     },
     {
-      "id": "Profile",
-      "label": "Profile",
-      "type": "stub"
+      "id": "ui/src/components/layout/TopBar.tsx",
+      "label": "TopBar.tsx",
+      "type": "file"
     },
     {
-      "id": "Proposed",
-      "label": "Proposed",
-      "type": "stub"
+      "id": "ui/src/store/__tests__/serverStore.test.ts",
+      "label": "serverStore.test.ts",
+      "type": "file"
     },
     {
-      "id": "Provide",
-      "label": "Provide",
-      "type": "stub"
+      "id": "ui/src/lib/__tests__/validation.test.ts",
+      "label": "validation.test.ts",
+      "type": "file"
     },
     {
-      "id": "Query",
-      "label": "Query",
-      "type": "stub"
+      "id": "ui/src/store/hardwareStore.ts",
+      "label": "hardwareStore.ts",
+      "type": "file"
     },
     {
-      "id": "RAM_BudgetMB",
-      "label": "RAM_BudgetMB",
-      "type": "stub"
+      "id": "ui/src/App.tsx",
+      "label": "App.tsx",
+      "type": "file"
     },
     {
-      "id": "REST",
-      "label": "REST",
-      "type": "stub"
+      "id": "ui/src/pages/Settings.tsx",
+      "label": "Settings.tsx",
+      "type": "file"
     },
     {
-      "id": "Release",
-      "label": "Release",
-      "type": "stub"
+      "id": "ui/src/pages/Integrations.tsx",
+      "label": "Integrations.tsx",
+      "type": "file"
     },
     {
-      "id": "Review",
-      "label": "Review",
-      "type": "stub"
+      "id": "ui/vite.config.ts",
+      "label": "vite.config.ts",
+      "type": "file"
     },
     {
-      "id": "SafeContextSize",
-      "label": "SafeContextSize",
-      "type": "stub"
+      "id": "ui/src/store/__tests__/modelsStore.test.ts",
+      "label": "modelsStore.test.ts",
+      "type": "file"
     },
     {
-      "id": "Scan",
-      "label": "Scan",
-      "type": "stub"
+      "id": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "label": "SetupFlow.test.ts",
+      "type": "file"
     },
     {
-      "id": "ScanModels",
-      "label": "ScanModels",
-      "type": "stub"
+      "id": "ui/src/lib/validation.ts",
+      "label": "validation.ts",
+      "type": "file"
     },
     {
-      "id": "Server",
-      "label": "Server",
-      "type": "stub"
+      "id": "ui/src/store/serverStore.ts",
+      "label": "serverStore.ts",
+      "type": "file"
     },
     {
-      "id": "SetThreads",
-      "label": "SetThreads",
-      "type": "stub"
+      "id": "ui/src/components/layout/PageShell.tsx",
+      "label": "PageShell.tsx",
+      "type": "file"
     },
     {
-      "id": "ShiftPort",
-      "label": "ShiftPort",
-      "type": "stub"
+      "id": "ui/src/pages/Performance.tsx",
+      "label": "Performance.tsx",
+      "type": "file"
     },
     {
-      "id": "Silicon",
-      "label": "Silicon",
-      "type": "stub"
+      "id": "ui/src/store/validationStore.ts",
+      "label": "validationStore.ts",
+      "type": "file"
     },
     {
-      "id": "Speculative",
-      "label": "Speculative",
-      "type": "stub"
+      "id": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
+      "label": "PerformanceAndSettings.test.ts",
+      "type": "file"
     },
     {
-      "id": "Start",
-      "label": "Start",
-      "type": "stub"
+      "id": "ui/src/pages/Diagnostics.tsx",
+      "label": "Diagnostics.tsx",
+      "type": "file"
     },
     {
-      "id": "Starting",
-      "label": "Starting",
-      "type": "stub"
+      "id": "ui/src/pages/Logs.tsx",
+      "label": "Logs.tsx",
+      "type": "file"
     },
     {
-      "id": "Step",
-      "label": "Step",
+      "id": "./Diagnostics.css",
+      "label": "Diagnostics.css",
       "type": "stub"
     },
     {
-      "id": "Stopping",
-      "label": "Stopping",
+      "id": "./ImpactBanner.css",
+      "label": "ImpactBanner.css",
       "type": "stub"
     },
     {
-      "id": "System",
-      "label": "System",
+      "id": "./Integrations.css",
+      "label": "Integrations.css",
       "type": "stub"
     },
     {
-      "id": "Telemetry",
-      "label": "Telemetry",
+      "id": "./Logs.css",
+      "label": "Logs.css",
       "type": "stub"
     },
     {
-      "id": "Tell",
-      "label": "Tell",
+      "id": "./Models.css",
+      "label": "Models.css",
       "type": "stub"
     },
     {
-      "id": "Templates",
-      "label": "Templates",
+      "id": "./Overview.css",
+      "label": "Overview.css",
       "type": "stub"
     },
     {
-      "id": "Terminal",
-      "label": "Terminal",
+      "id": "./PageShell.css",
+      "label": "PageShell.css",
       "type": "stub"
     },
     {
-      "id": "Tier",
-      "label": "Tier",
+      "id": "./Performance.css",
+      "label": "Performance.css",
       "type": "stub"
     },
     {
-      "id": "TierCPU_LowV",
-      "label": "TierCPU_LowV",
+      "id": "./Settings.css",
+      "label": "Settings.css",
       "type": "stub"
     },
     {
-      "id": "TierCPU_NoBE",
-      "label": "TierCPU_NoBE",
+      "id": "./Setup.css",
+      "label": "Setup.css",
       "type": "stub"
     },
     {
-      "id": "TierCPU_None",
-      "label": "TierCPU_None",
+      "id": "./Sidebar.css",
+      "label": "Sidebar.css",
       "type": "stub"
     },
     {
-      "id": "TierCPU_iGPU",
-      "label": "TierCPU_iGPU",
+      "id": "./TopBar.css",
+      "label": "TopBar.css",
       "type": "stub"
     },
     {
-      "id": "TierHigh",
-      "label": "TierHigh",
+      "id": "./styles/index.css",
+      "label": "index.css",
       "type": "stub"
     },
     {
-      "id": "TierLow",
-      "label": "TierLow",
+      "id": "@tauri-apps/api/core",
+      "label": "core",
       "type": "stub"
     },
     {
-      "id": "TierMid",
-      "label": "TierMid",
+      "id": "@tauri-apps/api/event",
+      "label": "event",
       "type": "stub"
     },
     {
-      "id": "Total",
-      "label": "Total",
+      "id": "@tauri-apps/api/window",
+      "label": "window",
       "type": "stub"
     },
     {
-      "id": "Update",
-      "label": "Update",
+      "id": "@tauri-apps/plugin-dialog",
+      "label": "plugin-dialog",
       "type": "stub"
     },
     {
-      "id": "UsableForInference",
-      "label": "UsableForInference",
+      "id": "@tauri-apps/plugin-shell",
+      "label": "plugin-shell",
       "type": "stub"
     },
     {
-      "id": "Users",
-      "label": "Users",
+      "id": "@vitejs/plugin-react",
+      "label": "plugin-react",
       "type": "stub"
     },
     {
-      "id": "VRAM",
-      "label": "VRAM",
+      "id": "lucide-react",
+      "label": "lucide-react",
       "type": "stub"
     },
     {
-      "id": "VRAM_BudgetMB",
-      "label": "VRAM_BudgetMB",
+      "id": "path",
+      "label": "path",
       "type": "stub"
     },
     {
-      "id": "VSCode",
-      "label": "VSCode",
+      "id": "react",
+      "label": "react",
       "type": "stub"
     },
     {
-      "id": "ValidatedSpecType",
-      "label": "ValidatedSpecType",
+      "id": "react-dom/client",
+      "label": "client",
       "type": "stub"
     },
     {
-      "id": "Vulkan",
-      "label": "Vulkan",
+      "id": "vite",
+      "label": "vite",
       "type": "stub"
     },
     {
-      "id": "Windows",
-      "label": "Windows",
+      "id": "vitest",
+      "label": "vitest",
       "type": "stub"
     },
     {
-      "id": "Write",
-      "label": "Write",
+      "id": "zustand",
+      "label": "zustand",
       "type": "stub"
     },
     {
-      "id": "WritePreset",
-      "label": "WritePreset",
-      "type": "stub"
+      "id": "ui/src/lib/validation.ts::calculateKvCacheGb",
+      "label": "validation.ts::calculateKvCacheGb",
+      "type": "symbol"
     },
     {
-      "id": "Your",
-      "label": "Your",
-      "type": "stub"
+      "id": "ui/src/lib/validation.ts::validateConfiguration",
+      "label": "validation.ts::validateConfiguration",
+      "type": "symbol"
     },
     {
-      "id": "YourName",
-      "label": "YourName",
-      "type": "stub"
+      "id": "ui/src/lib/validation.ts::validateModelLaunch",
+      "label": "validation.ts::validateModelLaunch",
+      "type": "symbol"
     }
   ],
   "edges": [
     {
-      "source": "USER_GUIDE.md",
-      "target": "Apple",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/components/ImpactBanner.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Arguments",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Auto",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Automatic",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Chat",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Choose",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Claude",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Code",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/store/validationStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Configuration",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "./Overview.css",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Copy",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Custom",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Decoding",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Directory",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/layout/Sidebar.tsx",
+      "target": "./Sidebar.css",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Enable",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/layout/Sidebar.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Enter",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/layout/Sidebar.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "File",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/configStore.ts",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Follow",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/configStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "GGUF",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/main.tsx",
+      "target": "ui/src/App.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Grammars",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/main.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Hands",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/main.tsx",
+      "target": "react-dom/client",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Homebrew",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/__tests__/configStore.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Installation",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/__tests__/configStore.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Integration",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/ImpactBanner.tsx",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Linux",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/ImpactBanner.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Local",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/ImpactBanner.tsx",
+      "target": "./ImpactBanner.css",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Managing",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/ImpactBanner.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Models",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/ImpactBanner.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Navigate",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Open",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Optimization",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Option",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Models.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Optional",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Models.tsx",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "PATH",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Models.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Path",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Models.tsx",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Preferences",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Models.tsx",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Proposed",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Models.tsx",
+      "target": "./Models.css",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Provide",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Models.tsx",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "REST",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Models.tsx",
+      "target": "@tauri-apps/plugin-dialog",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Release",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Models.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Review",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Models.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Server",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Silicon",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Speculative",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Starting",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Step",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Stopping",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/__tests__/hardwareStore.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Telemetry",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/__tests__/hardwareStore.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Tell",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/modelsStore.ts",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Templates",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/modelsStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Terminal",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/components/ImpactBanner.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Update",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Users",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "VRAM",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "VSCode",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Windows",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/store/validationStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "Your",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "./Setup.css",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "USER_GUIDE.md",
-      "target": "YourName",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "@tauri-apps/plugin-dialog",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "CLAUDE.md",
-      "target": "GitDiff",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "AdapterClass",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Apply",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "ApplyOverrides",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "./TopBar.css",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "BudgetRAM_MB",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "CPUs",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "@tauri-apps/api/window",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "CUDA",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Cache",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "CheckBackend",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/__tests__/serverStore.test.ts",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "CheckVRAM",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/__tests__/serverStore.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "ClassifyAdapter",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/lib/__tests__/validation.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Cores",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/lib/__tests__/validation.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "DetectCPU",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/lib/__tests__/validation.test.ts",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "DetectGPU",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/lib/__tests__/validation.test.ts",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Export",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/lib/__tests__/validation.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "ExportEnv",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/hardwareStore.ts",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "GGUFs",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/hardwareStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "GetParams_CPU",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/components/layout/Sidebar.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "GetParams_High",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/pages/Diagnostics.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "GetParams_Low",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/pages/Integrations.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "GetParams_Mid",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/pages/Logs.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Hardware",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/pages/Models.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Hybrid",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/pages/Overview.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Increment",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/pages/Performance.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "InferenceParams",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/pages/Settings.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Intel",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/pages/Setup.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Launch",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "ModelSize_MB",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "OptimalThreads",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "PerModel",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "ui/src/store/validationStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Physical",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "./styles/index.css",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "PhysicalCores",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "@tauri-apps/api/event",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Port",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/App.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "PortCheck",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Profile",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Query",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "./Settings.css",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "RAM_BudgetMB",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "@tauri-apps/plugin-dialog",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "SafeContextSize",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Scan",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "ScanModels",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "SetThreads",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "ShiftPort",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "./Integrations.css",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Start",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "@tauri-apps/plugin-shell",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "System",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Tier",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "TierCPU_LowV",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/vite.config.ts",
+      "target": "@vitejs/plugin-react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "TierCPU_NoBE",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/vite.config.ts",
+      "target": "path",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "TierCPU_None",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/vite.config.ts",
+      "target": "vite",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "TierCPU_iGPU",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/__tests__/modelsStore.test.ts",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "TierHigh",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/store/__tests__/modelsStore.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "TierLow",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "TierMid",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Total",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "UsableForInference",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "VRAM",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "VRAM_BudgetMB",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "ValidatedSpecType",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/lib/validation.ts::calculateKvCacheGb",
+      "type": "contains",
+      "weight": 1.0
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Vulkan",
-      "type": "reference",
-      "weight": 0.5
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/lib/validation.ts::validateConfiguration",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/lib/validation.ts::validateModelLaunch",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/store/serverStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/PageShell.tsx",
+      "target": "./PageShell.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/PageShell.tsx",
+      "target": "ui/src/components/layout/TopBar.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/PageShell.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "./Performance.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/validationStore.ts",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/validationStore.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/validationStore.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/validationStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "./Diagnostics.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "./Logs.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "@tauri-apps/plugin-dialog",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "Write",
-      "type": "reference",
+      "source": "ui/src/lib/validation.ts::validateConfiguration",
+      "target": "ui/src/lib/validation.ts::calculateKvCacheGb",
+      "type": "calls",
       "weight": 0.5
     },
     {
-      "source": "ARCHITECTURE.md",
-      "target": "WritePreset",
-      "type": "reference",
+      "source": "ui/src/lib/validation.ts::validateModelLaunch",
+      "target": "ui/src/lib/validation.ts::calculateKvCacheGb",
+      "type": "calls",
       "weight": 0.5
     }
   ]

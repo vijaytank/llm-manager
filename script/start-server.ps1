@@ -195,8 +195,25 @@ $defaultModelId = ""
 if ($models.Count -gt 0) {
     # Use the generated models preset config file
     $serverArgs += @("--models-preset", $PresetFile)
-    $serverArgs += @("--models-max", "1") # Allow max 1 model in VRAM at a time to prevent RTX 5060 OOM
-    $defaultModelId = $models[0].Alias
+    $serverArgs += @("--models-max", "1")
+
+    # Match config.active_model against discovered model entries
+    $selectedEntry = $null
+    if ($config.active_model) {
+        $activeName = $config.active_model.ToString().Trim().ToLowerInvariant()
+        $selectedEntry = $models | Where-Object {
+            $_.Alias.ToLowerInvariant() -eq $activeName -or
+            $_.Path.ToLowerInvariant().Contains($activeName)
+        } | Select-Object -First 1
+    }
+
+    if (-not $selectedEntry) {
+        $selectedEntry = $models[0]
+    }
+
+    $defaultModelId = $selectedEntry.Alias
+    $serverArgs += @("-m", $selectedEntry.Path)
+    Write-Host "Selected Active Model for Inference: $($selectedEntry.Alias) ($($selectedEntry.Path))" -ForegroundColor Green
 } else {
     # Bootstrap download mode: No GGUFs and no cloud keys set. Run tiny local model from Hugging Face
     $bootstrapRepo = "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF:Q4_K_M"

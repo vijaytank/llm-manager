@@ -5,38 +5,38 @@
 ## 🏆 High-Impact Files
 These files have the highest centrality (PageRank) and are critical to the system architecture.
 
-- [USER_GUIDE.md](file:///E:/Projects/llm-manager/USER_GUIDE.md) (Score: 0.5405)
-- [README.md](file:///E:/Projects/llm-manager/README.md) (Score: 0.5405)
-- [CLAUDE.md](file:///E:/Projects/llm-manager/CLAUDE.md) (Score: 0.5405)
-- [ARCHITECTURE.md](file:///E:/Projects/llm-manager/ARCHITECTURE.md) (Score: 0.5405)
-- [AGENTS.md](file:///E:/Projects/llm-manager/AGENTS.md) (Score: 0.5405)
+- [ui/src/store/configStore.ts](file:///E:/Projects/llm-manager/ui/src/store/configStore.ts) (Score: 0.5298)
+- [ui/src/store/hardwareStore.ts](file:///E:/Projects/llm-manager/ui/src/store/hardwareStore.ts) (Score: 0.4069)
+- [ui/src/store/serverStore.ts](file:///E:/Projects/llm-manager/ui/src/store/serverStore.ts) (Score: 0.3569)
+- [ui/src/store/modelsStore.ts](file:///E:/Projects/llm-manager/ui/src/store/modelsStore.ts) (Score: 0.3043)
+- [ui/src/components/layout/PageShell.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/PageShell.tsx) (Score: 0.2741)
+- [ui/src/lib/validation.ts](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts) (Score: 0.2637)
+- [ui/src/components/layout/TopBar.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/TopBar.tsx) (Score: 0.2117)
+- [ui/src/App.tsx](file:///E:/Projects/llm-manager/ui/src/App.tsx) (Score: 0.1721)
+- [ui/src/store/validationStore.ts](file:///E:/Projects/llm-manager/ui/src/store/validationStore.ts) (Score: 0.1655)
+- [ui/src/components/ImpactBanner.tsx](file:///E:/Projects/llm-manager/ui/src/components/ImpactBanner.tsx) (Score: 0.1564)
 
 ## 🧬 High-Impact Symbols
 These class and function abstractions are the key logical hubs of the system.
 
+- [calculateKvCacheGb](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts#L28-L42) (function in `ui/src/lib/validation.ts` · Score: 0.4741)
+- [validateConfiguration](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts#L44-L142) (function in `ui/src/lib/validation.ts` · Score: 0.1756)
+- [validateModelLaunch](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts#L155-L251) (function in `ui/src/lib/validation.ts` · Score: 0.1756)
 
 ## 📦 Module Communities (Louvain)
 The following clusters represent tightly-coupled functional modules detected in the graph.
 
-### Module 1: USER_GUIDE Cluster
-- **Size**: 1 nodes
-- **Key Files**: USER_GUIDE.md
+### Module 1: ui Cluster
+- **Size**: 15 nodes
+- **Key Files**: ui/src/store/hardwareStore.ts, ui/src/pages/Overview.tsx, ui/src/pages/Models.tsx, ui/src/pages/__tests__/OverviewFlow.test.ts, ui/src/store/__tests__/hardwareStore.test.ts...
 
-### Module 2: README Cluster
-- **Size**: 1 nodes
-- **Key Files**: README.md
+### Module 2: ui Cluster
+- **Size**: 14 nodes
+- **Key Files**: ui/src/pages/Logs.tsx, ui/src/App.tsx, ui/src/components/layout/Sidebar.tsx, ui/src/store/__tests__/serverStore.test.ts, ui/src/store/serverStore.ts...
 
-### Module 3: CLAUDE Cluster
+### Module 3: ui Cluster
 - **Size**: 1 nodes
-- **Key Files**: CLAUDE.md
-
-### Module 4: ARCHITECTURE Cluster
-- **Size**: 1 nodes
-- **Key Files**: ARCHITECTURE.md
-
-### Module 5: AGENTS Cluster
-- **Size**: 1 nodes
-- **Key Files**: AGENTS.md
+- **Key Files**: ui/vite.config.ts
 
 
 ## ⚠️ Blast Radius Warnings

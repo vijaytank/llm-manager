@@ -13,31 +13,41 @@
 #   macOS   : sysctl + system_profiler (Apple Silicon unified memory or discrete GPU)
 #   Linux   : /proc/cpuinfo, /proc/meminfo, nvidia-smi, rocm-smi, /sys/class/drm
 
+param(
+    [switch]$Json
+)
+
+$isWin = $IsWindows -or ($env:OS -match "Windows") -or ($PSVersionTable.PSEdition -eq "Desktop")
+$isMac = $IsMacOS -or ($env:OSTYPE -match "darwin")
+$isLin = $IsLinux -or (-not $isWin -and -not $isMac)
+
 $ErrorActionPreference = "Stop"
 
 function Get-SystemHardwareProfile {
-    Write-Host "Profiling system hardware..." -ForegroundColor Cyan
+    if (-not $Json) {
+        Write-Host "Profiling system hardware..." -ForegroundColor Cyan
+    }
 
     # ── 1. CPU ────────────────────────────────────────────────────────────────
     $cpuName       = "Unknown"
     $logicalCores  = 1
     $physicalCores = 1
 
-    if ($IsWindows) {
+    if ($isWin) {
         $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1 Name, NumberOfCores, NumberOfLogicalProcessors
         $cpuName       = $cpu.Name.Trim()
         $logicalCores  = $cpu.NumberOfLogicalProcessors
         $physicalCores = $cpu.NumberOfCores
-    } elseif ($IsMacOS) {
+    } elseif ($isMac) {
         try {
             $cpuName      = (sysctl -n machdep.cpu.brand_string 2>$null).Trim()
             if ([string]::IsNullOrWhiteSpace($cpuName)) { $cpuName = (sysctl -n hw.model 2>$null).Trim() }
             $physicalCores = [int](sysctl -n hw.physicalcpu 2>$null)
             $logicalCores  = [int](sysctl -n hw.logicalcpu  2>$null)
         } catch {
-            Write-Host "[WARNING] macOS CPU detection failed: $($_.Exception.Message)" -ForegroundColor Yellow
+            if (-not $Json) { Write-Host "[WARNING] macOS CPU detection failed: $($_.Exception.Message)" -ForegroundColor Yellow }
         }
-    } elseif ($IsLinux) {
+    } elseif ($isLin) {
         try {
             $cpuInfo = Get-Content /proc/cpuinfo -ErrorAction SilentlyContinue
             if ($cpuInfo) {
@@ -49,7 +59,7 @@ function Get-SystemHardwareProfile {
                 if ($logicalCores -lt 1) { $logicalCores = $physicalCores }
             }
         } catch {
-            Write-Host "[WARNING] Linux CPU detection failed: $($_.Exception.Message)" -ForegroundColor Yellow
+            if (-not $Json) { Write-Host "[WARNING] Linux CPU detection failed: $($_.Exception.Message)" -ForegroundColor Yellow }
         }
     }
 
@@ -64,16 +74,16 @@ function Get-SystemHardwareProfile {
     # ── 2. RAM ────────────────────────────────────────────────────────────────
     $totalRamBytes = 0
 
-    if ($IsWindows) {
+    if ($isWin) {
         $cs            = Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory
         $totalRamBytes = $cs.TotalPhysicalMemory
-    } elseif ($IsMacOS) {
+    } elseif ($isMac) {
         try {
             $totalRamBytes = [long](sysctl -n hw.memsize 2>$null)
         } catch {
-            Write-Host "[WARNING] macOS RAM detection failed: $($_.Exception.Message)" -ForegroundColor Yellow
+            if (-not $Json) { Write-Host "[WARNING] macOS RAM detection failed: $($_.Exception.Message)" -ForegroundColor Yellow }
         }
-    } elseif ($IsLinux) {
+    } elseif ($isLin) {
         try {
             $memInfo = Get-Content /proc/meminfo -ErrorAction SilentlyContinue
             $memTotalLine = $memInfo | Where-Object { $_ -match '^MemTotal' } | Select-Object -First 1
@@ -81,7 +91,7 @@ function Get-SystemHardwareProfile {
                 $totalRamBytes = [long]$Matches[1] * 1024
             }
         } catch {
-            Write-Host "[WARNING] Linux RAM detection failed: $($_.Exception.Message)" -ForegroundColor Yellow
+            if (-not $Json) { Write-Host "[WARNING] Linux RAM detection failed: $($_.Exception.Message)" -ForegroundColor Yellow }
         }
     }
 
@@ -108,7 +118,7 @@ function Get-SystemHardwareProfile {
 
     # Locate nvidia-smi (prefer explicit paths, fall back to PATH lookup)
     $nvidiaSmi = $null
-    if ($IsWindows) {
+    if ($isWin) {
         $smiCandidates = @(
             "C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
             "C:\Windows\System32\nvidia-smi.exe"
@@ -438,7 +448,10 @@ function Get-SystemHardwareProfile {
 # ── Self-run: print summary when executed directly (not dot-sourced) ──────────
 # Using MyCommand.Name is safe for nested dot-sourcing: it reflects the
 # script file name only when run directly, not when dot-sourced into another scope.
-if ($MyInvocation.MyCommand.Name -eq 'Profile.ps1') {
+if ($Json) {
+    $p = Get-SystemHardwareProfile
+    $p | ConvertTo-Json -Depth 5
+} elseif ($MyInvocation.MyCommand.Name -eq 'Profile.ps1') {
     $p = Get-SystemHardwareProfile
     Write-Host ""
     Write-Host "--- System Hardware Profile ---" -ForegroundColor Green

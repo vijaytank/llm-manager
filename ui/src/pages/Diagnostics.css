@@ -1,0 +1,45 @@
+.diag-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.diag-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.diag-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.diag-report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.diag-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-button);
+  justify-content: space-between;
+}
+
+.diag-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.diag-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.diag-icon.success { color: var(--status-success); }
+.diag-icon.warning { color: var(--status-warning); }

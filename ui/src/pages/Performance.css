@@ -1,0 +1,15 @@
+.perf-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.perf-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.policy-table-container {
+  overflow-x: auto;
+}

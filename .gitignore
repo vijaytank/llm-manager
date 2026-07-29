@@ -30,3 +30,8 @@ grammars/
 
 # Graphify output directory
 /graphify-out/
+
+# UI build artifacts and dependencies
+ui/node_modules/
+ui/dist/
+ui/src-tauri/target/
