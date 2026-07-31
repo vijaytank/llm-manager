@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::scripts::{run_powershell_script, get_workspace_root};
+use crate::scripts::run_powershell_script;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -42,41 +42,17 @@ pub struct SystemHardwareProfile {
 
 #[tauri::command]
 pub fn detect_hardware() -> Result<SystemHardwareProfile, String> {
-    let script_res = run_powershell_script("llo-core/Profile.ps1", &["-Json"]);
-    let output = match &script_res {
-        Ok(s) => s.clone(),
-        Err(e) => format!("SCRIPT EXECUTION ERROR: {}", e),
-    };
+    let script_res = run_powershell_script("llo-core/Profile.ps1", &["-Json"])?;
+    let log_path = crate::scripts::get_user_log_dir().join("hardware_debug.log");
 
-    let log_path = get_workspace_root().join("hardware_debug.log");
-
-    match serde_json::from_str::<SystemHardwareProfile>(&output) {
+    match serde_json::from_str::<SystemHardwareProfile>(&script_res) {
         Ok(profile) => {
             let _ = std::fs::write(&log_path, format!("--- HARDWARE PROBE SUCCESS ---\n{}\n", serde_json::to_string_pretty(&profile).unwrap_or_default()));
             Ok(profile)
         }
         Err(e) => {
-            let _ = std::fs::write(&log_path, format!("--- HARDWARE PROBE SERDE ERROR ---\nError: {}\nRaw script_res: {:?}\nRaw output:\n{}\n", e, script_res, output));
-            // Safe CPU-only baseline profile if live script execution output fails
-            Ok(SystemHardwareProfile {
-                cpu: CpuInfo {
-                    name: "Host Processor".to_string(),
-                    physical_cores: 4,
-                    logical_cores: 8,
-                    optimal_threads: 4,
-                },
-                ram: serde_json::json!({
-                    "TotalGB": 8,
-                    "BudgetMB": 6144
-                }),
-                gpu: GpuInfo {
-                    name: "No Compatible GPU".to_string(),
-                    total_vram_mb: 0,
-                    adapter_class: "none".to_string(),
-                    performance_tier: "cpu".to_string(),
-                    reason: "CPU-only inference mode".to_string(),
-                },
-            })
+            let _ = std::fs::write(&log_path, format!("--- HARDWARE PROBE SERDE ERROR ---\nError: {}\nRaw script_res:\n{}\n", e, script_res));
+            Err(format!("Hardware probe output parsing error: {}. Output was: {}", e, script_res))
         }
     }
 }

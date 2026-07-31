@@ -10,13 +10,11 @@ use crate::scripts::run_powershell_script;
 static IS_RUNNING: AtomicBool = AtomicBool::new(false);
 
 fn get_log_path() -> PathBuf {
-    let root = crate::scripts::get_workspace_root();
-    root.join("llama-server.log")
+    crate::scripts::get_user_log_dir().join("llama-server.log")
 }
 
 fn get_err_log_path() -> PathBuf {
-    let root = crate::scripts::get_workspace_root();
-    root.join("llama-server.err.log")
+    crate::scripts::get_user_log_dir().join("llama-server.err.log")
 }
 
 fn classify_log_level(line: &str, default: &'static str) -> &'static str {
@@ -153,8 +151,40 @@ pub async fn start_server(app: AppHandle, port: Option<u16>) -> Result<String, S
     }));
 
     let port_str = p.to_string();
+    let user_data_dir = crate::scripts::get_user_data_dir();
+    let config_file = user_data_dir.join("llo-config.json");
+    let log_dir = crate::scripts::get_user_log_dir();
+    let config_file_str = config_file.to_string_lossy().to_string();
+    let log_dir_str = log_dir.to_string_lossy().to_string();
+
+    // Read models_dir from the user's config so SetupRouter.ps1 scans the right place
+    let models_dir_str = {
+        let cfg_json = std::fs::read_to_string(&config_file).unwrap_or_default();
+        let v: serde_json::Value = serde_json::from_str(&cfg_json).unwrap_or_default();
+        v.get("models_dir").and_then(|x| x.as_str()).unwrap_or("").to_string()
+    };
+
+    let app_err = app.clone();
     tokio::task::spawn_blocking(move || {
-        let _ = run_powershell_script("script/start-server.ps1", &["-Port", &port_str]);
+        let result = run_powershell_script(
+            "script/start-server.ps1",
+            &[
+                "-Port", &port_str,
+                "-ConfigFile", &config_file_str,
+                "-LogDir", &log_dir_str,
+                "-ModelsDir", &models_dir_str,
+            ],
+        );
+        if let Err(e) = result {
+            // Emit the actual error text so it appears in the Logs panel
+            let _ = app_err.emit("server-log", serde_json::json!({
+                "timestamp": chrono::Local::now().format("%H:%M:%S").to_string(),
+                "level": "ERROR",
+                "message": format!("start-server.ps1 failed:\n{}", e)
+            }));
+            IS_RUNNING.store(false, Ordering::SeqCst);
+            let _ = app_err.emit("server-status-changed", "stopped");
+        }
     });
 
     let app_clone = app.clone();
@@ -183,8 +213,10 @@ pub async fn stop_server(app: AppHandle) -> Result<String, String> {
         "message": "Stopping llama-server process..."
     }));
 
+    let config_file = crate::scripts::get_user_data_dir().join("llo-config.json");
+    let config_file_str = config_file.to_string_lossy().to_string();
     tokio::task::spawn_blocking(move || {
-        let _ = run_powershell_script("script/stop-server.ps1", &[]);
+        let _ = run_powershell_script("script/stop-server.ps1", &["-ConfigFile", &config_file_str]);
     });
 
     Ok("Server stopped successfully".to_string())
@@ -201,12 +233,25 @@ pub fn get_server_status() -> String {
 
 #[tauri::command]
 pub fn get_active_model_info() -> Result<serde_json::Value, String> {
+    let config_path = crate::commands::config::get_config_path();
+    let active_model = if config_path.exists() {
+        let config_raw = std::fs::read_to_string(&config_path).unwrap_or_default();
+        let config_value: serde_json::Value = serde_json::from_str(&config_raw).unwrap_or_default();
+        config_value.get("active_model").and_then(|v| v.as_str()).unwrap_or("").to_string()
+    } else {
+        String::new()
+    };
+    
+    let user_data_dir = crate::scripts::get_user_data_dir();
     let root = crate::scripts::get_workspace_root();
-    let config_path = root.join("llo-config.json");
-    let config_raw = std::fs::read_to_string(&config_path).map_err(|e| format!("Failed to read config: {}", e))?;
-    let config_value: serde_json::Value = serde_json::from_str(&config_raw).map_err(|e| format!("Failed to parse config: {}", e))?;
-    let active_model = config_value.get("active_model").and_then(|v| v.as_str()).unwrap_or("");
-    let models_path = root.join("models-preset.ini");
+    let preset_candidates = vec![
+        user_data_dir.join("models-preset.ini"),
+        root.join("models-preset.ini"),
+        root.join("resources").join("models-preset.ini"),
+    ];
+
+    let models_path = preset_candidates.into_iter().find(|p| p.exists()).unwrap_or_else(|| user_data_dir.join("models-preset.ini"));
+
     Ok(serde_json::json!({
         "active_model": active_model,
         "models_preset_path": models_path.to_string_lossy(),

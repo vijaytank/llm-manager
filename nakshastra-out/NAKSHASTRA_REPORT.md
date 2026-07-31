@@ -1,6 +1,6 @@
 # NakshAstra Architectural Report
 
-> **Generated at**: llm-manager mapping
+> **Generated at**: Antigravity IDE mapping
 
 ## 🏆 High-Impact Files
 These files have the highest centrality (PageRank) and are critical to the system architecture.
@@ -27,22 +27,18 @@ These class and function abstractions are the key logical hubs of the system.
 The following clusters represent tightly-coupled functional modules detected in the graph.
 
 ### Module 1: ui Cluster
-- **Size**: 9 nodes
-- **Key Files**: ui/src/components/layout/Sidebar.tsx, ui/src/pages/Settings.tsx, ui/src/main.tsx, ui/src/pages/Diagnostics.tsx, ui/src/App.tsx...
+- **Size**: 12 nodes
+- **Key Files**: ui/src/store/hardwareStore.ts, ui/src/lib/__tests__/validation.test.ts, ui/src/store/validationStore.ts, ui/src/pages/Setup.tsx, ui/src/components/ImpactBanner.tsx...
 
 ### Module 2: ui Cluster
-- **Size**: 8 nodes
-- **Key Files**: ui/src/components/ImpactBanner.tsx, ui/src/store/modelsStore.ts, ui/src/store/__tests__/modelsStore.test.ts, ui/src/pages/Overview.tsx, ui/src/pages/Models.tsx...
+- **Size**: 10 nodes
+- **Key Files**: ui/src/pages/Integrations.tsx, ui/src/store/__tests__/serverStore.test.ts, ui/src/store/configStore.ts, ui/src/store/serverStore.ts, ui/src/pages/__tests__/PerformanceAndSettings.test.ts...
 
 ### Module 3: ui Cluster
-- **Size**: 7 nodes
-- **Key Files**: ui/src/store/__tests__/serverStore.test.ts, ui/src/store/__tests__/configStore.test.ts, ui/src/pages/__tests__/AllScreensAndActions.test.ts, ui/src/pages/__tests__/PerformanceAndSettings.test.ts, ui/src/store/serverStore.ts...
+- **Size**: 8 nodes
+- **Key Files**: ui/src/pages/Settings.tsx, ui/src/pages/Logs.tsx, ui/src/components/layout/Sidebar.tsx, ui/src/pages/Diagnostics.tsx, ui/src/main.tsx...
 
 ### Module 4: ui Cluster
-- **Size**: 6 nodes
-- **Key Files**: ui/src/pages/__tests__/SetupFlow.test.ts, ui/src/pages/Performance.tsx, ui/src/store/validationStore.ts, ui/src/pages/Setup.tsx, ui/src/store/hardwareStore.ts...
-
-### Module 5: ui Cluster
 - **Size**: 1 nodes
 - **Key Files**: ui/vite.config.ts
 

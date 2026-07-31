@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use crate::scripts::get_workspace_root;
+use crate::scripts::{get_workspace_root, get_user_data_dir};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -173,18 +173,32 @@ impl Default for AppConfig {
 }
 
 pub fn get_config_path() -> PathBuf {
-    get_workspace_root().join("llo-config.json")
+    get_user_data_dir().join("llo-config.json")
 }
 
 #[tauri::command]
 pub fn load_config() -> Result<AppConfig, String> {
-    let path = get_config_path();
-    if !path.exists() {
+    let user_config_path = get_config_path();
+    
+    if !user_config_path.exists() {
+        // Copy initial default config from bundled resources if available
+        let root = get_workspace_root();
+        let bundled_candidates = vec![
+            root.join("llo-config.json"),
+            root.join("resources").join("llo-config.json"),
+        ];
+
+        if let Some(bundled_path) = bundled_candidates.into_iter().find(|p| p.exists()) {
+            let _ = fs::copy(&bundled_path, &user_config_path);
+        }
+    }
+
+    if !user_config_path.exists() {
         return Ok(AppConfig::default());
     }
 
-    let contents = fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read llo-config.json: {}", e))?;
+    let contents = fs::read_to_string(&user_config_path)
+        .map_err(|e| format!("Failed to read llo-config.json at {:?}: {}", user_config_path, e))?;
 
     let config: AppConfig = serde_json::from_str(&contents)
         .map_err(|e| format!("Failed to parse llo-config.json: {}", e))?;
@@ -199,7 +213,7 @@ pub fn save_config(config: AppConfig) -> Result<(), String> {
         .map_err(|e| format!("Failed to serialize config: {}", e))?;
 
     fs::write(&path, contents)
-        .map_err(|e| format!("Failed to write llo-config.json: {}", e))?;
+        .map_err(|e| format!("Failed to write llo-config.json at {:?}: {}", path, e))?;
 
     Ok(())
 }

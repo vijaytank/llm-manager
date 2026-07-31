@@ -21,7 +21,9 @@ pub struct HealthReport {
 
 #[tauri::command]
 pub fn run_health_check() -> Result<HealthReport, String> {
-    let script_output = match run_powershell_script("script/test-health.ps1", &[]) {
+    let config_file = crate::scripts::get_user_data_dir().join("llo-config.json");
+    let config_file_str = config_file.to_string_lossy().to_string();
+    let script_output = match run_powershell_script("script/test-health.ps1", &["-ConfigFile", &config_file_str]) {
         Ok(out) => out,
         Err(e) => e,
     };
@@ -108,7 +110,9 @@ pub fn run_health_check() -> Result<HealthReport, String> {
 
 #[tauri::command]
 pub fn audit_scripts() -> Result<String, String> {
-    let output = match run_powershell_script("script/verify-scripts.ps1", &[]) {
+    let config_file = crate::scripts::get_user_data_dir().join("llo-config.json");
+    let config_file_str = config_file.to_string_lossy().to_string();
+    let output = match run_powershell_script("script/verify-scripts.ps1", &["-ConfigFile", &config_file_str]) {
         Ok(out) => out,
         Err(e) => format!("Audit completed with notes:\n{}", e),
     };

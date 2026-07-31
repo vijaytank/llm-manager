@@ -15,13 +15,17 @@ export const OverviewPage: React.FC = () => {
   const { profile, fetchHardware, loading: hardwareLoading } = useHardwareStore();
   const { config, updateConfig, saveConfig } = useConfigStore();
   const { status, port, logs } = useServerStore();
-  const { models } = useModelsStore();
+  const { models, fetchModels } = useModelsStore();
   const { assessments } = useValidationStore();
   const [backendModelInfo, setBackendModelInfo] = useState<{ active_model?: string; models_preset_path?: string } | null>(null);
 
   useEffect(() => {
     fetchHardware();
   }, [fetchHardware]);
+
+  useEffect(() => {
+    fetchModels(config?.models_dir);
+  }, [fetchModels, config?.models_dir]);
 
   useEffect(() => {
     invoke('get_active_model_info')
@@ -31,11 +35,16 @@ export const OverviewPage: React.FC = () => {
       });
   }, []);
 
-  const [selectedModelFilename, setSelectedModelFilename] = useState<string>(
-    models.length > 0 ? models[0].filename : ''
-  );
+  const [selectedModelFilename, setSelectedModelFilename] = useState<string>('');
 
-  const selectedModel = models.find((m) => m.filename === selectedModelFilename) || models[0] || null;
+  useEffect(() => {
+    if (models.length > 0 && !selectedModelFilename) {
+      const active = models.find((m) => m.name === config?.active_model);
+      setSelectedModelFilename(active ? active.filename : models[0].filename);
+    }
+  }, [models, config?.active_model, selectedModelFilename]);
+
+  const selectedModel = models.find((m) => m.filename === selectedModelFilename) || models.find((m) => m.name === config?.active_model) || models[0] || null;
   const activeModel = models.find((m) => m.name === config?.active_model);
   const launchCheck = validateModelLaunch(selectedModel, config || ({} as any), profile);
 

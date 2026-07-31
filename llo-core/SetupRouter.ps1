@@ -26,7 +26,11 @@ $ErrorActionPreference = "Stop"
 
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 if ([string]::IsNullOrWhiteSpace($ConfigFile))   { $ConfigFile   = Join-Path $ManagerDir "llo-config.json" }
-if ([string]::IsNullOrWhiteSpace($PresetFile))   { $PresetFile   = Join-Path $ManagerDir "models-preset.ini" }
+$ConfigFile = [System.IO.Path]::GetFullPath($ConfigFile)
+
+if ([string]::IsNullOrWhiteSpace($PresetFile))   { $PresetFile   = Join-Path (Split-Path -Parent $ConfigFile) "models-preset.ini" }
+$PresetFile = [System.IO.Path]::GetFullPath($PresetFile)
+
 if ([string]::IsNullOrWhiteSpace($ModelsDir))    { $ModelsDir    = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\models")) }
 if ([string]::IsNullOrWhiteSpace($TemplatesDir)) { $TemplatesDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\templates")) }
 if ([string]::IsNullOrWhiteSpace($GrammarsDir))  { $GrammarsDir  = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\grammars")) }

@@ -3,7 +3,8 @@
 
 param(
     [string]$LlamaRepoPath = "",
-    [string]$LlamaServerPath = ""
+    [string]$LlamaServerPath = "",
+    [string]$ConfigFile = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,7 +13,9 @@ $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $CacheFile = Join-Path $ManagerDir ".cached_flags.json"
 $DocsDir = Join-Path $ManagerDir "docs"
 $SystemCommandsDoc = Join-Path $DocsDir "SYSTEM_COMMANDS.md"
-$ConfigFile = Join-Path $ManagerDir "llo-config.json"
+if ([string]::IsNullOrWhiteSpace($ConfigFile)) {
+    $ConfigFile = Join-Path $ManagerDir "llo-config.json"
+}
 
 # Load config to get paths if parameters are not provided
 $config = @{}

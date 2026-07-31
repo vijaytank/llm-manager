@@ -41,7 +41,17 @@ pub fn scan_models(models_dir_path: Option<String>) -> Result<Vec<ModelInfo>, St
     let root = get_workspace_root();
     let target_dir = match models_dir_path {
         Some(p) if !p.is_empty() => PathBuf::from(p),
-        _ => root.join("..").join("models"),
+        _ => {
+            let config = crate::commands::config::load_config().ok();
+            let cfg_dir = config.and_then(|c| if !c.models_dir.is_empty() { Some(PathBuf::from(c.models_dir)) } else { None });
+            cfg_dir.unwrap_or_else(|| {
+                if root.join("models").exists() {
+                    root.join("models")
+                } else {
+                    root.join("..").join("models")
+                }
+            })
+        }
     };
 
     let mut models = Vec::new();

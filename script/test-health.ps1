@@ -3,9 +3,15 @@
 
 $ErrorActionPreference = "Stop"
 
+param(
+    [string]$ConfigFile = ""
+)
+
 $ScriptDir = $PSScriptRoot
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $ScriptDir ".."))
-$ConfigFile = Join-Path $ManagerDir "llo-config.json"
+if ([string]::IsNullOrWhiteSpace($ConfigFile)) {
+    $ConfigFile = Join-Path $ManagerDir "llo-config.json"
+}
 $PresetFile = Join-Path $ManagerDir "models-preset.ini"
 
 Write-Host "==========================================================" -ForegroundColor Green

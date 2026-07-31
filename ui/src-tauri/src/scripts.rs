@@ -1,5 +1,29 @@
 use std::path::PathBuf;
 use std::process::Command;
+use std::fs;
+
+/// Returns the user data directory for writable files (config, logs) at runtime.
+/// Uses `%APPDATA%\LLM Manager` on Windows, ensuring write permissions regardless of install dir.
+pub fn get_user_data_dir() -> PathBuf {
+    let base_dir = if let Ok(appdata) = std::env::var("APPDATA") {
+        PathBuf::from(appdata)
+    } else if let Ok(home) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
+        PathBuf::from(home).join(".config")
+    } else {
+        std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+    };
+
+    let user_dir = base_dir.join("LLM Manager");
+    let _ = fs::create_dir_all(&user_dir);
+    user_dir
+}
+
+/// Returns the user log directory (`%APPDATA%\LLM Manager\logs`).
+pub fn get_user_log_dir() -> PathBuf {
+    let log_dir = get_user_data_dir().join("logs");
+    let _ = fs::create_dir_all(&log_dir);
+    log_dir
+}
 
 /// Returns the workspace root or release resource path for llo-core scripts & config.
 pub fn get_workspace_root() -> PathBuf {
@@ -21,22 +45,28 @@ pub fn get_workspace_root() -> PathBuf {
     // 2. Check current_exe location & parent directories (Release build / Installed binary)
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
-            if exe_dir.join("llo-core").exists() {
-                return exe_dir.to_path_buf();
+            let candidates = vec![
+                exe_dir.to_path_buf(),
+                exe_dir.join("resources"),
+                exe_dir.join("_up_").join("_up_"),
+                exe_dir.join("resources").join("_up_").join("_up_"),
+            ];
+
+            for cand in &candidates {
+                if cand.join("llo-core").exists() || cand.join("script").exists() {
+                    return cand.clone();
+                }
             }
-            if exe_dir.join("resources").join("llo-core").exists() {
-                return exe_dir.join("resources");
-            }
+
             if let Some(parent) = exe_dir.parent() {
-                if parent.join("llo-core").exists() {
-                    return parent.to_path_buf();
-                }
-                if parent.join("resources").join("llo-core").exists() {
-                    return parent.join("resources");
-                }
-                if let Some(grandparent) = parent.parent() {
-                    if grandparent.join("llo-core").exists() {
-                        return grandparent.to_path_buf();
+                let parent_candidates = vec![
+                    parent.to_path_buf(),
+                    parent.join("resources"),
+                    parent.join("_up_").join("_up_"),
+                ];
+                for cand in &parent_candidates {
+                    if cand.join("llo-core").exists() || cand.join("script").exists() {
+                        return cand.clone();
                     }
                 }
             }
@@ -46,7 +76,7 @@ pub fn get_workspace_root() -> PathBuf {
     // 3. Fallback: Walk up from current working directory
     let mut current = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     for _ in 0..5 {
-        if current.join("llo-core").exists() || current.join("llo-config.json").exists() {
+        if current.join("llo-core").exists() || current.join("llo-config.json").exists() || current.join("script").exists() {
             return current;
         }
         if let Some(parent) = current.parent() {
@@ -63,16 +93,34 @@ pub fn get_workspace_root() -> PathBuf {
 #[allow(dead_code)]
 pub fn run_powershell_script(script_relative_path: &str, args: &[&str]) -> Result<String, String> {
     let root = get_workspace_root();
-    let mut script_full_path = root.join(script_relative_path);
+    
+    // Check multiple candidate locations for the target script
+    let mut candidate_paths = vec![
+        root.join(script_relative_path),
+        root.join("resources").join(script_relative_path),
+        root.join("_up_").join("_up_").join(script_relative_path),
+    ];
 
-    // If script full path doesn't exist directly, check root/resources/script_relative_path
-    if !script_full_path.exists() && root.join("resources").join(script_relative_path).exists() {
-        script_full_path = root.join("resources").join(script_relative_path);
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            candidate_paths.push(exe_dir.join(script_relative_path));
+            candidate_paths.push(exe_dir.join("resources").join(script_relative_path));
+            candidate_paths.push(exe_dir.join("_up_").join("_up_").join(script_relative_path));
+            candidate_paths.push(exe_dir.join("resources").join("_up_").join("_up_").join(script_relative_path));
+        }
     }
 
-    if !script_full_path.exists() {
-        return Err(format!("Script not found at path: {:?}", script_full_path));
-    }
+    let resolved_script = candidate_paths.into_iter().find(|p| p.exists());
+
+    let script_full_path = match resolved_script {
+        Some(path) => path,
+        None => {
+            return Err(format!(
+                "Script not found: '{}'. Searched under workspace root '{:?}'",
+                script_relative_path, root
+            ));
+        }
+    };
 
     let executable = if cfg!(target_os = "windows") {
         "powershell.exe"
@@ -81,9 +129,17 @@ pub fn run_powershell_script(script_relative_path: &str, args: &[&str]) -> Resul
     };
 
     let mut command = Command::new(executable);
-    
+
     if cfg!(target_os = "windows") {
-        command.arg("-ExecutionPolicy").arg("Bypass");
+        command
+            .arg("-ExecutionPolicy").arg("Bypass")
+            .arg("-WindowStyle").arg("Hidden")
+            .arg("-NonInteractive");
+
+        // Prevent Windows from creating a visible console window for this child process.
+        // 0x08000000 = CREATE_NO_WINDOW (only needed as an extra precaution on some setups)
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
     }
 
     command.arg("-File").arg(&script_full_path);
@@ -119,4 +175,12 @@ mod tests {
             "llo-core directory must be found at workspace root or resources"
         );
     }
+
+    #[test]
+    fn test_get_user_data_dir() {
+        let dir = get_user_data_dir();
+        assert!(dir.exists(), "User data dir must exist");
+        assert!(dir.join("logs").exists() || get_user_log_dir().exists(), "User log dir must exist");
+    }
 }
+

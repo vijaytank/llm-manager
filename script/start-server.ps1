@@ -5,14 +5,31 @@ param(
     [int]$Port = 8080,
     [string]$HostAddr = "127.0.0.1",
     [string]$LlamaServer = "",
-    [string]$LlamaDir = ""
+    [string]$LlamaDir = "",
+    [string]$ConfigFile = "",
+    [string]$LogDir = "",
+    [string]$ModelsDir = ""
 )
 
 $ErrorActionPreference = "Stop"
 
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$ConfigFile = Join-Path $ManagerDir "llo-config.json"
-$PresetFile = Join-Path $ManagerDir "models-preset.ini"
+
+if ([string]::IsNullOrWhiteSpace($ConfigFile)) {
+    $ConfigFile = Join-Path $ManagerDir "llo-config.json"
+}
+$ConfigFile = [System.IO.Path]::GetFullPath($ConfigFile)
+
+# Store preset configuration in user AppData folder alongside llo-config.json
+$UserDir = Split-Path -Parent $ConfigFile
+$PresetFile = [System.IO.Path]::GetFullPath((Join-Path $UserDir "models-preset.ini"))
+
+if ([string]::IsNullOrWhiteSpace($LogDir)) {
+    $LogDir = $ManagerDir
+} else {
+    if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
+}
+$LogDir = [System.IO.Path]::GetFullPath($LogDir)
 
 # Load current config settings
 $config = @{}
@@ -60,7 +77,16 @@ if (-not (Test-Path $setupScript)) {
 # Run setup and capture returned GGUF models list
 # Wrap in @() to prevent PowerShell from unrolling a single-element array into a scalar,
 # which would make $models.Count return $null instead of 1 and fall through to bootstrap mode.
-$models = @(. $setupScript)
+# Forward all user-data paths so SetupRouter reads config and preset from the correct location.
+$setupArgs = @{}
+$setupArgs["ConfigFile"] = $ConfigFile
+$setupArgs["PresetFile"] = $PresetFile
+if (-not [string]::IsNullOrWhiteSpace($ModelsDir)) {
+    $setupArgs["ModelsDir"] = $ModelsDir
+} elseif ($config.models_dir) {
+    $setupArgs["ModelsDir"] = $config.models_dir
+}
+$models = @(. $setupScript @setupArgs)
 
 # 2. Stop any existing llama-server on the port
 if ($IsWindows) {
@@ -191,8 +217,8 @@ $serverArgs = @(
 )
 
 $defaultModelId = ""
-$logPath = Join-Path $ManagerDir "llama-server.log"
-$errPath = Join-Path $ManagerDir "llama-server.err.log"
+$logPath = Join-Path $LogDir "llama-server.log"
+$errPath = Join-Path $LogDir "llama-server.err.log"
 
 if (Test-Path $logPath) { Remove-Item $logPath -Force }
 if (Test-Path $errPath) { Remove-Item $errPath -Force }
@@ -233,10 +259,19 @@ if ($config.custom_args) {
     $serverArgs += $customList
 }
 
-Write-Host "Starting llama-server..." -ForegroundColor Cyan
-Write-Host "Command: $LlamaServer $($serverArgs -join ' ')" -ForegroundColor DarkGray
+# Properly quote arguments that contain spaces for Start-Process -ArgumentList
+$formattedServerArgs = $serverArgs | ForEach-Object {
+    if ($_ -and $_.ToString().Contains(' ') -and -not ($_.ToString().StartsWith('"') -and $_.ToString().EndsWith('"'))) {
+        "`"$_`""
+    } else {
+        $_
+    }
+}
 
-$proc = Start-Process -FilePath $LlamaServer -ArgumentList $serverArgs -WorkingDirectory $LlamaDir -PassThru -NoNewWindow -RedirectStandardOutput $logPath -RedirectStandardError $errPath
+Write-Host "Starting llama-server..." -ForegroundColor Cyan
+Write-Host "Command: $LlamaServer $($formattedServerArgs -join ' ')" -ForegroundColor DarkGray
+
+$proc = Start-Process -FilePath $LlamaServer -ArgumentList $formattedServerArgs -WorkingDirectory $LlamaDir -PassThru -NoNewWindow -RedirectStandardOutput $logPath -RedirectStandardError $errPath
 Write-Host "Server process launched (PID: $($proc.Id))" -ForegroundColor Green
 Write-Host "llama-server stdout log: $logPath" -ForegroundColor DarkGray
 Write-Host "llama-server stderr log: $errPath" -ForegroundColor DarkGray
