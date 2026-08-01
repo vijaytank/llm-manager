@@ -7,6 +7,7 @@ import { useConfigStore } from '../store/configStore';
 import { useModelsStore } from '../store/modelsStore';
 import { useValidationStore } from '../store/validationStore';
 import { ImpactBanner } from '../components/ImpactBanner';
+import { InfoTooltip } from '../components/InfoTooltip';
 import './Setup.css';
 
 interface SetupPageProps {
@@ -227,7 +228,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
             <div className="param-grid">
               <div className="param-card">
                 <div>
-                  <div className="param-label">Flash Attention</div>
+                  <div className="param-label">
+                    Flash Attention
+                    <InfoTooltip
+                      title="Flash Attention (--flash-attn)"
+                      description="Accelerates model attention calculation and optimizes GPU memory footprint."
+                      recommendation={isCpuOnly ? "Disabled in CPU-only mode." : "Keep enabled for modern GPUs."}
+                      impact="Speeds up prompt processing and saves memory."
+                    />
+                  </div>
                   <div className="param-value font-mono">
                     {config?.flash_attn || 'off'} ({isCpuOnly ? 'Disabled' : 'Enabled'})
                   </div>
@@ -245,19 +254,80 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
 
               <div className="param-card">
                 <div>
-                  <div className="param-label">Default Context Window</div>
-                  <div className="param-value font-mono">{config?.default_context_size || 32768} tokens</div>
+                  <div className="param-label">
+                    KV Cache Precision
+                    <InfoTooltip
+                      title="KV Cache Precision (--cache-type-k/v)"
+                      description="Quantization precision of the context memory buffer."
+                      recommendation={(profile?.vramGb || 0) <= 8 ? "q8_0 is highly recommended on your system to cut VRAM usage by 50%." : "f16 for max precision."}
+                      impact="q8_0 saves 50% VRAM; q4_0 saves 75% VRAM."
+                    />
+                  </div>
+                  <div className="param-value font-mono">{config?.cache_type_k || 'f16'} (VRAM Tradeoff)</div>
                 </div>
                 <select
                   className="form-input font-mono"
-                  style={{ width: '120px', padding: '4px 8px' }}
-                  value={config?.default_context_size || 32768}
-                  onChange={(e) => updateConfig({ default_context_size: Number(e.target.value) })}
+                  style={{ width: '160px', padding: '4px 8px' }}
+                  value={config?.cache_type_k || 'f16'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    updateConfig({ cache_type_k: val, cache_type_v: val });
+                  }}
                 >
-                  <option value={8192}>8192</option>
-                  <option value={16384}>16384</option>
-                  <option value={32768}>32768</option>
-                  <option value={65536}>65536</option>
+                  <option value="f16">f16 (Full Precision)</option>
+                  <option value="q8_0">q8_0 (50% VRAM Savings ⭐)</option>
+                  <option value="q4_0">q4_0 (75% VRAM Savings)</option>
+                </select>
+              </div>
+
+              <div className="param-card">
+                <div>
+                  <div className="param-label">
+                    Parallel User Slots
+                    <InfoTooltip
+                      title="Parallel User Slots (--parallel)"
+                      description="Slot count for concurrent requests. Slot 1 focuses 100% of GPU bandwidth on single user for top speed."
+                      recommendation="Select 1 slot for maximum single-user generation speed."
+                      impact="1 slot = Max GPU Speed. 2/4 slots = Concurrency."
+                    />
+                  </div>
+                  <div className="param-value font-mono">{config?.parallel_slots || 1} Slot(s)</div>
+                </div>
+                <select
+                  className="form-input font-mono"
+                  style={{ width: '140px', padding: '4px 8px' }}
+                  value={config?.parallel_slots || 1}
+                  onChange={(e) => updateConfig({ parallel_slots: Number(e.target.value) })}
+                >
+                  <option value={1}>1 (Max Speed ⭐)</option>
+                  <option value={2}>2 (Dual Slots)</option>
+                  <option value={4}>4 (Quad Slots)</option>
+                </select>
+              </div>
+
+              <div className="param-card">
+                <div>
+                  <div className="param-label">
+                    Micro-Batch Size
+                    <InfoTooltip
+                      title="Micro-Batch Size (--ubatch-size)"
+                      description="Physical evaluation batch size."
+                      recommendation="512 is the universal standard default."
+                      impact="Increases prompt evaluation throughput."
+                    />
+                  </div>
+                  <div className="param-value font-mono">{config?.ubatch_size || 512} tokens</div>
+                </div>
+                <select
+                  className="form-input font-mono"
+                  style={{ width: '130px', padding: '4px 8px' }}
+                  value={config?.ubatch_size || 512}
+                  onChange={(e) => updateConfig({ ubatch_size: Number(e.target.value) })}
+                >
+                  <option value={128}>128</option>
+                  <option value={256}>256</option>
+                  <option value={512}>512 (Default)</option>
+                  <option value={1024}>1024 (High VRAM)</option>
                 </select>
               </div>
             </div>

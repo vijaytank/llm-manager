@@ -7,6 +7,7 @@ import { useModelsStore, ModelInfo } from '../store/modelsStore';
 import { useConfigStore } from '../store/configStore';
 import { useHardwareStore } from '../store/hardwareStore';
 import { validateModelLaunch } from '../lib/validation';
+import { InfoTooltip } from '../components/InfoTooltip';
 import './Models.css';
 
 interface GgufDetail {
@@ -126,23 +127,53 @@ export const ModelsPage: React.FC = () => {
           <table className="models-table">
             <thead>
               <tr>
-                <th>Model Name</th>
+                <th>
+                  Model Name
+                  <InfoTooltip
+                    title="GGUF Model File"
+                    description="The main GGML/GGUF quantized weights file scanned from your configured models directory."
+                    recommendation="Q4_K_M or NVFP4 quantizations provide the best balance of speed, quality, and low VRAM footprint."
+                  />
+                </th>
                 <th>File Size</th>
                 <th>Quantization</th>
-                <th>Template / Type</th>
-                <th>Vision (mmproj) Adapter</th>
-                <th>Hardware Compatibility & Pre-Flight Check</th>
+                <th>
+                  Template / Type
+                  <InfoTooltip
+                    title="Detected Chat Template & Type"
+                    description="Chat template auto-detected from GGUF metadata headers (e.g. ChatML, Mistral, Llama-3)."
+                  />
+                </th>
+                <th>
+                  Vision (mmproj) Adapter
+                  <InfoTooltip
+                    title="Multimodal Projector Adapter"
+                    description="Identifies if the file is a vision adapter (mmproj) or text model."
+                    recommendation="Must match the base vision model architecture to enable image input."
+                  />
+                </th>
+                <th>
+                  Hardware Check
+                  <InfoTooltip
+                    title="Hardware Safety & Pre-Flight Check"
+                    description="Evaluates if your GPU VRAM and System RAM can fit the model weights + KV cache."
+                    recommendation={profile?.vramGb ? `Models under ${profile.vramGb * 0.8} GB will run with 100% GPU offload.` : "CPU mode active."}
+                  />
+                </th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {models.length > 0 ? (
                 (() => {
+                  const baseModels = models.filter((m) => !m.isMmproj);
                   const mmprojModels = models.filter((m) => m.isMmproj);
                   const selectedMmprojPath = config?.mmproj_path || '';
                   const isNoOffload = !!config?.mmproj_no_offload;
 
-                  return models.map((m, i) => {
+                  const displayList = baseModels.length > 0 ? baseModels : models;
+
+                  return displayList.map((m, i) => {
                     const launchCheck = validateModelLaunch(m, config || ({} as any), profile);
                     const isActive = config?.active_model === m.name;
                     const isCurrentModelMmprojSelected = isActive && selectedMmprojPath !== '' && selectedMmprojPath !== 'none';

@@ -3,6 +3,7 @@ import { PageShell } from '../components/layout/PageShell';
 import { Save, FolderOpen, Code, Sliders, Check, AlertTriangle } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useConfigStore, AppConfig } from '../store/configStore';
+import { InfoTooltip } from '../components/InfoTooltip';
 import './Settings.css';
 
 export const SettingsPage: React.FC = () => {
@@ -97,7 +98,14 @@ export const SettingsPage: React.FC = () => {
             <h2>System Path Configurations</h2>
             
             <div className="form-group">
-              <label className="form-label">llama-server.exe Executable Path</label>
+              <label className="form-label">
+                llama-server.exe Executable Path
+                <InfoTooltip
+                  title="llama-server.exe Executable Path"
+                  description="Absolute path to the backend llama-server binary. Built-in precompiled binary is used by default."
+                  recommendation="Leave default unless you are using a custom compiled llama.cpp build."
+                />
+              </label>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <input
                   type="text"
@@ -112,7 +120,14 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">GGUF Models Directory</label>
+              <label className="form-label">
+                GGUF Models Directory
+                <InfoTooltip
+                  title="GGUF Models Folder"
+                  description="Root folder where LLM Manager scans for .gguf model files and .jinja templates."
+                  recommendation="Set to your dedicated model storage drive."
+                />
+              </label>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <input
                   type="text"

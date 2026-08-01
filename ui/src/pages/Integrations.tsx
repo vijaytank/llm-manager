@@ -4,6 +4,7 @@ import { Code, Terminal, Sparkles, Globe, Copy, Check } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useConfigStore } from '../store/configStore';
 import { useServerStore } from '../store/serverStore';
+import { InfoTooltip } from '../components/InfoTooltip';
 import './Integrations.css';
 
 export const IntegrationsPage: React.FC = () => {
@@ -36,7 +37,14 @@ export const IntegrationsPage: React.FC = () => {
             <div className="flex-items-center gap-10">
               <Code className="card-icon" size={24} />
               <div>
-                <h3>VS Code Workspace</h3>
+                <h3>
+                  VS Code Workspace
+                  <InfoTooltip
+                    title="VS Code Integration"
+                    description="Configures environment variables for Continue, GitHub Copilot alternatives, and local LLM extensions."
+                    recommendation="Set OPENAI_BASE_URL to point to local LLM Manager."
+                  />
+                </h3>
                 <p className="card-sub">Tasks & integrated terminal environment</p>
               </div>
             </div>
@@ -62,7 +70,15 @@ export const IntegrationsPage: React.FC = () => {
             <div className="flex-items-center gap-10">
               <Terminal className="card-icon" size={24} />
               <div>
-                <h3>Claude Code CLI</h3>
+                <h3>
+                  Claude Code CLI
+                  <InfoTooltip
+                    title="Claude Code CLI Integration"
+                    description="Launches an interactive Command Prompt terminal pre-configured with ANTHROPIC_BASE_URL pointing to local LLM Manager."
+                    recommendation="Uses local GGUF models as Anthropic Claude drop-in replacements."
+                    impact="Zero API costs; 100% offline agentic coding."
+                  />
+                </h3>
                 <p className="card-sub">Local model proxy & telemetry control</p>
               </div>
             </div>
@@ -85,7 +101,14 @@ export const IntegrationsPage: React.FC = () => {
             <div className="flex-items-center gap-10">
               <Sparkles className="card-icon" size={24} />
               <div>
-                <h3>Cursor & Continue</h3>
+                <h3>
+                  Cursor & Continue
+                  <InfoTooltip
+                    title="Cursor & Continue IDE Integration"
+                    description="Connects Cursor IDE, Continue, or Aider to local OpenAI-compatible endpoint."
+                    recommendation="Set model name to 'local-model' or matching GGUF alias."
+                  />
+                </h3>
                 <p className="card-sub">OpenAI compatible API endpoint</p>
               </div>
             </div>
@@ -111,7 +134,14 @@ export const IntegrationsPage: React.FC = () => {
             <div className="flex-items-center gap-10">
               <Globe className="card-icon" size={24} />
               <div>
-                <h3>Direct REST API</h3>
+                <h3>
+                  Direct REST API
+                  <InfoTooltip
+                    title="Direct REST API Endpoints"
+                    description="Native llama.cpp endpoints (/health, /v1/chat/completions, /slots) for custom scripts or curl commands."
+                    recommendation="Supports streaming responses, vision payloads, and slot monitoring."
+                  />
+                </h3>
                 <p className="card-sub">Native llama.cpp & OpenAI endpoints</p>
               </div>
             </div>

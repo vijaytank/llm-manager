@@ -1,11 +1,11 @@
 # LLO test-health.ps1
 # Verifies the health and integrity of all llm-manager scripts, configs, and hardware profile APIs.
 
-$ErrorActionPreference = "Stop"
-
 param(
     [string]$ConfigFile = ""
 )
+
+$ErrorActionPreference = "Stop"
 
 $ScriptDir = $PSScriptRoot
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $ScriptDir ".."))

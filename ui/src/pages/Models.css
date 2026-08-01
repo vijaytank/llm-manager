@@ -17,26 +17,31 @@
 
 .table-container {
   overflow-x: auto;
+  width: 100%;
+  max-width: 100%;
+  border-radius: 8px;
 }
 
 .models-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.875rem;
+  font-size: 0.82rem;
 }
 
 .models-table th {
-  padding: 14px 16px;
+  padding: 10px 12px;
   background: var(--bg-surface);
   color: var(--text-secondary);
   font-weight: 600;
   border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
 }
 
 .models-table td {
-  padding: 14px 16px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
 }
 
 .models-table tr:hover {

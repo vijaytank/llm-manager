@@ -9,6 +9,7 @@ import { useModelsStore } from '../store/modelsStore';
 import { useValidationStore } from '../store/validationStore';
 import { validateModelLaunch } from '../lib/validation';
 import { ImpactBanner } from '../components/ImpactBanner';
+import { InfoTooltip } from '../components/InfoTooltip';
 import './Overview.css';
 
 export const OverviewPage: React.FC = () => {
@@ -117,7 +118,15 @@ export const OverviewPage: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Boxes size={24} className="card-icon" />
               <div>
-                <h3 style={{ margin: 0 }}>Model Selection & Pre-Flight Check</h3>
+                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
+                  Model Selection & Pre-Flight Check
+                  <InfoTooltip
+                    title="Model Selection & Pre-Flight Check"
+                    description="Selects the primary GGUF model for inference and validates memory safety before launching llama-server."
+                    recommendation={profile?.vramGb ? `Your ${profile.vramGb} GB GPU fits models up to ~${Math.floor(profile.vramGb * 0.8)} GB file size.` : "Running on CPU RAM budget."}
+                    impact="Ensures system RAM/VRAM is not exceeded during server initialization."
+                  />
+                </h3>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                   {launchCheck.message}
                 </div>
@@ -159,24 +168,32 @@ export const OverviewPage: React.FC = () => {
               {/* Vision mmproj Dropdown */}
               {mmprojModels.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <select
-                    className="form-input font-mono"
-                    style={{ width: '220px', padding: '6px 10px', fontSize: '0.85rem' }}
-                    value={config?.mmproj_path || ''}
-                    onChange={async (e) => {
-                      updateConfig({ mmproj_path: e.target.value });
-                      await saveConfig();
-                    }}
-                  >
-                    <option value="">Vision: Disabled (Text Only)</option>
-                    {mmprojModels.map((proj, idx) => (
-                      <option key={idx} value={proj.path}>
-                        Vision: {proj.name} ({proj.fileSizeGb} GB)
-                      </option>
-                    ))}
-                  </select>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <select
+                      className="form-input font-mono"
+                      style={{ width: '220px', padding: '6px 10px', fontSize: '0.85rem' }}
+                      value={config?.mmproj_path || ''}
+                      onChange={async (e) => {
+                        updateConfig({ mmproj_path: e.target.value });
+                        await saveConfig();
+                      }}
+                    >
+                      <option value="">Vision: Disabled (Text Only)</option>
+                      {mmprojModels.map((proj, idx) => (
+                        <option key={idx} value={proj.path}>
+                          Vision: {proj.name} ({proj.fileSizeGb} GB)
+                        </option>
+                      ))}
+                    </select>
+                    <InfoTooltip
+                      title="Multimodal Vision Adapter (--mmproj)"
+                      description="Enables image and multimodal visual processing for compatible GGUF vision models (CLIP / LLaVA / Qwen-VL)."
+                      recommendation="Select matching mmproj file for image support. Use CPU offload if VRAM is tight."
+                      impact="Consumes ~0.8-1.5 GB VRAM or RAM."
+                    />
+                  </div>
                   {config?.mmproj_path && config.mmproj_path !== 'none' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem' }}>
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', marginTop: '2px', background: 'var(--bg-card)', padding: '4px 8px', borderRadius: '4px' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                         <input
                           type="radio"
@@ -207,7 +224,7 @@ export const OverviewPage: React.FC = () => {
               )}
 
               {/* Chat Template Selector */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <select
                   className="form-input font-mono"
                   style={{ width: '240px', padding: '6px 10px', fontSize: '0.85rem' }}
@@ -238,6 +255,12 @@ export const OverviewPage: React.FC = () => {
                     </option>
                   ))}
                 </select>
+                <InfoTooltip
+                  title="Chat Template (--chat-template-file)"
+                  description="Formats system, user, and assistant prompt roles. Universal Default (default.jinja) fixes Jinja system role exceptions across custom GGUF models."
+                  recommendation="Universal Default (default.jinja) is recommended if your model returns template parsing errors."
+                  impact="Ensures system prompts and multi-turn conversations format cleanly."
+                />
               </div>
 
               {status === 'stopped' ? (

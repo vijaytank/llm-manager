@@ -3,6 +3,7 @@ import { PageShell } from '../components/layout/PageShell';
 import { Search, Trash2, Download, Copy, Check } from 'lucide-react';
 import { save } from '@tauri-apps/plugin-dialog';
 import { useServerStore } from '../store/serverStore';
+import { InfoTooltip } from '../components/InfoTooltip';
 import './Logs.css';
 
 export const LogsPage: React.FC = () => {
@@ -89,6 +90,11 @@ export const LogsPage: React.FC = () => {
               <option value="WARN">WARN Only</option>
               <option value="ERROR">ERROR Only</option>
             </select>
+            <InfoTooltip
+              title="Full Server Output Stream Logs"
+              description="Displays complete real-time stdout and stderr log streams tailed from llama-server.log and llama-server.err.log."
+              recommendation="Use keyword search and ERROR level filter to diagnose runtime issues."
+            />
 
             <button className="btn btn-outline" onClick={handleCopyLogs} disabled={filteredLogs.length === 0}>
               {copied ? <Check size={16} style={{ color: 'var(--accent-green, #10b981)' }} /> : <Copy size={16} />}

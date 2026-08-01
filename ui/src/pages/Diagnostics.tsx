@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PageShell } from '../components/layout/PageShell';
 import { Activity, CheckCircle, ShieldCheck } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { InfoTooltip } from '../components/InfoTooltip';
 import './Diagnostics.css';
 
 interface HealthReport {
@@ -34,7 +35,14 @@ export const DiagnosticsPage: React.FC = () => {
       <div className="diag-container">
         <div className="diag-header glass-card card-padding">
           <div>
-            <h2>System & Infrastructure Health Check</h2>
+            <h2 style={{ display: 'flex', alignItems: 'center' }}>
+              System & Infrastructure Health Check
+              <InfoTooltip
+                title="System Health & Infrastructure Audit"
+                description="Audits PowerShell execution policies, llama-server binary permissions, model paths, port 8080 availability, and GGUF integrity."
+                recommendation="Run after installation or when port errors occur."
+              />
+            </h2>
             <p className="card-sub">Audits PowerShell scripts, binary paths, system dependencies, and port availability</p>
           </div>
           <div className="diag-actions">

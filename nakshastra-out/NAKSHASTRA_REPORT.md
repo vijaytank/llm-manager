@@ -5,38 +5,38 @@
 ## 🏆 High-Impact Files
 These files have the highest centrality (PageRank) and are critical to the system architecture.
 
-- [ui/src/store/configStore.ts](file:///E:/Projects/llm-manager/ui/src/store/configStore.ts) (Score: 0.5693)
-- [ui/src/store/hardwareStore.ts](file:///E:/Projects/llm-manager/ui/src/store/hardwareStore.ts) (Score: 0.3959)
-- [ui/src/store/serverStore.ts](file:///E:/Projects/llm-manager/ui/src/store/serverStore.ts) (Score: 0.3521)
-- [ui/src/store/modelsStore.ts](file:///E:/Projects/llm-manager/ui/src/store/modelsStore.ts) (Score: 0.2961)
-- [ui/src/components/layout/PageShell.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/PageShell.tsx) (Score: 0.2638)
-- [ui/src/components/layout/TopBar.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/TopBar.tsx) (Score: 0.2606)
-- [ui/src/lib/validation.ts](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts) (Score: 0.2566)
-- [ui/src/App.tsx](file:///E:/Projects/llm-manager/ui/src/App.tsx) (Score: 0.1674)
-- [ui/src/store/validationStore.ts](file:///E:/Projects/llm-manager/ui/src/store/validationStore.ts) (Score: 0.1610)
-- [ui/src/components/ImpactBanner.tsx](file:///E:/Projects/llm-manager/ui/src/components/ImpactBanner.tsx) (Score: 0.1521)
+- [ui/src/store/configStore.ts](file:///E:/Projects/llm-manager/ui/src/store/configStore.ts) (Score: 0.5934)
+- [ui/src/store/hardwareStore.ts](file:///E:/Projects/llm-manager/ui/src/store/hardwareStore.ts) (Score: 0.4311)
+- [ui/src/store/serverStore.ts](file:///E:/Projects/llm-manager/ui/src/store/serverStore.ts) (Score: 0.3350)
+- [ui/src/store/modelsStore.ts](file:///E:/Projects/llm-manager/ui/src/store/modelsStore.ts) (Score: 0.2838)
+- [ui/src/components/layout/TopBar.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/TopBar.tsx) (Score: 0.2478)
+- [ui/src/lib/validation.ts](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts) (Score: 0.2462)
+- [ui/src/components/layout/PageShell.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/PageShell.tsx) (Score: 0.2388)
+- [ui/src/components/InfoTooltip.tsx](file:///E:/Projects/llm-manager/ui/src/components/InfoTooltip.tsx) (Score: 0.2388)
+- [ui/src/App.tsx](file:///E:/Projects/llm-manager/ui/src/App.tsx) (Score: 0.1622)
+- [ui/src/store/validationStore.ts](file:///E:/Projects/llm-manager/ui/src/store/validationStore.ts) (Score: 0.1543)
 
 ## 🧬 High-Impact Symbols
 These class and function abstractions are the key logical hubs of the system.
 
-- [calculateKvCacheGb](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts#L28-L42) (function in `ui/src/lib/validation.ts` · Score: 0.4612)
-- [validateConfiguration](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts#L44-L142) (function in `ui/src/lib/validation.ts` · Score: 0.1708)
-- [validateModelLaunch](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts#L155-L251) (function in `ui/src/lib/validation.ts` · Score: 0.1708)
+- [calculateKvCacheGb](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts#L28-L42) (function in `ui/src/lib/validation.ts` · Score: 0.4459)
+- [validateConfiguration](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts#L44-L142) (function in `ui/src/lib/validation.ts` · Score: 0.1652)
+- [validateModelLaunch](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts#L155-L251) (function in `ui/src/lib/validation.ts` · Score: 0.1652)
 
 ## 📦 Module Communities (Louvain)
 The following clusters represent tightly-coupled functional modules detected in the graph.
 
 ### Module 1: ui Cluster
 - **Size**: 10 nodes
-- **Key Files**: ui/src/lib/validation.ts, ui/src/store/__tests__/modelsStore.test.ts, ui/src/pages/Performance.tsx, ui/src/pages/__tests__/SetupFlow.test.ts, ui/src/lib/__tests__/validation.test.ts...
+- **Key Files**: ui/src/pages/Diagnostics.tsx, ui/src/components/layout/PageShell.tsx, ui/src/App.tsx, ui/src/main.tsx, ui/src/pages/Performance.tsx...
 
 ### Module 2: ui Cluster
-- **Size**: 9 nodes
-- **Key Files**: ui/src/components/layout/__tests__/TopBar.test.ts, ui/src/components/layout/TopBar.tsx, ui/src/pages/__tests__/AllScreensAndActions.test.ts, ui/src/store/__tests__/configStore.test.ts, ui/src/pages/Integrations.tsx...
+- **Size**: 10 nodes
+- **Key Files**: ui/src/lib/validation.ts, ui/src/store/__tests__/modelsStore.test.ts, ui/src/store/__tests__/hardwareStore.test.ts, ui/src/lib/__tests__/validation.test.ts, ui/src/pages/Models.tsx...
 
 ### Module 3: ui Cluster
-- **Size**: 7 nodes
-- **Key Files**: ui/src/components/layout/PageShell.tsx, ui/src/pages/Diagnostics.tsx, ui/src/App.tsx, ui/src/pages/Settings.tsx, ui/src/main.tsx...
+- **Size**: 9 nodes
+- **Key Files**: ui/src/components/layout/__tests__/TopBar.test.ts, ui/src/components/layout/TopBar.tsx, ui/src/pages/__tests__/AllScreensAndActions.test.ts, ui/src/store/__tests__/configStore.test.ts, ui/src/pages/__tests__/PerformanceAndSettings.test.ts...
 
 ### Module 4: ui Cluster
 - **Size**: 4 nodes

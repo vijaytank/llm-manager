@@ -46,8 +46,18 @@
       "type": "file"
     },
     {
+      "id": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
+      "label": "ParameterCLIForwarding.test.ts",
+      "type": "file"
+    },
+    {
       "id": "ui/src/pages/Overview.tsx",
       "label": "Overview.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/components/InfoTooltip.tsx",
+      "label": "InfoTooltip.tsx",
       "type": "file"
     },
     {
@@ -58,6 +68,11 @@
     {
       "id": "ui/src/store/__tests__/hardwareStore.test.ts",
       "label": "hardwareStore.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/components/__tests__/InfoTooltip.test.ts",
+      "label": "InfoTooltip.test.ts",
       "type": "file"
     },
     {
@@ -166,6 +181,11 @@
       "type": "stub"
     },
     {
+      "id": "./InfoTooltip.css",
+      "label": "InfoTooltip.css",
+      "type": "stub"
+    },
+    {
       "id": "./Integrations.css",
       "label": "Integrations.css",
       "type": "stub"
@@ -253,6 +273,11 @@
     {
       "id": "react",
       "label": "react",
+      "type": "stub"
+    },
+    {
+      "id": "react-dom",
+      "label": "react-dom",
       "type": "stub"
     },
     {
@@ -378,6 +403,12 @@
     },
     {
       "source": "ui/src/pages/Models.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Models.tsx",
       "target": "ui/src/components/layout/PageShell.tsx",
       "type": "import",
       "weight": 0.8
@@ -450,6 +481,12 @@
     },
     {
       "source": "ui/src/pages/Logs.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
       "target": "ui/src/components/layout/PageShell.tsx",
       "type": "import",
       "weight": 0.8
@@ -516,6 +553,12 @@
     },
     {
       "source": "ui/src/pages/Performance.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
       "target": "ui/src/components/layout/PageShell.tsx",
       "type": "import",
       "weight": 0.8
@@ -551,8 +594,26 @@
       "weight": 0.8
     },
     {
+      "source": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
       "source": "ui/src/pages/Overview.tsx",
       "target": "ui/src/components/ImpactBanner.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
       "type": "import",
       "weight": 0.8
     },
@@ -623,6 +684,36 @@
       "weight": 0.8
     },
     {
+      "source": "ui/src/components/InfoTooltip.tsx",
+      "target": "./InfoTooltip.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/InfoTooltip.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/InfoTooltip.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/InfoTooltip.tsx",
+      "target": "react-dom",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
       "source": "ui/src/pages/Settings.tsx",
       "target": "ui/src/components/layout/PageShell.tsx",
       "type": "import",
@@ -671,8 +762,26 @@
       "weight": 0.8
     },
     {
+      "source": "ui/src/components/__tests__/InfoTooltip.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/__tests__/InfoTooltip.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
       "source": "ui/src/pages/Setup.tsx",
       "target": "ui/src/components/ImpactBanner.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
       "type": "import",
       "weight": 0.8
     },
@@ -864,6 +973,12 @@
     },
     {
       "source": "ui/src/pages/Integrations.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
       "target": "ui/src/components/layout/PageShell.tsx",
       "type": "import",
       "weight": 0.8
@@ -949,6 +1064,12 @@
     {
       "source": "ui/vite.config.ts",
       "target": "vite",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
       "type": "import",
       "weight": 0.8
     },

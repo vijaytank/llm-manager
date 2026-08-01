@@ -251,6 +251,13 @@ if ($models.Count -gt 0) {
         Write-Host "Configured Context Size: $($selectedEntry.CtxSize) tokens" -ForegroundColor Green
     }
 
+    if ($config.cache_type_k) {
+        $serverArgs += @("--cache-type-k", "$($config.cache_type_k)")
+        $cacheV = if ($config.cache_type_v) { "$($config.cache_type_v)" } else { "$($config.cache_type_k)" }
+        $serverArgs += @("--cache-type-v", $cacheV)
+        Write-Host "KV Cache Precision: $($config.cache_type_k)" -ForegroundColor Green
+    }
+
     # Explicitly pass --mmproj and --no-mmproj-offload CLI flags if configured
     if ($config.mmproj_path -and (Test-Path $config.mmproj_path) -and $config.mmproj_path -ne "none") {
         $serverArgs += @("--mmproj", $config.mmproj_path)
@@ -290,6 +297,59 @@ if ($models.Count -gt 0) {
     if ($resolvedTemplate) {
         $serverArgs += @("--chat-template-file", $resolvedTemplate)
         Write-Host "Chat Template File: $resolvedTemplate" -ForegroundColor Green
+    }
+
+    # Explicitly pass --parallel slot count if configured
+    if ($config.parallel_slots -and [int]$config.parallel_slots -gt 0) {
+        $serverArgs += @("--parallel", "$($config.parallel_slots)")
+        Write-Host "Configured Parallel Slots: $($config.parallel_slots)" -ForegroundColor Green
+    }
+
+    # Explicitly pass --ubatch-size if configured
+    if ($config.ubatch_size -and [int]$config.ubatch_size -gt 0) {
+        $serverArgs += @("--ubatch-size", "$($config.ubatch_size)")
+        Write-Host "Configured Micro-Batch Size: $($config.ubatch_size)" -ForegroundColor Green
+    }
+
+    # Explicitly pass --spec-type speculative decoding flag if configured
+    if ($config.spec_type -and $config.spec_type -ne "none") {
+        $serverArgs += @("--spec-type", "$($config.spec_type)")
+        Write-Host "Selected Speculative Decoding: $($config.spec_type)" -ForegroundColor Green
+    }
+
+    # Explicitly pass Flash Attention flag
+    if ($config.flash_attn -and $config.flash_attn -ne "auto") {
+        if ($config.flash_attn -eq "on") {
+            $serverArgs += @("--flash-attn", "on")
+            Write-Host "Flash Attention: ON" -ForegroundColor Green
+        } elseif ($config.flash_attn -eq "off") {
+            $serverArgs += @("--flash-attn", "off")
+            Write-Host "Flash Attention: OFF" -ForegroundColor Yellow
+        }
+    }
+
+    # Explicitly pass CPU inference threads if configured
+    if ($config.threads -and [int]$config.threads -gt 0) {
+        $serverArgs += @("-t", "$($config.threads)")
+        Write-Host "CPU Threads: $($config.threads)" -ForegroundColor Green
+    }
+
+    # Explicitly pass process priority if configured
+    if ($config.prio -and [int]$config.prio -gt 0) {
+        $serverArgs += @("--prio", "$($config.prio)")
+        Write-Host "Process Priority: $($config.prio)" -ForegroundColor Green
+    }
+
+    # Explicitly pass memory locking flag if configured
+    if ($config.mlock) {
+        $serverArgs += "--mlock"
+        Write-Host "Memory Locking: ENABLED" -ForegroundColor Green
+    }
+
+    # Explicitly pass reasoning tags behavior if configured
+    if ($config.reasoning -and $config.reasoning -ne "auto") {
+        $serverArgs += @("--reasoning", "$($config.reasoning)")
+        Write-Host "Reasoning Output: $($config.reasoning)" -ForegroundColor Green
     }
 } else {
     # Bootstrap download mode: No GGUFs and no cloud keys set. Run tiny local model from Hugging Face
