@@ -245,6 +245,52 @@ if ($models.Count -gt 0) {
     $defaultModelId = $selectedEntry.Alias
     $serverArgs += @("-m", $selectedEntry.Path)
     Write-Host "Selected Active Model for Inference: $($selectedEntry.Alias) ($($selectedEntry.Path))" -ForegroundColor Green
+
+    if ($selectedEntry.CtxSize -and [int]$selectedEntry.CtxSize -gt 0) {
+        $serverArgs += @("-c", "$($selectedEntry.CtxSize)")
+        Write-Host "Configured Context Size: $($selectedEntry.CtxSize) tokens" -ForegroundColor Green
+    }
+
+    # Explicitly pass --mmproj and --no-mmproj-offload CLI flags if configured
+    if ($config.mmproj_path -and (Test-Path $config.mmproj_path) -and $config.mmproj_path -ne "none") {
+        $serverArgs += @("--mmproj", $config.mmproj_path)
+        Write-Host "Multimodal Vision Projector: $($config.mmproj_path)" -ForegroundColor Green
+        if ($config.mmproj_no_offload) {
+            $serverArgs += "--no-mmproj-offload"
+            Write-Host "Vision Projector Offload: CPU (RAM)" -ForegroundColor Yellow
+        } else {
+            Write-Host "Vision Projector Offload: GPU (VRAM)" -ForegroundColor Green
+        }
+    }
+
+    # Explicitly pass --chat-template-file CLI flag if active_template or use_default_template is set
+    $resolvedTemplate = $null
+    $templatesDir = if ($config.templates_dir -and (Test-Path $config.templates_dir)) {
+        $config.templates_dir
+    } else {
+        Join-Path $ManagerDir "templates"
+    }
+
+    if ($config.active_template -and $config.active_template -ne "auto") {
+        if (Test-Path $config.active_template) {
+            $resolvedTemplate = $config.active_template
+        } else {
+            $cand = Join-Path $templatesDir $config.active_template
+            if (Test-Path $cand) {
+                $resolvedTemplate = $cand
+            }
+        }
+    } elseif ($config.use_default_template) {
+        $cand = Join-Path $templatesDir "default.jinja"
+        if (Test-Path $cand) {
+            $resolvedTemplate = $cand
+        }
+    }
+
+    if ($resolvedTemplate) {
+        $serverArgs += @("--chat-template-file", $resolvedTemplate)
+        Write-Host "Chat Template File: $resolvedTemplate" -ForegroundColor Green
+    }
 } else {
     # Bootstrap download mode: No GGUFs and no cloud keys set. Run tiny local model from Hugging Face
     $bootstrapRepo = "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF:Q4_K_M"
@@ -343,51 +389,55 @@ if ($liveModels.Count -gt 0) {
 Write-Host ""
 Write-Host "Client environment variables exported successfully." -ForegroundColor Green
 
-# 7. Optionally launch Claude Code CLI in a new window
+# 7. Optionally launch Claude Code CLI in a new window (interactive console only)
 if ([Environment]::UserInteractive) {
-    $claudeCli = Get-Command "claude" -ErrorAction SilentlyContinue
-    if ($claudeCli) {
-        Write-Host "`n[Claude Code Integration]" -ForegroundColor Yellow
-        Write-Host "Would you like to launch Claude Code CLI in a new window now? (Y/N) [N]: " -NoNewline -ForegroundColor White
-        $ans = Read-Host
-        if ($ans -and $ans.Trim().ToUpper() -eq "Y") {
-            # Select model
-            Write-Host "`nSelect model to run with Claude Code:" -ForegroundColor Cyan
-            $modelsList = if ($liveModels.Count -gt 0) { $liveModels } else { @($defaultModelId) }
-            for ($i = 0; $i -lt $modelsList.Count; $i++) {
-                Write-Host "  $($i + 1)) $($modelsList[$i])" -ForegroundColor DarkGray
+    try {
+        $claudeCli = Get-Command "claude" -ErrorAction SilentlyContinue
+        if ($claudeCli) {
+            Write-Host "`n[Claude Code Integration]" -ForegroundColor Yellow
+            Write-Host "Would you like to launch Claude Code CLI in a new window now? (Y/N) [N]: " -NoNewline -ForegroundColor White
+            $ans = Read-Host
+            if ($ans -and $ans.Trim().ToUpper() -eq "Y") {
+                # Select model
+                Write-Host "`nSelect model to run with Claude Code:" -ForegroundColor Cyan
+                $modelsList = if ($liveModels.Count -gt 0) { $liveModels } else { @($defaultModelId) }
+                for ($i = 0; $i -lt $modelsList.Count; $i++) {
+                    Write-Host "  $($i + 1)) $($modelsList[$i])" -ForegroundColor DarkGray
+                }
+                Write-Host "Select option [1]: " -NoNewline -ForegroundColor White
+                $sel = Read-Host
+                $idx = 0
+                if ($sel -match '^\d+$') {
+                    $idx = [int]$sel - 1
+                }
+                if ($idx -lt 0 -or $idx -ge $modelsList.Count) { $idx = 0 }
+                $selectedModel = $modelsList[$idx]
+                
+                Write-Host "Launching Claude Code with model '$selectedModel' in a new window..." -ForegroundColor Green
+                
+                # Prepare the startup command for the new window
+                $startupCmds = @(
+                    "`$env:ANTHROPIC_BASE_URL = '$localBase'",
+                    "`$env:ANTHROPIC_AUTH_TOKEN = 'local'",
+                    "`$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '$disableTeleVal'",
+                    "`$env:CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY = '1'",
+                    "claude --model $selectedModel"
+                ) -join "; "
+                
+                if ($IsWindows) {
+                    Start-Process powershell -ArgumentList "-NoExit", "-Command", "`"$startupCmds`""
+                } else {
+                    # macOS/Linux: PowerShell 7 binary is 'pwsh'
+                    Start-Process pwsh -ArgumentList "-NoExit", "-Command", "`"$startupCmds`""
+                }
             }
-            Write-Host "Select option [1]: " -NoNewline -ForegroundColor White
-            $sel = Read-Host
-            $idx = 0
-            if ($sel -match '^\d+$') {
-                $idx = [int]$sel - 1
-            }
-            if ($idx -lt 0 -or $idx -ge $modelsList.Count) { $idx = 0 }
-            $selectedModel = $modelsList[$idx]
-            
-            Write-Host "Launching Claude Code with model '$selectedModel' in a new window..." -ForegroundColor Green
-            
-            # Prepare the startup command for the new window
-            $startupCmds = @(
-                "`$env:ANTHROPIC_BASE_URL = '$localBase'",
-                "`$env:ANTHROPIC_AUTH_TOKEN = 'local'",
-                "`$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '$disableTeleVal'",
-                "`$env:CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY = '1'",
-                "claude --model $selectedModel"
-            ) -join "; "
-            
-            if ($IsWindows) {
-                Start-Process powershell -ArgumentList "-NoExit", "-Command", "`"$startupCmds`""
-            } else {
-                # macOS/Linux: PowerShell 7 binary is 'pwsh'
-                Start-Process pwsh -ArgumentList "-NoExit", "-Command", "`"$startupCmds`""
-            }
+        } else {
+            Write-Host "`n[Claude Code Integration]" -ForegroundColor Yellow
+            Write-Host "Claude Code CLI not detected in your PATH." -ForegroundColor DarkGray
+            Write-Host "To use Claude Code locally, install it via: npm install -g @anthropic-ai/claude-code" -ForegroundColor DarkGray
+            Write-Host "And run: claude --model <model-name>" -ForegroundColor Yellow
         }
-    } else {
-        Write-Host "`n[Claude Code Integration]" -ForegroundColor Yellow
-        Write-Host "Claude Code CLI not detected in your PATH." -ForegroundColor DarkGray
-        Write-Host "To use Claude Code locally, install it via: npm install -g @anthropic-ai/claude-code" -ForegroundColor DarkGray
-        Write-Host "And run: claude --model <model-name>" -ForegroundColor Yellow
+    } catch {
+        # Non-interactive shell environment (e.g. launched via Tauri GUI without console input)
     }
 }

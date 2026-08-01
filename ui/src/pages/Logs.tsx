@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PageShell } from '../components/layout/PageShell';
-import { Search, Trash2, Download } from 'lucide-react';
+import { Search, Trash2, Download, Copy, Check } from 'lucide-react';
 import { save } from '@tauri-apps/plugin-dialog';
 import { useServerStore } from '../store/serverStore';
 import './Logs.css';
@@ -9,6 +9,7 @@ export const LogsPage: React.FC = () => {
   const { logs, clearLogs } = useServerStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [levelFilter, setLevelFilter] = useState<'ALL' | 'INFO' | 'WARN' | 'ERROR'>('ALL');
+  const [copied, setCopied] = useState(false);
 
   const filteredLogs = logs.filter((log) => {
     const matchesLevel = levelFilter === 'ALL' || log.level === levelFilter;
@@ -17,24 +18,49 @@ export const LogsPage: React.FC = () => {
     return matchesLevel && matchesSearch;
   });
 
+  const handleCopyLogs = async () => {
+    if (filteredLogs.length === 0) return;
+    const text = filteredLogs.map((l) => `[${l.timestamp}] [${l.level}] ${l.message}`).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  };
+
   const handleExportLogs = async () => {
+    if (filteredLogs.length === 0) return;
+    const text = filteredLogs.map((l) => `[${l.timestamp}] [${l.level}] ${l.message}`).join('\n');
+    const defaultName = `llm-manager-server-${new Date().toISOString().slice(0, 10)}.log`;
+
+    let filename = defaultName;
     try {
       const selected = await save({
-        filters: [{ name: 'Text Files', extensions: ['txt', 'log'] }],
-        defaultPath: 'llm-manager-server.log',
+        filters: [{ name: 'Log Files (*.log)', extensions: ['log', 'txt'] }],
+        defaultPath: defaultName,
       });
-      if (selected) {
-        const text = logs.map((l) => `[${l.timestamp}] [${l.level}] ${l.message}`).join('\n');
-        // Save via Blob URL or electron download; for now copy to clipboard if file save is simple
-        const blob = new Blob([text], { type: 'text/plain' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'llm-manager-server.log';
-        a.click();
+      if (selected && typeof selected === 'string') {
+        filename = selected.split(/[/\\]/).pop() || defaultName;
       }
     } catch (e) {
-      console.error(e);
+      console.warn('Native save dialog cancelled or error:', e);
     }
+
+    // Trigger DOM file download (works cleanly in Tauri WebView and Browsers)
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
   };
 
   return (
@@ -64,11 +90,16 @@ export const LogsPage: React.FC = () => {
               <option value="ERROR">ERROR Only</option>
             </select>
 
-            <button className="btn btn-outline" onClick={handleExportLogs}>
+            <button className="btn btn-outline" onClick={handleCopyLogs} disabled={filteredLogs.length === 0}>
+              {copied ? <Check size={16} style={{ color: 'var(--accent-green, #10b981)' }} /> : <Copy size={16} />}
+              {copied ? 'Copied!' : 'Copy Logs'}
+            </button>
+
+            <button className="btn btn-outline" onClick={handleExportLogs} disabled={filteredLogs.length === 0}>
               <Download size={16} /> Export Logs
             </button>
 
-            <button className="btn btn-outline btn-danger" onClick={clearLogs}>
+            <button className="btn btn-outline btn-danger" onClick={clearLogs} disabled={logs.length === 0}>
               <Trash2 size={16} /> Clear Logs
             </button>
           </div>

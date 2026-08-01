@@ -40,6 +40,9 @@ export interface AppConfig {
   fallback_api_key: string;
   fallback_endpoint: string;
   fallback_model: string;
+  mmproj_path?: string;
+  mmproj_no_offload?: boolean;
+  active_template?: string;
 }
 
 interface ConfigState {
@@ -67,8 +70,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   },
 
   updateConfig: (partial) => {
-    const current = get().config;
-    if (!current) return;
+    const current = get().config || ({} as AppConfig);
     set({ config: { ...current, ...partial } });
   },
 

@@ -5,7 +5,7 @@ mod commands;
 mod scripts;
 mod tray;
 
-use commands::config::{load_config, save_config};
+use commands::config::{load_config, save_config, list_templates};
 use commands::profile::detect_hardware;
 use commands::server::{start_server, stop_server, get_server_status, get_active_model_info, launch_claude_terminal};
 use commands::models::scan_models;
@@ -32,6 +32,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             load_config,
             save_config,
+            list_templates,
             detect_hardware,
             start_server,
             stop_server,

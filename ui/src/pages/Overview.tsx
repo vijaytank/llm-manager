@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PageShell } from '../components/layout/PageShell';
-import { Cpu, Zap, Boxes, Plug, Terminal, Play, Square, Wand2, ShieldAlert, Image, RefreshCw } from 'lucide-react';
+import { Cpu, Zap, Boxes, Plug, Terminal, Play, Square, Wand2, ShieldAlert, Image, RefreshCw, Copy, Check, Trash2 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useHardwareStore } from '../store/hardwareStore';
 import { useConfigStore } from '../store/configStore';
@@ -14,10 +14,12 @@ import './Overview.css';
 export const OverviewPage: React.FC = () => {
   const { profile, fetchHardware, loading: hardwareLoading } = useHardwareStore();
   const { config, updateConfig, saveConfig } = useConfigStore();
-  const { status, port, logs } = useServerStore();
+  const { status, port, logs, clearLogs } = useServerStore();
   const { models, fetchModels } = useModelsStore();
   const { assessments } = useValidationStore();
   const [backendModelInfo, setBackendModelInfo] = useState<{ active_model?: string; models_preset_path?: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [templates, setTemplates] = useState<string[]>([]);
 
   useEffect(() => {
     fetchHardware();
@@ -26,6 +28,12 @@ export const OverviewPage: React.FC = () => {
   useEffect(() => {
     fetchModels(config?.models_dir);
   }, [fetchModels, config?.models_dir]);
+
+  useEffect(() => {
+    invoke<string[]>('list_templates', { templatesDirPath: config?.templates_dir })
+      .then((res) => setTemplates(res.filter((t) => t !== 'default.jinja')))
+      .catch((err) => console.warn('Failed to list templates:', err));
+  }, [config?.templates_dir]);
 
   useEffect(() => {
     invoke('get_active_model_info')
@@ -44,8 +52,11 @@ export const OverviewPage: React.FC = () => {
     }
   }, [models, config?.active_model, selectedModelFilename]);
 
-  const selectedModel = models.find((m) => m.filename === selectedModelFilename) || models.find((m) => m.name === config?.active_model) || models[0] || null;
-  const activeModel = models.find((m) => m.name === config?.active_model);
+  const baseModels = models.filter((m) => !m.isMmproj);
+  const mmprojModels = models.filter((m) => m.isMmproj);
+
+  const selectedModel = baseModels.find((m) => m.filename === selectedModelFilename) || baseModels.find((m) => m.name === config?.active_model) || baseModels[0] || null;
+  const activeModel = baseModels.find((m) => m.name === config?.active_model);
   const launchCheck = validateModelLaunch(selectedModel, config || ({} as any), profile);
 
   const handleStart = async () => {
@@ -78,6 +89,20 @@ export const OverviewPage: React.FC = () => {
     }
   };
 
+  const handleCopyLogs = async () => {
+    if (logs.length === 0) return;
+    const text = logs.map((l) => `[${l.timestamp}] [${l.level}] ${l.message}`).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  };
+
+  const overviewLogs = logs.slice(-100);
+
   return (
     <PageShell title="Overview">
       {/* Dynamic Validation Banners */}
@@ -100,8 +125,10 @@ export const OverviewPage: React.FC = () => {
                   <div style={{ marginTop: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <span className="badge badge-info">Configured Active Model</span>
                     <span className="font-mono">{activeModel.name}</span>
-                    {activeModel.isMmproj && (
-                      <span className="badge badge-warning">mmproj selected</span>
+                    {config?.mmproj_path && config.mmproj_path !== 'none' && (
+                      <span className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Image size={12} /> Vision Enabled ({config.mmproj_no_offload ? 'CPU RAM' : 'GPU'})
+                      </span>
                     )}
                   </div>
                 )}
@@ -114,19 +141,104 @@ export const OverviewPage: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              {/* Primary LLM Model Dropdown */}
               <select
                 className="form-input font-mono"
                 style={{ width: '240px', padding: '6px 12px' }}
                 value={selectedModelFilename}
                 onChange={(e) => setSelectedModelFilename(e.target.value)}
               >
-                {models.map((m, i) => (
+                {baseModels.map((m, i) => (
                   <option key={i} value={m.filename}>
                     {m.name} ({m.fileSizeGb} GB)
                   </option>
                 ))}
               </select>
+
+              {/* Vision mmproj Dropdown */}
+              {mmprojModels.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <select
+                    className="form-input font-mono"
+                    style={{ width: '220px', padding: '6px 10px', fontSize: '0.85rem' }}
+                    value={config?.mmproj_path || ''}
+                    onChange={async (e) => {
+                      updateConfig({ mmproj_path: e.target.value });
+                      await saveConfig();
+                    }}
+                  >
+                    <option value="">Vision: Disabled (Text Only)</option>
+                    {mmprojModels.map((proj, idx) => (
+                      <option key={idx} value={proj.path}>
+                        Vision: {proj.name} ({proj.fileSizeGb} GB)
+                      </option>
+                    ))}
+                  </select>
+                  {config?.mmproj_path && config.mmproj_path !== 'none' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="overview-mmproj-offload"
+                          checked={!config?.mmproj_no_offload}
+                          onChange={async () => {
+                            updateConfig({ mmproj_no_offload: false });
+                            await saveConfig();
+                          }}
+                        />
+                        <span style={{ color: 'var(--accent-green, #10b981)' }}>GPU Offload</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="overview-mmproj-offload"
+                          checked={!!config?.mmproj_no_offload}
+                          onChange={async () => {
+                            updateConfig({ mmproj_no_offload: true });
+                            await saveConfig();
+                          }}
+                        />
+                        <span style={{ color: 'var(--text-muted)' }}>CPU (RAM)</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Chat Template Selector */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <select
+                  className="form-input font-mono"
+                  style={{ width: '240px', padding: '6px 10px', fontSize: '0.85rem' }}
+                  value={
+                    config?.active_template
+                      ? config.active_template
+                      : config?.use_default_template
+                      ? 'default.jinja'
+                      : 'auto'
+                  }
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    if (val === 'auto') {
+                      updateConfig({ active_template: '', use_default_template: false });
+                    } else if (val === 'default.jinja') {
+                      updateConfig({ active_template: 'default.jinja', use_default_template: true });
+                    } else {
+                      updateConfig({ active_template: val, use_default_template: false });
+                    }
+                    await saveConfig();
+                  }}
+                >
+                  <option value="auto">Template: Auto (GGUF internal)</option>
+                  <option value="default.jinja">Template: Universal Default (default.jinja)</option>
+                  {templates.map((tpl, idx) => (
+                    <option key={idx} value={tpl}>
+                      Template: {tpl}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               {status === 'stopped' ? (
                 launchCheck.canLaunch ? (
@@ -285,13 +397,34 @@ export const OverviewPage: React.FC = () => {
 
         {/* Live Logs Card */}
         <div className="glass-card card-padding full-width">
-          <div className="card-header">
-            <Terminal className="card-icon" size={20} />
-            <h3 className="card-title">Live Server Output Streams</h3>
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Terminal className="card-icon" size={20} />
+              <h3 className="card-title">Live Server Streams (Latest 100 Lines)</h3>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className="btn btn-outline"
+                style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                onClick={handleCopyLogs}
+                disabled={logs.length === 0}
+              >
+                {copied ? <Check size={14} style={{ color: 'var(--accent-green, #10b981)' }} /> : <Copy size={14} />}
+                {copied ? 'Copied!' : 'Copy Logs'}
+              </button>
+              <button
+                className="btn btn-outline"
+                style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                onClick={clearLogs}
+                disabled={logs.length === 0}
+              >
+                <Trash2 size={14} /> Clear
+              </button>
+            </div>
           </div>
           <div className="log-container font-mono">
-            {logs.length > 0 ? (
-              logs.map((log, index) => (
+            {overviewLogs.length > 0 ? (
+              overviewLogs.map((log, index) => (
                 <div key={index} className="log-line">
                   <span className="log-time">[{log.timestamp}]</span>
                   <span className={`log-level level-${log.level.toLowerCase()}`}>{log.level}</span>

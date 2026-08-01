@@ -16,13 +16,16 @@ interface SetupPageProps {
 export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
   const [step, setStep] = useState(1);
   const { profile, fetchHardware, loading: hardwareLoading } = useHardwareStore();
-  const { config, updateConfig, saveConfig } = useConfigStore();
+  const { config, updateConfig, saveConfig, fetchConfig } = useConfigStore();
   const { models, fetchModels } = useModelsStore();
   const { assessments } = useValidationStore();
 
   useEffect(() => {
     fetchHardware();
-  }, [fetchHardware]);
+    if (!config) {
+      fetchConfig();
+    }
+  }, [fetchHardware, fetchConfig, config]);
 
   const steps = [
     { num: 1, title: 'Installation' },

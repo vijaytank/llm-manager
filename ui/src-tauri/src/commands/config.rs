@@ -110,6 +110,15 @@ pub struct AppConfig {
 
     #[serde(default)]
     pub fallback_model: String,
+
+    #[serde(default)]
+    pub mmproj_path: String,
+
+    #[serde(default)]
+    pub mmproj_no_offload: bool,
+
+    #[serde(default)]
+    pub active_template: String,
 }
 
 fn default_installation_type() -> String { "none".to_string() }
@@ -168,6 +177,9 @@ impl Default for AppConfig {
             fallback_api_key: String::new(),
             fallback_endpoint: String::new(),
             fallback_model: String::new(),
+            mmproj_path: String::new(),
+            mmproj_no_offload: false,
+            active_template: String::new(),
         }
     }
 }
@@ -216,6 +228,45 @@ pub fn save_config(config: AppConfig) -> Result<(), String> {
         .map_err(|e| format!("Failed to write llo-config.json at {:?}: {}", path, e))?;
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn list_templates(templates_dir_path: Option<String>) -> Result<Vec<String>, String> {
+    let dir_path = match templates_dir_path {
+        Some(p) if !p.trim().is_empty() => PathBuf::from(p),
+        _ => {
+            let config = load_config().unwrap_or_default();
+            if !config.templates_dir.trim().is_empty() {
+                PathBuf::from(config.templates_dir)
+            } else {
+                get_workspace_root().join("templates")
+            }
+        }
+    };
+
+    if !dir_path.exists() || !dir_path.is_dir() {
+        return Ok(vec![]);
+    }
+
+    let entries = fs::read_dir(&dir_path)
+        .map_err(|e| format!("Failed to read templates directory: {}", e))?;
+
+    let mut templates = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(ext) = path.extension() {
+                if ext == "jinja" {
+                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                        templates.push(name.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    templates.sort();
+    Ok(templates)
 }
 
 #[cfg(test)]

@@ -68,6 +68,8 @@ $config = @{
     dynatemp_range      = ""
     dynatemp_exp        = ""
     mmproj_auto         = $null
+    mmproj_path         = ""
+    mmproj_no_offload    = $false
     custom_args          = ""
     integrations         = @()
 
@@ -293,10 +295,32 @@ function Get-InferenceParams {
         }
     }
 
-    # Support legacy top-level config key mapping for parallel slots.
+    # Support legacy and top-level config key mappings for user settings
     if (-not $Overrides.ContainsKey("parallel") -and $config.ContainsKey("parallel_slots") -and [int]$config.parallel_slots -gt 0) {
         $params.parallel = [int]$config.parallel_slots
-        Write-Host "  [override] parallel = $($params.parallel)  (from config.parallel_slots)" -ForegroundColor DarkYellow
+        Write-Host "  [config] parallel = $($params.parallel)  (from config.parallel_slots)" -ForegroundColor DarkYellow
+    }
+
+    if ($config.ContainsKey("cache_type_k") -and -not [string]::IsNullOrWhiteSpace($config.cache_type_k)) {
+        $params.cache_type_k = $config.cache_type_k
+    }
+    if ($config.ContainsKey("cache_type_v") -and -not [string]::IsNullOrWhiteSpace($config.cache_type_v)) {
+        $params.cache_type_v = $config.cache_type_v
+    }
+    if ($config.ContainsKey("flash_attn") -and -not [string]::IsNullOrWhiteSpace($config.flash_attn)) {
+        $params.flash_attn = $config.flash_attn
+    }
+    if ($config.ContainsKey("ubatch_size") -and [int]$config.ubatch_size -gt 0) {
+        $params.ubatch_size = [int]$config.ubatch_size
+    }
+    if ($config.ContainsKey("spec_type") -and -not [string]::IsNullOrWhiteSpace($config.spec_type)) {
+        $params.spec_type = $config.spec_type
+    }
+    if ($config.ContainsKey("context_shift") -and $null -ne $config.context_shift) {
+        $params.context_shift = [bool]$config.context_shift
+    }
+    if ($config.ContainsKey("cache_reuse") -and [int]$config.cache_reuse -ge 0) {
+        $params.cache_reuse = [int]$config.cache_reuse
     }
 
     # Claude Code integration requires at least 2 parallel slots to avoid subagent deadlocks.
@@ -562,8 +586,11 @@ foreach ($gguf in $ggufs) {
         -CacheTypeK   $inferParams.cache_type_k `
         -Integrations $config.integrations
 
-    # User ctx_size override takes absolute priority
-    if ($config.overrides.ContainsKey("ctx_size")) {
+    # User context size configuration or override takes priority
+    if ($config.ContainsKey("default_context_size") -and $config.default_context_size -and [int]$config.default_context_size -gt 0) {
+        $ctxSize = [int]$config.default_context_size
+        Write-Host "    [config] ctx-size = $ctxSize  (from config.default_context_size)" -ForegroundColor Green
+    } elseif ($config.overrides.ContainsKey("ctx_size")) {
         $ctxSize = [int]$config.overrides["ctx_size"]
         Write-Host "    [override] ctx-size = $ctxSize  (from config.overrides)" -ForegroundColor DarkYellow
     }
@@ -674,7 +701,13 @@ if ($config.ContainsKey('dynatemp_range') -and $config.dynatemp_range -and -not 
 if ($config.ContainsKey('dynatemp_exp') -and $config.dynatemp_exp -and -not [string]::IsNullOrWhiteSpace($config.dynatemp_exp)) {
     $presetLines.Add("dynatemp-exp = $($config.dynatemp_exp)")
 }
-if ($config.ContainsKey('mmproj_auto') -and $null -ne $config.mmproj_auto) {
+if ($config.ContainsKey('mmproj_path') -and $config.mmproj_path -and -not [string]::IsNullOrWhiteSpace($config.mmproj_path) -and $config.mmproj_path -ne "none") {
+    $mmprojNorm = $config.mmproj_path -replace '\\','/'
+    $presetLines.Add("mmproj = $mmprojNorm")
+    if ($config.ContainsKey('mmproj_no_offload') -and $config.mmproj_no_offload) {
+        $presetLines.Add("no-mmproj-offload = 1")
+    }
+} elseif ($config.ContainsKey('mmproj_auto') -and $null -ne $config.mmproj_auto) {
     if ($config.mmproj_auto) {
         $presetLines.Add("mmproj-auto = 1")
     } else {
@@ -705,6 +738,13 @@ if ($modelEntries.Count -gt 0) {
         $presetLines.Add("model = $($m.Path -replace '\\','/')")
         $presetLines.Add("ctx-size = $($m.CtxSize)")
 
+        if ($config.ContainsKey('mmproj_path') -and $config.mmproj_path -and -not [string]::IsNullOrWhiteSpace($config.mmproj_path) -and $config.mmproj_path -ne "none") {
+            $presetLines.Add("mmproj = $($config.mmproj_path -replace '\\','/')")
+            if ($config.ContainsKey('mmproj_no_offload') -and $config.mmproj_no_offload) {
+                $presetLines.Add("no-mmproj-offload = 1")
+            }
+        }
+
         # Per-model spec-type override when validation result differs from global
         if ($modelSpecType -ne $inferParams.spec_type) {
             $presetLines.Add("spec-type = none")
@@ -712,7 +752,22 @@ if ($modelEntries.Count -gt 0) {
 
         # Chat template resolution
         $defaultTemplatePath = Join-Path $TemplatesDir "default.jinja"
-        if ($m.TemplateFile) {
+        $resolvedActiveTemplate = $null
+        if ($config.ContainsKey('active_template') -and $config.active_template -and -not [string]::IsNullOrWhiteSpace($config.active_template) -and $config.active_template -ne "auto") {
+            if (Test-Path $config.active_template) {
+                $resolvedActiveTemplate = $config.active_template
+            } else {
+                $cand = Join-Path $TemplatesDir $config.active_template
+                if (Test-Path $cand) {
+                    $resolvedActiveTemplate = $cand
+                }
+            }
+        }
+
+        if ($resolvedActiveTemplate) {
+            $presetLines.Add("chat-template-file = $($resolvedActiveTemplate -replace '\\','/')")
+            Write-Host "    -> Selected template: $resolvedActiveTemplate" -ForegroundColor DarkGray
+        } elseif ($m.TemplateFile) {
             $presetLines.Add("chat-template-file = $($m.TemplateFile -replace '\\','/')")
             Write-Host "    -> Custom template  : $($m.TemplateFile)" -ForegroundColor DarkGray
         } elseif ($config.use_default_template -and (Test-Path $defaultTemplatePath)) {
