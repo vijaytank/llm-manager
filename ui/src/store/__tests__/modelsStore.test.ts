@@ -8,7 +8,7 @@ vi.mock('@tauri-apps/api/core', () => ({
         {
           name: 'ornith-1.0-9b-Q4_K_M',
           filename: 'ornith-1.0-9b-Q4_K_M.gguf',
-          path: 'F:\\llama\\models\\ornith-1.0-9b-Q4_K_M.gguf',
+          path: 'C:\\llama\\models\\ornith-1.0-9b-Q4_K_M.gguf',
           fileSizeGb: 5.2,
           quantization: 'Q4_K_M',
           template: 'chatml.jinja',
@@ -20,7 +20,7 @@ vi.mock('@tauri-apps/api/core', () => ({
         {
           name: 'mmproj-Qwythos-9B-v2-BF16',
           filename: 'mmproj-Qwythos-9B-v2-BF16.gguf',
-          path: 'F:\\llama\\models\\mmproj-Qwythos-9B-v2-BF16.gguf',
+          path: 'C:\\llama\\models\\mmproj-Qwythos-9B-v2-BF16.gguf',
           fileSizeGb: 0.9,
           quantization: 'Q4_K_M',
           template: 'mmproj.jinja',
@@ -42,7 +42,7 @@ describe('modelsStore', () => {
   });
 
   it('scans and populates models directory with LLM models & mmproj vision adapters', async () => {
-    await useModelsStore.getState().fetchModels('F:\\llama\\models');
+    await useModelsStore.getState().fetchModels('C:\\llama\\models');
     const models = useModelsStore.getState().models;
 
     expect(models.length).toBe(2);

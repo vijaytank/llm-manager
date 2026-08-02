@@ -77,14 +77,26 @@ function Sync-GitHubFolder {
     } catch {}
 
     $remoteItems = $null
-    try {
-        $headers = @{ "User-Agent" = "llm-manager-asset-fetcher" }
-        $response = Invoke-RestMethod -Uri $ApiUrl -Headers $headers -TimeoutSec $TimeoutSec -ErrorAction Stop
-        $remoteItems = @($response)
-    } catch {
-        $errText = $_.Exception.Message
-        Write-Host "  [!] Could not reach GitHub API ($errText). Skipping remote sync for $ManifestKey." -ForegroundColor Yellow
-        return @{ Success = $false; Downloaded = 0; Skipped = 0; Removed = 0; NetworkError = $true }
+    $headers = @{ "User-Agent" = "llm-manager-asset-fetcher" }
+    if ($env:GITHUB_TOKEN) {
+        $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN"
+    }
+
+    $maxAttempts = 3
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        try {
+            $response = Invoke-RestMethod -Uri $ApiUrl -Headers $headers -TimeoutSec $TimeoutSec -ErrorAction Stop
+            $remoteItems = @($response)
+            break
+        } catch {
+            $errText = $_.Exception.Message
+            if ($attempt -lt $maxAttempts) {
+                Start-Sleep -Seconds ($attempt * 2)
+            } else {
+                Write-Host "  [!] Could not reach GitHub API ($errText). Skipping remote sync for $ManifestKey." -ForegroundColor Yellow
+                return @{ Success = $false; Downloaded = 0; Skipped = 0; Removed = 0; NetworkError = $true }
+            }
+        }
     }
 
     $downloaded = 0
@@ -108,15 +120,29 @@ function Sync-GitHubFolder {
             continue
         }
 
-        # Download file
-        try {
-            Write-Host "  [+] Downloading $itemName..." -ForegroundColor Cyan
-            Invoke-WebRequest -Uri $item.download_url -OutFile $targetFile -TimeoutSec $TimeoutSec -ErrorAction Stop
-            $currentManifestMap[$itemName] = $item.sha
-            $downloaded++
-        } catch {
-            $errText = $_.Exception.Message
-            Write-Host "  [WARNING] Failed to download $($itemName): $errText" -ForegroundColor Yellow
+        # Download file with retry and validation
+        for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            try {
+                if ($attempt -eq 1) { Write-Host "  [+] Downloading $itemName..." -ForegroundColor Cyan }
+                Invoke-WebRequest -Uri $item.download_url -OutFile $targetFile -TimeoutSec $TimeoutSec -ErrorAction Stop
+                
+                # Basic validation: ensure downloaded file exists and is non-empty
+                if ((Test-Path $targetFile) -and (Get-Item $targetFile).Length -gt 0) {
+                    $currentManifestMap[$itemName] = $item.sha
+                    $downloaded++
+                    break
+                } else {
+                    throw "Downloaded file is empty (0 bytes)"
+                }
+            } catch {
+                $errText = $_.Exception.Message
+                if ($attempt -lt $maxAttempts) {
+                    Start-Sleep -Seconds ($attempt * 2)
+                } else {
+                    Write-Host "  [WARNING] Failed to download $($itemName) after $maxAttempts attempts: $errText" -ForegroundColor Yellow
+                    if (Test-Path $targetFile) { Remove-Item $targetFile -Force -ErrorAction SilentlyContinue }
+                }
+            }
         }
     }
 

@@ -1,4 +1,4 @@
-﻿# LLM Manager Main Setup Wizard (main.ps1)
+# LLM Manager Main Setup Wizard (main.ps1)
 # Interactive setup entry point.
 
 $ErrorActionPreference = "Stop"
@@ -387,11 +387,17 @@ if ($templateResult.NetworkError -and $downloadedTemplates.Count -eq 0) {
 # Step 2.2: Automated Memory & Performance Optimization
 if ($hwProfileJob -ne $null) {
     Write-Host "`nWaiting for hardware profiling to finish..." -ForegroundColor DarkGray
-    Wait-Job -Job $hwProfileJob
-    $hw = Receive-Job -Job $hwProfileJob
-    Remove-Job -Job $hwProfileJob
-    $hwProfileJob = $null
-    Write-Host "Hardware profiling complete." -ForegroundColor Green
+    try {
+        Wait-Job -Job $hwProfileJob -Timeout 30 | Out-Null
+        $hw = Receive-Job -Job $hwProfileJob -ErrorAction SilentlyContinue
+        Write-Host "Hardware profiling complete." -ForegroundColor Green
+    } catch {
+        Write-Host "[WARNING] Hardware profiling failed or timed out: $($_.Exception.Message)" -ForegroundColor Yellow
+        $hw = $null
+    } finally {
+        Remove-Job -Job $hwProfileJob -Force -ErrorAction SilentlyContinue
+        $hwProfileJob = $null
+    }
 }
 Write-Host "`nStep 2.2: Automatically tuning performance parameters for your system..." -ForegroundColor Cyan
 

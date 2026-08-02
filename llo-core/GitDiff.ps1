@@ -39,23 +39,48 @@ function Get-LlamaGitStatus {
         git fetch origin 2>$null | Out-Null
         $ErrorActionPreference = $oldEAP
 
-        # Check branch status
-        $status = (git status -uno) -join "`n"
+        # Check branch status machine-readably via git rev-list
         $isLatest = $true
         $statusMessage = "Up-to-date with remote."
         $aheadBy = 0
         $behindBy = 0
 
-        if ($status -match "Your branch is behind '([^']+)' by (\d+) commit") {
-            $isLatest = $false
-            $behindBy = [int]$Matches[2]
-            $statusMessage = "Behind remote by $behindBy commit(s). You should do a 'git pull'."
-        } elseif ($status -match "Your branch is ahead of '([^']+)' by (\d+) commit") {
-            $aheadBy = [int]$Matches[2]
-            $statusMessage = "Ahead of remote by $aheadBy commit(s)."
-        } elseif ($status -match "Your branch and '([^']+)' have diverged") {
-            $isLatest = $false
-            $statusMessage = "Diverged from remote. Clean manual merge or rebase required."
+        $oldEAP = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        $revCount = & git rev-list --left-right --count HEAD...@{u} 2>$null
+        $revSuccess = ($LastExitCode -eq 0)
+        $ErrorActionPreference = $oldEAP
+
+        if ($revSuccess -and $revCount) {
+            $parts = $revCount.Trim() -split '\s+'
+            if ($parts.Count -eq 2) {
+                $aheadBy = [int]$parts[0]
+                $behindBy = [int]$parts[1]
+
+                if ($aheadBy -gt 0 -and $behindBy -gt 0) {
+                    $isLatest = $false
+                    $statusMessage = "Diverged from remote (ahead by $aheadBy, behind by $behindBy). Clean manual merge or rebase required."
+                } elseif ($behindBy -gt 0) {
+                    $isLatest = $false
+                    $statusMessage = "Behind remote by $behindBy commit(s). You should do a 'git pull'."
+                } elseif ($aheadBy -gt 0) {
+                    $statusMessage = "Ahead of remote by $aheadBy commit(s)."
+                }
+            }
+        } else {
+            # Fallback to status parsing if upstream tracking branch is missing
+            $status = (git status -uno) -join "`n"
+            if ($status -match "Your branch is behind '([^']+)' by (\d+) commit") {
+                $isLatest = $false
+                $behindBy = [int]$Matches[2]
+                $statusMessage = "Behind remote by $behindBy commit(s). You should do a 'git pull'."
+            } elseif ($status -match "Your branch is ahead of '([^']+)' by (\d+) commit") {
+                $aheadBy = [int]$Matches[2]
+                $statusMessage = "Ahead of remote by $aheadBy commit(s)."
+            } elseif ($status -match "Your branch and '([^']+)' have diverged") {
+                $isLatest = $false
+                $statusMessage = "Diverged from remote. Clean manual merge or rebase required."
+            }
         }
 
         # Get active branch name

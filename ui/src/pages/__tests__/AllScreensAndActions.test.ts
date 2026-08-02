@@ -52,13 +52,13 @@ describe('All App Screens, Tabs, Dropdowns & User Actions', () => {
   it('Settings Page Action: updates system path configurations and saves config', () => {
     useConfigStore.getState().updateConfig({
       llama_server_path: 'C:\\Program Files\\llama\\llama-server.exe',
-      models_dir: 'F:\\llama\\models',
+      models_dir: 'C:\\llama\\models',
       default_context_size: 65536,
     });
 
     const cfg = useConfigStore.getState().config;
     expect(cfg?.llama_server_path).toBe('C:\\Program Files\\llama\\llama-server.exe');
-    expect(cfg?.models_dir).toBe('F:\\llama\\models');
+    expect(cfg?.models_dir).toBe('C:\\llama\\models');
     expect(cfg?.default_context_size).toBe(65536);
   });
 

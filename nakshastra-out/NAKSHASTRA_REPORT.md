@@ -28,19 +28,19 @@ The following clusters represent tightly-coupled functional modules detected in 
 
 ### Module 1: ui Cluster
 - **Size**: 10 nodes
-- **Key Files**: ui/src/pages/Diagnostics.tsx, ui/src/components/layout/PageShell.tsx, ui/src/App.tsx, ui/src/main.tsx, ui/src/pages/Performance.tsx...
+- **Key Files**: ui/src/pages/Integrations.tsx, ui/src/App.tsx, ui/src/components/layout/PageShell.tsx, ui/src/pages/Settings.tsx, ui/src/pages/Performance.tsx...
 
 ### Module 2: ui Cluster
 - **Size**: 10 nodes
-- **Key Files**: ui/src/lib/validation.ts, ui/src/store/__tests__/modelsStore.test.ts, ui/src/store/__tests__/hardwareStore.test.ts, ui/src/lib/__tests__/validation.test.ts, ui/src/pages/Models.tsx...
+- **Key Files**: ui/src/pages/__tests__/OverviewFlow.test.ts, ui/src/pages/Models.tsx, ui/src/store/hardwareStore.ts, ui/src/lib/__tests__/validation.test.ts, ui/src/store/modelsStore.ts...
 
 ### Module 3: ui Cluster
 - **Size**: 9 nodes
-- **Key Files**: ui/src/components/layout/__tests__/TopBar.test.ts, ui/src/components/layout/TopBar.tsx, ui/src/pages/__tests__/AllScreensAndActions.test.ts, ui/src/store/__tests__/configStore.test.ts, ui/src/pages/__tests__/PerformanceAndSettings.test.ts...
+- **Key Files**: ui/src/pages/__tests__/ParameterCLIForwarding.test.ts, ui/src/components/layout/__tests__/TopBar.test.ts, ui/src/store/serverStore.ts, ui/src/components/layout/TopBar.tsx, ui/src/store/__tests__/configStore.test.ts...
 
 ### Module 4: ui Cluster
 - **Size**: 4 nodes
-- **Key Files**: ui/src/pages/Overview.tsx, ui/src/store/validationStore.ts, ui/src/pages/Setup.tsx, ui/src/components/ImpactBanner.tsx
+- **Key Files**: ui/src/components/ImpactBanner.tsx, ui/src/pages/Setup.tsx, ui/src/pages/Overview.tsx, ui/src/store/validationStore.ts
 
 ### Module 5: ui Cluster
 - **Size**: 1 nodes

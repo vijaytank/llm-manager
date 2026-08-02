@@ -149,25 +149,42 @@ if (-not (Test-Path $DocsDir)) {
 }
 
 $hardwareScript = Join-Path $ManagerDir "llo-core\Profile.ps1"
-. $hardwareScript
-$hw = Get-SystemHardwareProfile
+$hw = try {
+    . $hardwareScript
+    Get-SystemHardwareProfile
+} catch {
+    Write-Host "[WARNING] Hardware profiling failed: $($_.Exception.Message)" -ForegroundColor Yellow
+    $null
+}
+
+$cpuName = if ($hw -and $hw.CPU) { $hw.CPU.Name } else { "Unknown / Probing Failed" }
+$physCores = if ($hw -and $hw.CPU) { $hw.CPU.PhysicalCores } else { 0 }
+$logCores = if ($hw -and $hw.CPU) { $hw.CPU.LogicalCores } else { 0 }
+$optThreads = if ($hw -and $hw.CPU) { $hw.CPU.OptimalThreads } else { 4 }
+$totalRamGB = if ($hw -and $hw.RAM) { $hw.RAM.TotalGB } else { 0 }
+$budgetRamMB = if ($hw -and $hw.RAM) { $hw.RAM.BudgetMB } else { 0 }
+$gpuName = if ($hw -and $hw.GPU) { $hw.GPU.Name } else { "Unknown" }
+$totalVramGB = if ($hw -and $hw.GPU) { [math]::Round($hw.GPU.TotalVramMB/1024, 1) } else { 0 }
+$budgetVramMB = if ($hw -and $hw.GPU) { $hw.GPU.BudgetVramMB } else { 0 }
+$cudaDriver = if ($hw -and $hw.GPU) { $hw.GPU.CudaDriver } else { "N/A" }
+$timestamp = if ($hw -and $hw.Timestamp) { $hw.Timestamp } else { (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
 
 $docLines = @(
     "# LLM Manager System Compatibility Documentation",
     "",
-    "Generated on: $($hw.Timestamp)",
+    "Generated on: $timestamp",
     "",
     "## 1. System Hardware Profile",
     "",
-    "- **CPU**: $($hw.CPU.Name)",
-    "  - Cores: $($hw.CPU.PhysicalCores) Physical / $($hw.CPU.LogicalCores) Logical",
-    "  - Recommended Inference Threads: $($hw.CPU.OptimalThreads)",
-    "- **System Memory (RAM)**: $($hw.RAM.TotalGB) GB",
-    "  - Safe RAM Budget: $($hw.RAM.BudgetMB) MB",
-    "- **GPU**: $($hw.GPU.Name)",
-    "  - VRAM: $([math]::Round($hw.GPU.TotalVramMB/1024, 1)) GB",
-    "  - Safe VRAM Budget: $($hw.GPU.BudgetVramMB) MB",
-    "  - Driver / CUDA Version: $($hw.GPU.CudaDriver)",
+    "- **CPU**: $cpuName",
+    "  - Cores: $physCores Physical / $logCores Logical",
+    "  - Recommended Inference Threads: $optThreads",
+    "- **System Memory (RAM)**: $totalRamGB GB",
+    "  - Safe RAM Budget: $budgetRamMB MB",
+    "- **GPU**: $gpuName",
+    "  - VRAM: $totalVramGB GB",
+    "  - Safe VRAM Budget: $budgetVramMB MB",
+    "  - Driver / CUDA Version: $cudaDriver",
     "",
     "## 2. Upstream Git & Build Status",
     "",

@@ -32,7 +32,8 @@ function Get-LlamaServerFlags {
 
     if (-not (Test-Path $ServerPath)) {
         $binaryName = if ($IsWindows) { "llama-server.exe" } else { "llama-server" }
-        throw "$binaryName not found at: $ServerPath"
+        Write-Host "[WARNING] $binaryName not found at: $ServerPath. Skipping live help parsing." -ForegroundColor Yellow
+        return @()
     }
 
     Write-Host "Running $ServerPath --help to extract options..." -ForegroundColor Cyan
@@ -135,10 +136,17 @@ function Update-CachedFlags {
         [string]$CachePath = $CacheFile
     )
 
-    $currentFlags = Get-LlamaServerFlags -ServerPath $ServerPath
+    $currentFlags = try { Get-LlamaServerFlags -ServerPath $ServerPath } catch { @() }
     if ($currentFlags.Count -eq 0) {
-        Write-Host "Warning: No flags parsed from llama-server.exe --help." -ForegroundColor Yellow
-        return $null
+        Write-Host "Warning: No flags parsed from llama-server --help (binary missing or unreadable)." -ForegroundColor Yellow
+        if (Test-Path $CachePath) {
+            Write-Host "Preserving existing cached flags at $CachePath." -ForegroundColor Cyan
+        }
+        return [pscustomobject]@{
+            Added = @()
+            Removed = @()
+            TotalCurrent = 0
+        }
     }
 
     $diffResult = [pscustomobject]@{

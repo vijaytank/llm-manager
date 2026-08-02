@@ -55,7 +55,7 @@ const cpuHardware: SystemHardware = {
 const model5Gb: ModelInfo = {
   name: 'Qwythos-9B-v2-Q4_K_M',
   filename: 'Qwythos-9B-v2-Q4_K_M.gguf',
-  path: 'F:\\llama\\models\\Qwythos-9B-v2-Q4_K_M.gguf',
+  path: 'C:\\llama\\models\\Qwythos-9B-v2-Q4_K_M.gguf',
   fileSizeGb: 5.3,
   quantization: 'Q4_K_M',
   template: 'chatml',
@@ -68,7 +68,7 @@ const model5Gb: ModelInfo = {
 const model12Gb: ModelInfo = {
   name: 'Llama-3-70B-Q2_K',
   filename: 'llama-3-70b-q2_k.gguf',
-  path: 'F:\\llama\\models\\llama-3-70b-q2_k.gguf',
+  path: 'C:\\llama\\models\\llama-3-70b-q2_k.gguf',
   fileSizeGb: 26.0,
   quantization: 'Q2_K',
   template: 'llama',
