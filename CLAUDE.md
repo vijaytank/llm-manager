@@ -1,30 +1,40 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working in this repository.
 
 ## ⚙️ Core Architecture
-This project functions as an LLM manager wrapper, primarily focused on tracking and analyzing upstream changes in the external `llama.cpp` repository. The system's intelligence is centered around its ability to parse commit logs and identify system-relevant updates.
+This project is a **hardware-adaptive inference orchestrator** built on top of `llama.cpp` (hosted locally) with a desktop GUI built using **Tauri + React + TypeScript** and a CLI scripting backend built using **PowerShell**.
 
-The main logic is contained within the `llo-core` module, specifically the `GitDiff.ps1` script. This script manages the dependency relationship, reading the necessary `llama_repo_path` from `llo-config.json` to interact with `llama.cpp`'s git history.
+The system profiles host hardware at startup, classifies the GPU and system memory, and dynamically computes optimal LLM inference parameters (layers, KV cache precision, context window, batch size, speculative decoding) to maximize token throughput and prevent Out-Of-Memory crashes.
 
 **Key Architectural Components:**
-*   **`llo-config.json`**: The central configuration file that dictates the location of the primary dependency (`llama.cpp`).
-*   **`llo-core/GitDiff.ps1`**: The primary analysis tool. It performs the following critical functions:
-    *   Checks the current branch status against the remote upstream repository.
-    *   Parses recent commit history (`git log`).
-    *   Identifies and flags commits containing keywords relevant to performance, hardware compatibility, or breaking changes (e.g., `cuda`, `perf`, `vram`, `breaking`, `server`, `preset`, `flash-attn`).
+*   **PowerShell Core (`llo-core/`)**:
+    *   `Profile.ps1`: Probes CPU, RAM, and GPU capabilities across OS platforms.
+    *   `SetupRouter.ps1`: Derives optimal inference arguments and generates the router preset `models-preset.ini`.
+    *   `ParseHelp.ps1` / `GitDiff.ps1`: Scans upstream `llama-server --help` outputs and repository commits to check for breaking changes or new features.
+    *   `FetchAssets.ps1`: Downloads and caches upstream templates and grammars.
+*   **Operational Scripts (`script/`)**:
+    *   `start-server.ps1` / `stop-server.ps1`: Server lifecycle controls. Includes Port Collision Protection (scans and shifts port).
+    *   `test-health.ps1`: Performs script syntax checks and config validation.
+    *   `verify-scripts.ps1`: Verifies CLI flags compatibility against the compiled binary.
+*   **Tauri Desktop App (`ui/` & `ui-src-tauri/`)**:
+    *   `ui-src-tauri/src/commands/`: Rust command handlers executing PowerShell backends and managing settings.
+    *   `ui/src/`: React frontend displaying system status, diagnostic checks, preset models list, and performance tuning sliders.
 
 ## 🛠️ Common Commands
-The primary development and monitoring task is running the Git status analysis script.
 
-**Monitoring Upstream Changes:**
-To run the change log and compatibility diff tool for `llama.cpp`:
-```bash
-.\llo-core\GitDiff.ps1
-```
+### Setup & Server (CLI)
+* Run wizard: `powershell -File main.ps1` (Windows) or `pwsh -File main.ps1` (macOS/Linux)
+* Start server: `powershell -File script/start-server.ps1`
+* Stop server: `powershell -File script/stop-server.ps1`
+* Run health checks: `powershell -File script/test-health.ps1`
+* Verify compatibility: `powershell -File script/verify-scripts.ps1`
 
-**Note on Development:**
-The project is built around PowerShell scripting (`.ps1`). Build, lint, and test commands are not defined in a standard package manager (`package.json`/`Makefile`), so development workflows must be tailored to PowerShell scripting conventions and the logic within `llo-core`.
+### Desktop UI Development
+* Run UI in Dev mode: `npm run tauri dev` (inside `ui/` directory)
+* Build release app: `npm run tauri build` (inside `ui/` directory)
 
 ## 🔗 Project Dependencies
-The project is critically dependent on having a local copy of the `llama.cpp` repository available at the path configured in `llo-config.json`. This dependency is the source of all tracked changes and architecture.
+* **llama.cpp**: Local compiled or pre-built binary (`llama-server`).
+* **PowerShell 7+** (Cross-platform) or PowerShell 5.1 (Windows only).
+* **Rust & Node.js**: Required for Tauri desktop application development.

@@ -1,88 +1,8 @@
 {
   "nodes": [
     {
-      "id": "ui/src/store/validationStore.ts",
-      "label": "validationStore.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/components/ImpactBanner.tsx",
-      "label": "ImpactBanner.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Diagnostics.tsx",
-      "label": "Diagnostics.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/components/layout/TopBar.tsx",
-      "label": "TopBar.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/__tests__/SetupFlow.test.ts",
-      "label": "SetupFlow.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Logs.tsx",
-      "label": "Logs.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
-      "label": "PerformanceAndSettings.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/__tests__/OverviewFlow.test.ts",
-      "label": "OverviewFlow.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/main.tsx",
-      "label": "main.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/components/layout/PageShell.tsx",
-      "label": "PageShell.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Settings.tsx",
-      "label": "Settings.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/modelsStore.ts",
-      "label": "modelsStore.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/lib/validation.ts",
-      "label": "validation.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/__tests__/configStore.test.ts",
-      "label": "configStore.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/vite.config.ts",
-      "label": "vite.config.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
-      "label": "AllScreensAndActions.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/configStore.ts",
-      "label": "configStore.ts",
+      "id": "ui/src/pages/Models.tsx",
+      "label": "Models.tsx",
       "type": "file"
     },
     {
@@ -91,58 +11,8 @@
       "type": "file"
     },
     {
-      "id": "ui/src/pages/Integrations.tsx",
-      "label": "Integrations.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Models.tsx",
-      "label": "Models.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/App.tsx",
-      "label": "App.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/lib/__tests__/validation.test.ts",
-      "label": "validation.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
-      "label": "ParameterCLIForwarding.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/serverStore.ts",
-      "label": "serverStore.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/components/__tests__/InfoTooltip.test.ts",
-      "label": "InfoTooltip.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/__tests__/modelsStore.test.ts",
-      "label": "modelsStore.test.ts",
-      "type": "file"
-    },
-    {
       "id": "ui/src/store/__tests__/serverStore.test.ts",
       "label": "serverStore.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/hardwareStore.ts",
-      "label": "hardwareStore.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Performance.tsx",
-      "label": "Performance.tsx",
       "type": "file"
     },
     {
@@ -151,8 +21,13 @@
       "type": "file"
     },
     {
-      "id": "ui/src/components/layout/Sidebar.tsx",
-      "label": "Sidebar.tsx",
+      "id": "ui/src/components/InfoTooltip.tsx",
+      "label": "InfoTooltip.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/components/layout/TopBar.tsx",
+      "label": "TopBar.tsx",
       "type": "file"
     },
     {
@@ -161,13 +36,138 @@
       "type": "file"
     },
     {
-      "id": "ui/src/components/InfoTooltip.tsx",
-      "label": "InfoTooltip.tsx",
+      "id": "ui/src/components/layout/Sidebar.tsx",
+      "label": "Sidebar.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/lib/validation.ts",
+      "label": "validation.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/Diagnostics.tsx",
+      "label": "Diagnostics.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/lib/__tests__/validation.test.ts",
+      "label": "validation.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/Logs.tsx",
+      "label": "Logs.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
+      "label": "ParameterCLIForwarding.test.ts",
       "type": "file"
     },
     {
       "id": "ui/src/pages/Overview.tsx",
       "label": "Overview.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/components/ImpactBanner.tsx",
+      "label": "ImpactBanner.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/Performance.tsx",
+      "label": "Performance.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/configStore.ts",
+      "label": "configStore.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/modelsStore.ts",
+      "label": "modelsStore.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "label": "OverviewFlow.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/vite.config.ts",
+      "label": "vite.config.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/__tests__/configStore.test.ts",
+      "label": "configStore.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/hardwareStore.ts",
+      "label": "hardwareStore.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/serverStore.ts",
+      "label": "serverStore.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/Settings.tsx",
+      "label": "Settings.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/__tests__/modelsStore.test.ts",
+      "label": "modelsStore.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/App.tsx",
+      "label": "App.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/main.tsx",
+      "label": "main.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "label": "SetupFlow.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/Integrations.tsx",
+      "label": "Integrations.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/validationStore.ts",
+      "label": "validationStore.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/components/__tests__/InfoTooltip.test.ts",
+      "label": "InfoTooltip.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
+      "label": "AllScreensAndActions.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
+      "label": "PerformanceAndSettings.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/components/layout/PageShell.tsx",
+      "label": "PageShell.tsx",
       "type": "file"
     },
     {
@@ -318,486 +318,6 @@
   ],
   "edges": [
     {
-      "source": "ui/src/store/validationStore.ts",
-      "target": "ui/src/lib/validation.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/validationStore.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/validationStore.ts",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/validationStore.ts",
-      "target": "zustand",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/ImpactBanner.tsx",
-      "target": "ui/src/lib/validation.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/ImpactBanner.tsx",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/ImpactBanner.tsx",
-      "target": "./ImpactBanner.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/ImpactBanner.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/ImpactBanner.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Diagnostics.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Diagnostics.tsx",
-      "target": "ui/src/components/layout/PageShell.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Diagnostics.tsx",
-      "target": "./Diagnostics.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Diagnostics.tsx",
-      "target": "@tauri-apps/api/core",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Diagnostics.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Diagnostics.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/TopBar.tsx",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/TopBar.tsx",
-      "target": "ui/src/store/serverStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/TopBar.tsx",
-      "target": "./TopBar.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/TopBar.tsx",
-      "target": "@tauri-apps/api/core",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/TopBar.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/TopBar.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Logs.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Logs.tsx",
-      "target": "ui/src/components/layout/PageShell.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Logs.tsx",
-      "target": "ui/src/store/serverStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Logs.tsx",
-      "target": "./Logs.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Logs.tsx",
-      "target": "@tauri-apps/plugin-dialog",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Logs.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Logs.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
-      "target": "ui/src/store/serverStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
-      "target": "ui/src/lib/validation.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
-      "target": "ui/src/store/modelsStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/main.tsx",
-      "target": "ui/src/App.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/main.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/main.tsx",
-      "target": "react-dom/client",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/PageShell.tsx",
-      "target": "./PageShell.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/PageShell.tsx",
-      "target": "ui/src/components/layout/TopBar.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/PageShell.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Settings.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Settings.tsx",
-      "target": "ui/src/components/layout/PageShell.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Settings.tsx",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Settings.tsx",
-      "target": "./Settings.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Settings.tsx",
-      "target": "@tauri-apps/plugin-dialog",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Settings.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Settings.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/modelsStore.ts",
-      "target": "@tauri-apps/api/core",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/modelsStore.ts",
-      "target": "zustand",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/validation.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/validation.ts",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/validation.ts",
-      "target": "ui/src/store/modelsStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/validation.ts",
-      "target": "ui/src/lib/validation.ts::calculateKvCacheGb",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/lib/validation.ts",
-      "target": "ui/src/lib/validation.ts::validateConfiguration",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/lib/validation.ts",
-      "target": "ui/src/lib/validation.ts::validateModelLaunch",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/store/__tests__/configStore.test.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/__tests__/configStore.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/vite.config.ts",
-      "target": "@vitejs/plugin-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/vite.config.ts",
-      "target": "path",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/vite.config.ts",
-      "target": "vite",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
-      "target": "ui/src/store/serverStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/configStore.ts",
-      "target": "@tauri-apps/api/core",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/configStore.ts",
-      "target": "zustand",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/__tests__/hardwareStore.test.ts",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/__tests__/hardwareStore.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "ui/src/components/layout/PageShell.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "ui/src/store/serverStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "./Integrations.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "@tauri-apps/api/core",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
       "source": "ui/src/pages/Models.tsx",
       "target": "ui/src/components/InfoTooltip.tsx",
       "type": "import",
@@ -860,6 +380,648 @@
     {
       "source": "ui/src/pages/Models.tsx",
       "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/__tests__/hardwareStore.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/__tests__/hardwareStore.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/__tests__/serverStore.test.ts",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/__tests__/serverStore.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/__tests__/TopBar.test.ts",
+      "target": "ui/src/components/layout/TopBar.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/__tests__/TopBar.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/InfoTooltip.tsx",
+      "target": "./InfoTooltip.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/InfoTooltip.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/InfoTooltip.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/InfoTooltip.tsx",
+      "target": "react-dom",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "./TopBar.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/components/ImpactBanner.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/store/validationStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "./Setup.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "@tauri-apps/plugin-dialog",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/Sidebar.tsx",
+      "target": "./Sidebar.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/Sidebar.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/Sidebar.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/lib/validation.ts::calculateKvCacheGb",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/lib/validation.ts::validateConfiguration",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/lib/validation.ts::validateModelLaunch",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "./Diagnostics.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/__tests__/validation.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/__tests__/validation.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/__tests__/validation.test.ts",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/__tests__/validation.test.ts",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/__tests__/validation.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "./Logs.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "@tauri-apps/plugin-dialog",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/components/ImpactBanner.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "ui/src/store/validationStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "./Overview.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Overview.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/ImpactBanner.tsx",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/ImpactBanner.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/ImpactBanner.tsx",
+      "target": "./ImpactBanner.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/ImpactBanner.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/ImpactBanner.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "./Performance.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/configStore.ts",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/configStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/modelsStore.ts",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/modelsStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/vite.config.ts",
+      "target": "@vitejs/plugin-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/vite.config.ts",
+      "target": "path",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/vite.config.ts",
+      "target": "vite",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/__tests__/configStore.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/__tests__/configStore.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/hardwareStore.ts",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/hardwareStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/serverStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "./Settings.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "@tauri-apps/plugin-dialog",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/__tests__/modelsStore.test.ts",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/__tests__/modelsStore.test.ts",
+      "target": "vitest",
       "type": "import",
       "weight": 0.8
     },
@@ -960,337 +1122,175 @@
       "weight": 0.8
     },
     {
-      "source": "ui/src/lib/__tests__/validation.test.ts",
-      "target": "ui/src/store/configStore.ts",
+      "source": "ui/src/main.tsx",
+      "target": "ui/src/App.tsx",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/lib/__tests__/validation.test.ts",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/__tests__/validation.test.ts",
-      "target": "ui/src/store/modelsStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/__tests__/validation.test.ts",
-      "target": "ui/src/lib/validation.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/__tests__/validation.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/serverStore.ts",
-      "target": "zustand",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/__tests__/InfoTooltip.test.ts",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/__tests__/InfoTooltip.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/__tests__/modelsStore.test.ts",
-      "target": "ui/src/store/modelsStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/__tests__/modelsStore.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/__tests__/serverStore.test.ts",
-      "target": "ui/src/store/serverStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/__tests__/serverStore.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/hardwareStore.ts",
-      "target": "@tauri-apps/api/core",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/hardwareStore.ts",
-      "target": "zustand",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Performance.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Performance.tsx",
-      "target": "ui/src/components/layout/PageShell.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Performance.tsx",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Performance.tsx",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Performance.tsx",
-      "target": "./Performance.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Performance.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Performance.tsx",
+      "source": "ui/src/main.tsx",
       "target": "react",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/components/layout/__tests__/TopBar.test.ts",
+      "source": "ui/src/main.tsx",
+      "target": "react-dom/client",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "./Integrations.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/validationStore.ts",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/validationStore.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/validationStore.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/validationStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/__tests__/InfoTooltip.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/__tests__/InfoTooltip.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/PageShell.tsx",
+      "target": "./PageShell.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/PageShell.tsx",
       "target": "ui/src/components/layout/TopBar.tsx",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/components/layout/__tests__/TopBar.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/Sidebar.tsx",
-      "target": "./Sidebar.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/Sidebar.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/Sidebar.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/components/ImpactBanner.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/components/layout/PageShell.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/store/modelsStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/store/validationStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "./Setup.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "@tauri-apps/plugin-dialog",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/InfoTooltip.tsx",
-      "target": "./InfoTooltip.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/InfoTooltip.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/InfoTooltip.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/InfoTooltip.tsx",
-      "target": "react-dom",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "ui/src/components/ImpactBanner.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "ui/src/components/layout/PageShell.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "ui/src/lib/validation.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "ui/src/store/modelsStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "ui/src/store/serverStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "ui/src/store/validationStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "./Overview.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "@tauri-apps/api/core",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
+      "source": "ui/src/components/layout/PageShell.tsx",
       "target": "react",
       "type": "import",
       "weight": 0.8

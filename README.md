@@ -11,17 +11,7 @@ LLM Manager is a hardware-adaptive inference orchestrator built on top of **llam
 
 ## 🖥️ Platform Requirements
 
-LLM Manager runs on **Windows, macOS, and Linux** via [PowerShell 7+](https://learn.microsoft.com/en-us/powershell/).
-
-| Platform | Requirement | Install |
-|---|---|---|
-| **Windows** | PowerShell 5.1+ (built-in) or PowerShell 7 | Built-in / [Download](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows) |
-| **macOS** | PowerShell 7 (`pwsh`) | `brew install powershell` |
-| **Linux (Ubuntu/Debian)** | PowerShell 7 (`pwsh`) | `sudo apt install powershell` |
-| **Linux (Fedora/RHEL)** | PowerShell 7 (`pwsh`) | `sudo dnf install powershell` |
-
-> **Windows users**: Use `powershell -File main.ps1` as before — nothing changes.  
-> **macOS/Linux users**: Use `pwsh -File main.ps1` or the convenience script `./run-setup.sh`.
+LLM Manager supports cross-platform operations on **Windows, macOS, and Linux**. For detailed prerequisite setup instructions, installation commands, and shell setup scripts, please refer to the **[USER_GUIDE.md: Prerequisites by Platform](USER_GUIDE.md#0-prerequisites-by-platform)**.
 
 
 ---
@@ -33,31 +23,9 @@ If you want to get started immediately, set up your model paths, and run your lo
 
 ## 🛠️ What It Does
 
-### 1. Hardware-Adaptive Inference Configuration
-Profiles your CPU, RAM, and GPU at every startup. GPU adapters are classified into two orthogonal dimensions:
+Profiles your host hardware (CPU cores, System RAM, GPU VRAM, CUDA/Metal support) at startup and automatically groups systems into performance tiers (`cpu`, `low`, `mid`, `high`). From these classifications, the decision engine automatically derives all tuning arguments (offload layers, Flash Attention, quantization precision, batch size, thread cap, etc.).
 
-- **AdapterClass** — `none | integrated | dedicated`  
-  Describes the hardware type: is this a discrete card with onboard VRAM, or a shared-memory integrated adapter?
-
-- **PerformanceTier** — `cpu | low | mid | high`  
-  Drives the inference parameter policy: what values should every llama.cpp argument take?
-
-From those two facts, the system derives every parameter automatically:
-
-| Parameter | CPU / Integrated | Low (2–4 GB) | Mid (4–8 GB) | High (>8 GB) |
-|---|---|---|---|---|
-| `n-gpu-layers` | `0` | `-1` + fit | `-1` + fit | `-1` + fit |
-| `flash-attn` | `off` | `on` | `on` | `on` |
-| `fit` | `off` | `on` | `on` | `on` |
-| `cache-type-k/v` | `f16` | `q8_0` | `q8_0` | `q8_0` / `f16 >12 GB` |
-| `ubatch-size` | `128` | `256` | `512` | `1024` |
-| `spec-type` | `ngram-simple`* | `none` | `ngram-simple`* | `ngram-simple`* |
-| `parallel` | `1` | `1` | `1–2`† | `1–2`† |
-
-\* Validated per-model (skipped for MoE / multimodal architectures)  
-† Upgraded to `2` only when both VRAM budget and system RAM confirm headroom
-
-**Context size** is also computed per-model using a formula that accounts for model weight footprint, KV cache pressure at the target context and concurrency level, and available RAM/VRAM — always treated as a ceiling, never a floor.
+For the complete parameter policies table, decision flow diagram, and mathematical context allocation formulas, please refer to **[ARCHITECTURE.md: Core Formulas](ARCHITECTURE.md#3-core-formulas)**.
 
 ### 2. Explicit Override Support
 Any auto-derived value can be overridden by adding an `overrides` block to `llo-config.json`:
@@ -82,6 +50,9 @@ Tracks `llama.cpp` argument changes on `git pull`, validating script options aga
 
 ### 5. Fallback & Bootstrapping
 When no local GGUF models are found and no GPU is available, falls back to a lightweight Hugging Face bootstrap model. When a cloud fallback provider is configured, routes client traffic to Ollama, OpenAI, Anthropic, or NVIDIA NIM instead.
+
+### 6. Desktop GUI Application
+Provides a premium desktop GUI built with **Tauri + React + TypeScript** that visually mirrors all CLI functionality. It offers real-time server logging, system health audits, active model switching, and dynamic sliders for custom memory tuning and config overrides. Details are located in the user guide.
 
 ---
 

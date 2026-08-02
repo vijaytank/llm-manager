@@ -11,8 +11,8 @@ These files have the highest centrality (PageRank) and are critical to the syste
 - [ui/src/store/modelsStore.ts](file:///E:/Projects/llm-manager/ui/src/store/modelsStore.ts) (Score: 0.2838)
 - [ui/src/components/layout/TopBar.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/TopBar.tsx) (Score: 0.2478)
 - [ui/src/lib/validation.ts](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts) (Score: 0.2462)
-- [ui/src/components/layout/PageShell.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/PageShell.tsx) (Score: 0.2388)
 - [ui/src/components/InfoTooltip.tsx](file:///E:/Projects/llm-manager/ui/src/components/InfoTooltip.tsx) (Score: 0.2388)
+- [ui/src/components/layout/PageShell.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/PageShell.tsx) (Score: 0.2388)
 - [ui/src/App.tsx](file:///E:/Projects/llm-manager/ui/src/App.tsx) (Score: 0.1622)
 - [ui/src/store/validationStore.ts](file:///E:/Projects/llm-manager/ui/src/store/validationStore.ts) (Score: 0.1543)
 
@@ -27,22 +27,18 @@ These class and function abstractions are the key logical hubs of the system.
 The following clusters represent tightly-coupled functional modules detected in the graph.
 
 ### Module 1: ui Cluster
-- **Size**: 10 nodes
-- **Key Files**: ui/src/pages/Integrations.tsx, ui/src/App.tsx, ui/src/components/layout/PageShell.tsx, ui/src/pages/Settings.tsx, ui/src/pages/Performance.tsx...
+- **Size**: 13 nodes
+- **Key Files**: ui/src/pages/__tests__/OverviewFlow.test.ts, ui/src/pages/Models.tsx, ui/src/lib/__tests__/validation.test.ts, ui/src/store/__tests__/modelsStore.test.ts, ui/src/store/__tests__/hardwareStore.test.ts...
 
 ### Module 2: ui Cluster
-- **Size**: 10 nodes
-- **Key Files**: ui/src/pages/__tests__/OverviewFlow.test.ts, ui/src/pages/Models.tsx, ui/src/store/hardwareStore.ts, ui/src/lib/__tests__/validation.test.ts, ui/src/store/modelsStore.ts...
+- **Size**: 12 nodes
+- **Key Files**: ui/src/pages/Diagnostics.tsx, ui/src/store/__tests__/serverStore.test.ts, ui/src/components/InfoTooltip.tsx, ui/src/pages/Logs.tsx, ui/src/App.tsx...
 
 ### Module 3: ui Cluster
-- **Size**: 9 nodes
-- **Key Files**: ui/src/pages/__tests__/ParameterCLIForwarding.test.ts, ui/src/components/layout/__tests__/TopBar.test.ts, ui/src/store/serverStore.ts, ui/src/components/layout/TopBar.tsx, ui/src/store/__tests__/configStore.test.ts...
+- **Size**: 8 nodes
+- **Key Files**: ui/src/store/__tests__/configStore.test.ts, ui/src/components/layout/__tests__/TopBar.test.ts, ui/src/pages/__tests__/ParameterCLIForwarding.test.ts, ui/src/components/layout/TopBar.tsx, ui/src/pages/__tests__/SetupFlow.test.ts...
 
 ### Module 4: ui Cluster
-- **Size**: 4 nodes
-- **Key Files**: ui/src/components/ImpactBanner.tsx, ui/src/pages/Setup.tsx, ui/src/pages/Overview.tsx, ui/src/store/validationStore.ts
-
-### Module 5: ui Cluster
 - **Size**: 1 nodes
 - **Key Files**: ui/vite.config.ts
 

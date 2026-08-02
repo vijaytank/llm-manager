@@ -127,6 +127,9 @@ By default, the server runs on **`http://127.0.0.1:8080`**.
 
 > [!NOTE]
 > **Port Collision Protection**: If port `8080` is already occupied by another application on your system, LLM Manager will automatically scan and shift `llama-server` to the next available free port (e.g., `8081`, `8082`). Always check the server logs in the startup window for the active port!
+> 
+> > [!WARNING]
+> > **Static Integration Port Mismatches**: When Port Collision Protection shifts the active port dynamically, static configuration files created during setup (such as `.vscode/settings.json` which hardcodes `8080`) will remain pointed at the old port. You must manually update these static integration settings (or your client API base URLs) to the shifted port number shown in the server log.
 
 ### A. VSCode & Cursor / Continue
 Most IDE plugins expect an OpenAI-compatible endpoint. Configure your plugin settings with:
@@ -168,3 +171,46 @@ During server startup, the script automatically exports the necessary environmen
 
 * **Apple Silicon (M-series) Notes**: The profiler detects Apple Silicon automatically via `system_profiler`. The entire unified memory is used as the inference budget. A 16 GB M3 Mac is treated as having 16 GB of "VRAM".
 * **AMD GPU on Linux**: Install ROCm and ensure `rocm-smi` is in your PATH for accurate VRAM detection. Without it, the profiler falls back to `/sys/class/drm` sysfs entries.
+
+---
+
+## 6. Tauri Desktop GUI Application
+
+LLM Manager includes a premium desktop GUI companion app built with **Tauri + React + TypeScript + Vite**. It allows you to monitor server status, view real-time log outputs, run health checks, scan models, and configure custom memory tuning overrides through an interactive visual interface.
+
+### A. How to Run and Build the App
+
+To run or compile the desktop application, you must have **Node.js** (LTS) and **Rust** installed on your system.
+
+**Run in Development Mode:**
+1. Navigate to the `ui/` directory:
+   ```bash
+   cd ui
+   ```
+2. Install Node dependencies:
+   ```bash
+   npm install
+   ```
+3. Launch the Tauri developer environment:
+   ```bash
+   npm run tauri dev
+   ```
+
+**Build for Production:**
+To compile a native executable bundle:
+```bash
+cd ui
+npm run tauri build
+```
+* **Windows**: Generates a setup installer (`.msi`) and binary in `ui/src-tauri/target/release/bundle/msi/`.
+* **macOS**: Generates a `.app` bundle in `ui/src-tauri/target/release/bundle/osx/`.
+* **Linux**: Generates a `.deb` package in `ui/src-tauri/target/release/bundle/deb/`.
+
+### B. Configuration Storage and CLI Divergence
+
+* **GUI Config Location**: The Tauri app stores and manages the settings in the user's local AppData directory:
+  - **Windows**: `%APPDATA%\LLM Manager\llo-config.json`
+  - **macOS/Linux**: `~/.config/LLM Manager/llo-config.json`
+* **CLI Config Location**: The PowerShell CLI wizard (`main.ps1`) and CLI scripts default to reading and saving `llo-config.json` in the **workspace root** folder.
+* **Important Sync Notice**: When launching scripts from the Tauri GUI, the app explicitly passes its AppData config path to the PowerShell backend. If you use both the CLI tools and the GUI app, changes made in the GUI will write to the AppData path, while changes in the CLI wizard write to the workspace folder. These configs do not auto-sync, so you should choose one primary interface to avoid split configurations.
+
