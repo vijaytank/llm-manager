@@ -1,11 +1,18 @@
 # LLM Manager
 
-[![PowerShell Version](https://img.shields.io/badge/PowerShell-5.1%20%7C%207%2B-blue.svg)](https://learn.microsoft.com/en-us/powershell/)
-[![Platform](https://img.shields.io/badge/platform-windows-lightgrey.svg)](https://www.microsoft.com/windows)
+[![PowerShell Version](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)](https://learn.microsoft.com/en-us/powershell/)
+[![Platform](https://img.shields.io/badge/platform-windows%20%7C%20macOS%20%7C%20linux-lightgrey.svg)](#platform-requirements)
 [![llama.cpp Compatibility](https://img.shields.io/badge/llama.cpp-compatible-blueviolet.svg)](https://github.com/ggerganov/llama.cpp)
 [![Optimization Status](https://img.shields.io/badge/optimization-hardware--adaptive-orange.svg)](#)
 
 LLM Manager is a hardware-adaptive inference orchestrator built on top of **llama.cpp**. It profiles your system at startup, classifies your GPU, and derives every inference parameter — GPU offload layers, KV cache precision, context size, batch size, speculative decoding — automatically from the live hardware state. No manual configuration is needed for a typical deployment.
+
+---
+
+## 🖥️ Platform Requirements
+
+LLM Manager supports cross-platform operations on **Windows, macOS, and Linux**. For detailed prerequisite setup instructions, installation commands, and shell setup scripts, please refer to the **[USER_GUIDE.md: Prerequisites by Platform](USER_GUIDE.md#0-prerequisites-by-platform)**.
+
 
 ---
 
@@ -16,31 +23,9 @@ If you want to get started immediately, set up your model paths, and run your lo
 
 ## 🛠️ What It Does
 
-### 1. Hardware-Adaptive Inference Configuration
-Profiles your CPU, RAM, and GPU at every startup. GPU adapters are classified into two orthogonal dimensions:
+Profiles your host hardware (CPU cores, System RAM, GPU VRAM, CUDA/Metal support) at startup and automatically groups systems into performance tiers (`cpu`, `low`, `mid`, `high`). From these classifications, the decision engine automatically derives all tuning arguments (offload layers, Flash Attention, quantization precision, batch size, thread cap, etc.).
 
-- **AdapterClass** — `none | integrated | dedicated`  
-  Describes the hardware type: is this a discrete card with onboard VRAM, or a shared-memory integrated adapter?
-
-- **PerformanceTier** — `cpu | low | mid | high`  
-  Drives the inference parameter policy: what values should every llama.cpp argument take?
-
-From those two facts, the system derives every parameter automatically:
-
-| Parameter | CPU / Integrated | Low (2–4 GB) | Mid (4–8 GB) | High (>8 GB) |
-|---|---|---|---|---|
-| `n-gpu-layers` | `0` | `-1` + fit | `-1` + fit | `-1` + fit |
-| `flash-attn` | `off` | `on` | `on` | `on` |
-| `fit` | `off` | `on` | `on` | `on` |
-| `cache-type-k/v` | `f16` | `q8_0` | `q8_0` | `q8_0` / `f16 >12 GB` |
-| `ubatch-size` | `128` | `256` | `512` | `1024` |
-| `spec-type` | `ngram-simple`* | `none` | `ngram-simple`* | `ngram-simple`* |
-| `parallel` | `1` | `1` | `1–2`† | `1–2`† |
-
-\* Validated per-model (skipped for MoE / multimodal architectures)  
-† Upgraded to `2` only when both VRAM budget and system RAM confirm headroom
-
-**Context size** is also computed per-model using a formula that accounts for model weight footprint, KV cache pressure at the target context and concurrency level, and available RAM/VRAM — always treated as a ceiling, never a floor.
+For the complete parameter policies table, decision flow diagram, and mathematical context allocation formulas, please refer to **[ARCHITECTURE.md: Core Formulas](ARCHITECTURE.md#3-core-formulas)**.
 
 ### 2. Explicit Override Support
 Any auto-derived value can be overridden by adding an `overrides` block to `llo-config.json`:
@@ -66,16 +51,19 @@ Tracks `llama.cpp` argument changes on `git pull`, validating script options aga
 ### 5. Fallback & Bootstrapping
 When no local GGUF models are found and no GPU is available, falls back to a lightweight Hugging Face bootstrap model. When a cloud fallback provider is configured, routes client traffic to Ollama, OpenAI, Anthropic, or NVIDIA NIM instead.
 
+### 6. Desktop GUI Application
+Provides a premium desktop GUI built with **Tauri + React + TypeScript** that visually mirrors all CLI functionality. It offers real-time server logging, system health audits, active model switching, and dynamic sliders for custom memory tuning and config overrides. Details are located in the user guide.
+
 ---
 
 ## 🔌 Integrations & Workspace Tools
 
 LLM Manager automatically configures environment parameters and settings files to bridge local models to popular development tools:
 
-- **VSCode Task Integration**: Automatically generates `.vscode/tasks.json` and `.vscode/settings.json` during wizard execution to let you start, stop, and audit the LLM server directly via `Ctrl+Shift+B` (Build Task) inside the workspace directory.
+- **VSCode Task Integration**: Automatically generates `.vscode/tasks.json` and `.vscode/settings.json` during wizard execution to let you start, stop, and audit the LLM server directly via `Ctrl+Shift+B` (Build Task) inside the workspace directory. Environment variables are injected for **Windows** (`terminal.integrated.env.windows`), **macOS** (`terminal.integrated.env.osx`), and **Linux** (`terminal.integrated.env.linux`) terminals.
 - **Claude Code CLI Integration**: Start the server and launch the interactive Claude Code CLI launcher. It auto-configures `ANTHROPIC_BASE_URL`, sets `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = 1` to prevent unnecessary remote telemetry/routing, and sets `ANTHROPIC_AUTH_TOKEN = local` for a fully offline loop.
 - **Cursor & Continue Setup**: Dynamically outputs configured JSON blocks and API endpoints (`http://127.0.0.1:<PORT>/v1`) for easy copy-paste setup in your client configuration.
-- **Auditing & Test Suite**: The health script (`script/test-health.ps1`) verifies local PowerShell syntax, config schemas, hardware profiling limits, and conducts live TCP/REST API connectivity checks to ensure llama-server is healthy.
+- **Auditing & Test Suite**: The health script (`script/test-health.ps1`) verifies local PowerShell syntax, config schemas, hardware profiling limits, and conducts live TCP/REST API connectivity checks to ensure llama-server is healthy. Run via `powershell -File script\test-health.ps1` (Windows), `pwsh -File script/test-health.ps1` (macOS/Linux), or use the convenience wrapper `./script/test-health.sh` (macOS/Linux). Compatibility checks can also be run via `./script/verify-scripts.sh` (macOS/Linux) or `.\script\verify-scripts.ps1` (Windows).
 
 ---
 

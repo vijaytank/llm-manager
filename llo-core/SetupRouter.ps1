@@ -15,19 +15,39 @@
 # fallback_provider, etc.) continue to be read from the flat config as before.
 
 param(
-    [string]$ModelsDir   = "",
+    [string]$ModelsDir    = "",
     [string]$TemplatesDir = "",
-    [string]$PresetFile  = "",
-    [string]$ConfigFile  = ""
+    [string]$GrammarsDir  = "",
+    [string]$PresetFile   = "",
+    [string]$ConfigFile   = ""
 )
 
 $ErrorActionPreference = "Stop"
 
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-if ([string]::IsNullOrWhiteSpace($ConfigFile))   { $ConfigFile   = Join-Path $ManagerDir "llo-config.json" }
-if ([string]::IsNullOrWhiteSpace($PresetFile))    { $PresetFile   = Join-Path $ManagerDir "models-preset.ini" }
-if ([string]::IsNullOrWhiteSpace($ModelsDir))     { $ModelsDir    = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\models")) }
-if ([string]::IsNullOrWhiteSpace($TemplatesDir))  { $TemplatesDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\templates")) }
+if ([string]::IsNullOrWhiteSpace($ConfigFile)) {
+    $appDataConfig = if ($env:APPDATA) {
+        Join-Path $env:APPDATA "LLM Manager\llo-config.json"
+    } elseif ($env:USERPROFILE) {
+        Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
+    } elseif ($env:HOME) {
+        Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
+    } else { $null }
+
+    if ($appDataConfig -and (Test-Path $appDataConfig)) {
+        $ConfigFile = $appDataConfig
+    } else {
+        $ConfigFile = Join-Path $ManagerDir "llo-config.json"
+    }
+}
+$ConfigFile = [System.IO.Path]::GetFullPath($ConfigFile)
+
+if ([string]::IsNullOrWhiteSpace($PresetFile))   { $PresetFile   = Join-Path (Split-Path -Parent $ConfigFile) "models-preset.ini" }
+$PresetFile = [System.IO.Path]::GetFullPath($PresetFile)
+
+if ([string]::IsNullOrWhiteSpace($ModelsDir))    { $ModelsDir    = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\models")) }
+if ([string]::IsNullOrWhiteSpace($TemplatesDir)) { $TemplatesDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\templates")) }
+if ([string]::IsNullOrWhiteSpace($GrammarsDir))  { $GrammarsDir  = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\grammars")) }
 
 # ── Load Hardware Profiler ─────────────────────────────────────────────────────
 $profileScript = Join-Path $PSScriptRoot "Profile.ps1"
@@ -51,6 +71,19 @@ $config = @{
     templates_dir        = ""
     use_default_template = $false
     cache_idle_slots     = $true
+    parallel_slots       = -1
+    threads             = 0
+    numa                = ""
+    cache_ram           = 0
+    temperature         = ""
+    top_k               = ""
+    top_p               = ""
+    samplers            = ""
+    dynatemp_range      = ""
+    dynatemp_exp        = ""
+    mmproj_auto         = $null
+    mmproj_path         = ""
+    mmproj_no_offload    = $false
     custom_args          = ""
     integrations         = @()
 
@@ -59,10 +92,12 @@ $config = @{
     overrides            = @{}
 }
 
+$loadedKeys = @()
 if (Test-Path $ConfigFile) {
     try {
         $loaded = Get-Content $ConfigFile -Raw | ConvertFrom-Json
-        foreach ($k in $loaded.PSObject.Properties.Name) {
+        $loadedKeys = @($loaded.PSObject.Properties.Name)
+        foreach ($k in $loadedKeys) {
             $config[$k] = $loaded.$k
         }
     } catch {
@@ -76,11 +111,30 @@ if (Test-Path $ConfigFile) {
 # normalize overrides to a plain hashtable (json deserializes to pscustomobject)
 if ($config.overrides -is [system.management.automation.pscustomobject]) {
     $ovr = @{}
-    foreach ($k in $config.overrides.psobject.properties.name) { $ovr[$k] = $config.overrides.$k }
+    foreach ($prop in $config.overrides.psobject.properties) {
+        $ovr[$prop.Name] = $config.overrides.$($prop.Name)
+    }
     $config.overrides = $ovr
 } elseif (-not ($config.overrides -is [hashtable])) {
     $config.overrides = @{}
 }
+
+function Map-LegacyConfigKeyToOverride {
+    param(
+        [string]$LegacyKey,
+        [string]$OverrideKey
+    )
+    if ($config.ContainsKey($LegacyKey) -and -not $config.overrides.ContainsKey($OverrideKey) -and $loadedKeys -contains $LegacyKey) {
+        $value = $config[$LegacyKey]
+        if ($null -ne $value -and $value -ne "") {
+            $config.overrides[$OverrideKey] = $value
+            Write-Host "  [legacy] '$LegacyKey' mapped to config.overrides.$OverrideKey" -ForegroundColor Yellow
+        }
+    }
+}
+
+# Explicit config.overrides remain active. Flat top-level keys are maintained as baseline configuration
+# and do not override hardware-adaptive tier settings unless placed in config.overrides.
 
 # Enforce operational limits for Claude Code
 if ($config.integrations -contains "claude-code" -and $config.idle_timeout_sec -lt 600) {
@@ -92,21 +146,14 @@ if ($config.models_dir)    { $ModelsDir    = $config.models_dir }
 if ($config.templates_dir) { $TemplatesDir = $config.templates_dir }
 else                       { $TemplatesDir = Join-Path $ManagerDir "templates" }
 
+if ($config.grammars_dir)  { $GrammarsDir  = $config.grammars_dir }
+else                       { $GrammarsDir  = Join-Path $ManagerDir "grammars" }
+
 # Ensure directories exist
 if ($ModelsDir    -and -not (Test-Path $ModelsDir))    { New-Item -ItemType Directory -Force -Path $ModelsDir    | Out-Null }
 if ($TemplatesDir -and -not (Test-Path $TemplatesDir)) { New-Item -ItemType Directory -Force -Path $TemplatesDir | Out-Null }
+if ($GrammarsDir  -and -not (Test-Path $GrammarsDir))  { New-Item -ItemType Directory -Force -Path $GrammarsDir  | Out-Null }
 
-# Copy default.jinja from package if missing in templates dir
-$defaultDest     = Join-Path $TemplatesDir "default.jinja"
-$packagedSource  = Join-Path (Split-Path $PSScriptRoot) "templates\default.jinja"
-if (-not (Test-Path $defaultDest) -and (Test-Path $packagedSource)) {
-    try {
-        Copy-Item -Path $packagedSource -Destination $defaultDest -Force | Out-Null
-        Write-Host "Copied default chat template to: $defaultDest" -ForegroundColor Green
-    } catch {
-        Write-Host "[WARNING] Failed to copy default template: $($_.Exception.Message)" -ForegroundColor Yellow
-    }
-}
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # HARDWARE-ADAPTIVE PARAMETER DERIVATION
@@ -253,12 +300,25 @@ function Get-InferenceParams {
         }
     }
 
+    # Support legacy and top-level config key mappings for user settings
+    if (-not $Overrides.ContainsKey("parallel") -and $config.ContainsKey("parallel_slots") -and [int]$config.parallel_slots -gt 0) {
+        $params.parallel = [int]$config.parallel_slots
+        Write-Host "  [config] parallel = $($params.parallel)  (from config.parallel_slots)" -ForegroundColor DarkYellow
+    }
+
     # Claude Code integration requires at least 2 parallel slots to avoid subagent deadlocks.
     if ($config.integrations -contains "claude-code") {
         if ($params.parallel -lt 2) {
             $params.parallel = 2
             Write-Host "    [Claude Code] Enforced parallel = 2 floor to prevent subagent deadlock." -ForegroundColor Cyan
         }
+    }
+
+    # ── Safeguard validations ──────────────────────────────────────────────────
+    # Low-VRAM Speculative Decoding Safeguard (Issue 2.1)
+    if ($tier -eq "low" -and $params.spec_type -ne "none") {
+        Write-Host "  [!] Low VRAM tier ('low') detected. Enforcing spec_type = 'none' to prevent out-of-memory errors." -ForegroundColor Yellow
+        $params.spec_type = "none"
     }
 
     # ── Post-override validation ──────────────────────────────────────────────
@@ -308,12 +368,21 @@ function Get-SafeContextSize {
     $modelGB = $modelMB / 1024.0
     $baseKV = 12.0 * $modelGB
     
-    $kvMBPerKToken = switch ($CacheTypeK) {
-        "f16"   { $baseKV * 2.0 }   # f16 is double the size of q8_0
-        "q8_0"  { $baseKV }         # baseline
-        "q4_0"  { $baseKV * 0.5 }   # q4_0 is half the size of q8_0
-        default { $baseKV }
+    # Mathematically exact element byte calculator matching ui/src/lib/validation.ts
+    $getBytesPerElem = {
+        param([string]$Type)
+        switch ($Type) {
+            "q4_0"  { 0.5625 }
+            "q8_0"  { 1.0625 }
+            "f16"   { 2.0 }
+            "bf16"  { 2.0 }
+            default { 1.0625 }
+        }
     }
+    $elemBytesK = & $getBytesPerElem $CacheTypeK
+    # Assume symmetric K/V cache quant unless specified
+    $kvRatio = ($elemBytesK * 2.0) / 2.125  # 2.125 = q8_0 (1.0625) + q8_0 (1.0625) baseline
+    $kvMBPerKToken = $baseKV * $kvRatio
     
     # Floor the estimate at a minimum of 5.0 MB per 1000 tokens for safety
     $kvMBPerKToken = [math]::Max($kvMBPerKToken, 5.0)
@@ -330,10 +399,22 @@ function Get-SafeContextSize {
     # it only causes partial layer/cache offloading. Thus, RAM is the binding constraint for allocation.
     $rawCtx = $maxCtxFromRam
 
-    # Snap down to the nearest standard llama.cpp context value
-    $snaps  = @(4096, 8192, 16384, 32768, 65536, 131072, 262144)
-    $chosen = 4096
-    foreach ($s in $snaps) { if ($rawCtx -ge $s) { $chosen = $s } }
+    # Snap down to the nearest standard llama.cpp context value (O(1) bitwise calculation)
+    if ($rawCtx -le 0) { $chosen = 4096 } else {
+        # Calculate the largest power of two less than or equal to rawCtx
+        $exponent = [math]::Floor([math]::Log($rawCtx) / [math]::Log(2))
+        $chosen = [math]::Pow(2, $exponent)
+    }
+
+    # Upper bounds by tier to avoid aggressive context sizes on mid/low VRAM.
+    $tierMaxCtx = switch ($GpuTier) {
+        "cpu"  { 16384 }
+        "low"  { 32768 }
+        "mid"  { 65536 }
+        "high" { 131072 }
+        default { 65536 }
+    }
+    $chosen = [math]::Min($chosen, $tierMaxCtx)
 
     # Integration-aware context floor:
     # Claude Code needs a large context (> 24k) to launch its initial prompts.
@@ -370,6 +451,17 @@ function Get-ValidatedSpecType {
 
 # ── Derive all parameters from hardware ───────────────────────────────────────
 $inferParams = Get-InferenceParams -Hardware $hardware -Overrides $config.overrides
+
+function Add-OptionalPresetEntry {
+    param(
+        [string]$Name,
+        $Value
+    )
+
+    if ($null -eq $Value) { return }
+    if ($Value -is [string] -and [string]::IsNullOrWhiteSpace($Value)) { return }
+    $presetLines.Add("$Name = $Value")
+}
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # HARDWARE SUMMARY (printed before model scan so users can verify auto-tuning)
@@ -429,12 +521,42 @@ function Find-MatchingTemplate {
     param([string]$Alias)
     if (-not (Test-Path $TemplatesDir)) { return $null }
     $files = Get-ChildItem -Path $TemplatesDir -Filter *.jinja
+    if ($files.Count -eq 0) { return $null }
+
+    $normalizedAlias = $Alias.ToLowerInvariant() -replace '[^a-z0-9]+', '-'
+
+    # Priority 1: Exact base-name match (normalized)
     foreach ($f in $files) {
+        if ($f.Name -eq "default.jinja") { continue }
         $templateBase = $f.BaseName.ToLowerInvariant() -replace '[^a-z0-9]+', '-'
-        if ($Alias -match $templateBase -or $templateBase -match $Alias) {
-            return $f.FullName
+        if ($templateBase -eq $normalizedAlias) { return $f.FullName }
+    }
+
+    # Priority 2: Substring token match scoring
+    $bestMatch = $null
+    $bestScore = 0
+    $aliasTokens = $normalizedAlias -split '-' | Where-Object {
+        $_.Length -gt 1 -and $_ -notmatch '^\d+$' -and $_ -ne 'gguf' -and $_ -ne 'q4' -and $_ -ne 'q5' -and $_ -ne 'q8' -and $_ -ne 'k' -and $_ -ne 'm' -and $_ -ne 's' -and $_ -ne 'l'
+    }
+    if ($aliasTokens.Count -gt 0) {
+        foreach ($f in $files) {
+            if ($f.Name -eq "default.jinja") { continue }
+            $templateBase = $f.BaseName.ToLowerInvariant() -replace '[^a-z0-9]+', '-'
+            $matchCount = 0
+            foreach ($t in $aliasTokens) {
+                if ($templateBase -match [regex]::Escape($t)) {
+                    $matchCount++
+                }
+            }
+            $score = $matchCount / $aliasTokens.Count
+            if ($score -gt $bestScore -and $score -ge 0.4) {
+                $bestScore = $score
+                $bestMatch = $f.FullName
+            }
         }
     }
+    if ($bestMatch) { return $bestMatch }
+
     return $null
 }
 
@@ -463,8 +585,11 @@ foreach ($gguf in $ggufs) {
         -CacheTypeK   $inferParams.cache_type_k `
         -Integrations $config.integrations
 
-    # User ctx_size override takes absolute priority
-    if ($config.overrides.ContainsKey("ctx_size")) {
+    # User context size configuration or override takes priority
+    if ($config.ContainsKey("default_context_size") -and $config.default_context_size -and [int]$config.default_context_size -gt 0) {
+        $ctxSize = [int]$config.default_context_size
+        Write-Host "    [config] ctx-size = $ctxSize  (from config.default_context_size)" -ForegroundColor Green
+    } elseif ($config.overrides.ContainsKey("ctx_size")) {
         $ctxSize = [int]$config.overrides["ctx_size"]
         Write-Host "    [override] ctx-size = $ctxSize  (from config.overrides)" -ForegroundColor DarkYellow
     }
@@ -492,9 +617,23 @@ $presetLines = New-Object System.Collections.Generic.List[string]
 
 # ── [*] Global defaults (apply to all models unless overridden per-model) ──────
 $presetLines.Add("[*]")
-$presetLines.Add("mmap = $($inferParams.mmap)")
+if ($config.ContainsKey('mmap') -and $config.mmap -ne $null -and $config.mmap -ne "") {
+    if ($config.mmap -eq 0 -or $config.mmap -eq '0') {
+        $presetLines.Add("no-mmap = 1")
+    } else {
+        $presetLines.Add("mmap = 1")
+    }
+} else {
+    $presetLines.Add("mmap = $($inferParams.mmap)")
+}
+
+if ($config.ContainsKey('threads') -and $config.threads -ne $null -and $config.threads -ne 0 -and $config.threads -ne "") {
+    $presetLines.Add("threads = $($config.threads)")
+} else {
+    $presetLines.Add("threads = $($hardware.CPU.OptimalThreads)")
+}
+
 $presetLines.Add("n-gpu-layers = $($inferParams.n_gpu_layers)")
-$presetLines.Add("threads = $($hardware.CPU.OptimalThreads)")
 $presetLines.Add("sleep-idle-seconds = $($config.idle_timeout_sec)")
 
 if ($config.enable_tools) {
@@ -536,6 +675,45 @@ if ($config.cache_idle_slots) {
 
 $presetLines.Add("parallel = $($inferParams.parallel)")
 
+# Optional advanced tuning flags
+if ($config.ContainsKey('numa') -and $config.numa -and -not [string]::IsNullOrWhiteSpace($config.numa)) {
+    $presetLines.Add("numa = $($config.numa)")
+}
+if ($config.ContainsKey('cache_ram') -and $config.cache_ram -ne $null -and $config.cache_ram -ne 0) {
+    $presetLines.Add("cache-ram = $($config.cache_ram)")
+}
+if ($config.ContainsKey('temperature') -and $config.temperature -and -not [string]::IsNullOrWhiteSpace($config.temperature)) {
+    $presetLines.Add("temperature = $($config.temperature)")
+}
+if ($config.ContainsKey('top_k') -and $config.top_k -and -not [string]::IsNullOrWhiteSpace($config.top_k)) {
+    $presetLines.Add("top-k = $($config.top_k)")
+}
+if ($config.ContainsKey('top_p') -and $config.top_p -and -not [string]::IsNullOrWhiteSpace($config.top_p)) {
+    $presetLines.Add("top-p = $($config.top_p)")
+}
+if ($config.ContainsKey('samplers') -and $config.samplers -and -not [string]::IsNullOrWhiteSpace($config.samplers)) {
+    $presetLines.Add("samplers = $($config.samplers)")
+}
+if ($config.ContainsKey('dynatemp_range') -and $config.dynatemp_range -and -not [string]::IsNullOrWhiteSpace($config.dynatemp_range)) {
+    $presetLines.Add("dynatemp-range = $($config.dynatemp_range)")
+}
+if ($config.ContainsKey('dynatemp_exp') -and $config.dynatemp_exp -and -not [string]::IsNullOrWhiteSpace($config.dynatemp_exp)) {
+    $presetLines.Add("dynatemp-exp = $($config.dynatemp_exp)")
+}
+if ($config.ContainsKey('mmproj_path') -and $config.mmproj_path -and -not [string]::IsNullOrWhiteSpace($config.mmproj_path) -and $config.mmproj_path -ne "none") {
+    $mmprojNorm = $config.mmproj_path -replace '\\','/'
+    $presetLines.Add("mmproj = $mmprojNorm")
+    if ($config.ContainsKey('mmproj_no_offload') -and $config.mmproj_no_offload) {
+        $presetLines.Add("no-mmproj-offload = 1")
+    }
+} elseif ($config.ContainsKey('mmproj_auto') -and $null -ne $config.mmproj_auto) {
+    if ($config.mmproj_auto) {
+        $presetLines.Add("mmproj-auto = 1")
+    } else {
+        $presetLines.Add("no-mmproj-auto = 1")
+    }
+}
+
 # Global spec-type default (may be overridden per-model by validation gate)
 if ($inferParams.spec_type -and $inferParams.spec_type -ne "none") {
     $presetLines.Add("spec-type = $($inferParams.spec_type)")
@@ -557,7 +735,14 @@ if ($modelEntries.Count -gt 0) {
 
         $presetLines.Add("[$($m.Alias)]")
         $presetLines.Add("model = $($m.Path -replace '\\','/')")
-        $presetLines.Add("ctx-size = $($m.CtxSize * $inferParams.parallel)")
+        $presetLines.Add("ctx-size = $($m.CtxSize)")
+
+        if ($config.ContainsKey('mmproj_path') -and $config.mmproj_path -and -not [string]::IsNullOrWhiteSpace($config.mmproj_path) -and $config.mmproj_path -ne "none") {
+            $presetLines.Add("mmproj = $($config.mmproj_path -replace '\\','/')")
+            if ($config.ContainsKey('mmproj_no_offload') -and $config.mmproj_no_offload) {
+                $presetLines.Add("no-mmproj-offload = 1")
+            }
+        }
 
         # Per-model spec-type override when validation result differs from global
         if ($modelSpecType -ne $inferParams.spec_type) {
@@ -566,7 +751,22 @@ if ($modelEntries.Count -gt 0) {
 
         # Chat template resolution
         $defaultTemplatePath = Join-Path $TemplatesDir "default.jinja"
-        if ($m.TemplateFile) {
+        $resolvedActiveTemplate = $null
+        if ($config.ContainsKey('active_template') -and $config.active_template -and -not [string]::IsNullOrWhiteSpace($config.active_template) -and $config.active_template -ne "auto") {
+            if (Test-Path $config.active_template) {
+                $resolvedActiveTemplate = $config.active_template
+            } else {
+                $cand = Join-Path $TemplatesDir $config.active_template
+                if (Test-Path $cand) {
+                    $resolvedActiveTemplate = $cand
+                }
+            }
+        }
+
+        if ($resolvedActiveTemplate) {
+            $presetLines.Add("chat-template-file = $($resolvedActiveTemplate -replace '\\','/')")
+            Write-Host "    -> Selected template: $resolvedActiveTemplate" -ForegroundColor DarkGray
+        } elseif ($m.TemplateFile) {
             $presetLines.Add("chat-template-file = $($m.TemplateFile -replace '\\','/')")
             Write-Host "    -> Custom template  : $($m.TemplateFile)" -ForegroundColor DarkGray
         } elseif ($config.use_default_template -and (Test-Path $defaultTemplatePath)) {

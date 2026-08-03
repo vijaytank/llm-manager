@@ -1,0 +1,98 @@
+.settings-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-tabs {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tab-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: var(--radius-button);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.form-input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-button);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  outline: none;
+  font-size: 0.875rem;
+}
+.form-input:focus {
+  border-color: var(--accent);
+}
+
+.overrides-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.override-row {
+  display: flex;
+  gap: 10px;
+}
+
+.raw-json-area {
+  width: 100%;
+  height: 450px;
+  background: #0A0C10;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-button);
+  padding: 16px;
+  color: var(--text-primary);
+  outline: none;
+  font-size: 0.85rem;
+  resize: vertical;
+}

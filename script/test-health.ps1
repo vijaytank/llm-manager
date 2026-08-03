@@ -1,12 +1,29 @@
 # LLO test-health.ps1
 # Verifies the health and integrity of all llm-manager scripts, configs, and hardware profile APIs.
 
+param(
+    [string]$ConfigFile = ""
+)
+
 $ErrorActionPreference = "Stop"
 
 $ScriptDir = $PSScriptRoot
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $ScriptDir ".."))
-$ConfigFile = Join-Path $ManagerDir "llo-config.json"
-$PresetFile = Join-Path $ManagerDir "models-preset.ini"
+if ([string]::IsNullOrWhiteSpace($ConfigFile)) {
+    $appDataConfig = if ($env:APPDATA) {
+        Join-Path $env:APPDATA "LLM Manager\llo-config.json"
+    } elseif ($env:USERPROFILE) {
+        Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
+    } elseif ($env:HOME) {
+        Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
+    } else { $null }
+
+    if ($appDataConfig -and (Test-Path $appDataConfig)) {
+        $ConfigFile = $appDataConfig
+    } else {
+        $ConfigFile = Join-Path $ManagerDir "llo-config.json"
+    }
+}
 
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "            LLM MANAGER INTEGRITY & HEALTH TEST" -ForegroundColor Cyan
@@ -14,7 +31,7 @@ Write-Host "==========================================================" -Foregro
 
 $globalPass = $true
 
-function Report-Result {
+function Write-HealthResult {
     param(
         [string]$TestName,
         [boolean]$Success,
@@ -49,7 +66,7 @@ foreach ($s in $scripts) {
         Write-Host "  -> Checked: $($s.Name)" -ForegroundColor DarkGray
     }
 }
-Report-Result -TestName "PowerShell Script Syntax Validation" -Success ($syntaxFailures -eq 0) -Detail $(if ($syntaxFailures -eq 0) { "All scripts parsed successfully." } else { "$syntaxFailures syntax error(s) found." })
+Write-HealthResult -TestName "PowerShell Script Syntax Validation" -Success ($syntaxFailures -eq 0) -Detail $(if ($syntaxFailures -eq 0) { "All scripts parsed successfully." } else { "$syntaxFailures syntax error(s) found." })
 
 # Check 2: Configuration Integrity
 Write-Host "`n[Check 2] Verifying Configuration Schema..." -ForegroundColor Cyan
@@ -62,12 +79,12 @@ if (Test-Path $ConfigFile) {
         foreach ($rk in $requiredKeys) {
             if ($rk -notin $keys) { $missing += $rk }
         }
-        Report-Result -TestName "Config JSON Format & Keys Check" -Success ($missing.Count -eq 0) -Detail $(if ($missing.Count -eq 0) { "Schema is valid and complete." } else { "Missing keys: $($missing -join ', ')" })
+        Write-HealthResult -TestName "Config JSON Format & Keys Check" -Success ($missing.Count -eq 0) -Detail $(if ($missing.Count -eq 0) { "Schema is valid and complete." } else { "Missing keys: $($missing -join ', ')" })
     } catch {
-        Report-Result -TestName "Config JSON Format & Keys Check" -Success $false -Detail $_.Exception.Message
+        Write-HealthResult -TestName "Config JSON Format & Keys Check" -Success $false -Detail $_.Exception.Message
     }
 } else {
-    Report-Result -TestName "Config JSON Format & Keys Check" -Success $true -Detail "llo-config.json not initialized yet (normal before first setup)."
+    Write-HealthResult -TestName "Config JSON Format & Keys Check" -Success $true -Detail "llo-config.json not initialized yet (normal before first setup)."
 }
 
 # Check 3: Profile System API Compatibility
@@ -80,12 +97,12 @@ if (Test-Path $profileScript) {
         $success = $null -ne $hw.CPU -and $null -ne $hw.RAM
         $detail = "CPU: $($hw.CPU.Name), RAM: $($hw.RAM.TotalGB) GB"
         if ($hw.GPU) { $detail += ", GPU: $($hw.GPU.Name) ($($hw.GPU.TotalVramMB) MB VRAM)" }
-        Report-Result -TestName "Hardware Profiling Execution" -Success $success -Detail $detail
+        Write-HealthResult -TestName "Hardware Profiling Execution" -Success $success -Detail $detail
     } catch {
-        Report-Result -TestName "Hardware Profiling Execution" -Success $false -Detail $_.Exception.Message
+        Write-HealthResult -TestName "Hardware Profiling Execution" -Success $false -Detail $_.Exception.Message
     }
 } else {
-    Report-Result -TestName "Hardware Profiling Execution" -Success $false -Detail "Profile.ps1 script is missing."
+    Write-HealthResult -TestName "Hardware Profiling Execution" -Success $false -Detail "Profile.ps1 script is missing."
 }
 
 # Check 4: Preset Configuration Generator Check
@@ -94,22 +111,24 @@ $setupRouterScript = Join-Path $ManagerDir "llo-core\SetupRouter.ps1"
 if (Test-Path $setupRouterScript) {
     try {
         # Run SetupRouter inside a dry-run/mock context (temporary outputs)
-        $tempPreset = Join-Path $env:TEMP "models-preset-test.ini"
-        $tempConfig = Join-Path $env:TEMP "llo-config-test.json"
+        $tempDir = if ($env:TEMP) { $env:TEMP } elseif ($env:TMPDIR) { $env:TMPDIR } else { '/tmp' }
+        $tempPreset = Join-Path $tempDir "models-preset-test.ini"
+        $tempConfig = Join-Path $tempDir "llo-config-test.json"
         if (Test-Path $ConfigFile) { Copy-Item $ConfigFile $tempConfig }
         
         $modelsList = & $setupRouterScript -PresetFile $tempPreset -ConfigFile $tempConfig
-        $success = $null -ne $modelsList
-        Report-Result -TestName "SetupRouter Execution Test" -Success $success -Detail "Router generated models list successfully. Found $($modelsList.Count) models."
+        $success = (Test-Path $tempPreset)
+        $modelsCount = if ($null -ne $modelsList) { @($modelsList).Count } else { 0 }
+        Write-HealthResult -TestName "SetupRouter Execution Test" -Success $success -Detail "Router generated models list successfully. Found $modelsCount models."
         
         # Clean up temporary test files
         if (Test-Path $tempPreset) { Remove-Item $tempPreset -Force }
         if (Test-Path $tempConfig) { Remove-Item $tempConfig -Force -ErrorAction SilentlyContinue }
     } catch {
-        Report-Result -TestName "SetupRouter Execution Test" -Success $false -Detail $_.Exception.Message
+        Write-HealthResult -TestName "SetupRouter Execution Test" -Success $false -Detail $_.Exception.Message
     }
 } else {
-    Report-Result -TestName "SetupRouter Execution Test" -Success $false -Detail "SetupRouter.ps1 script is missing."
+    Write-HealthResult -TestName "SetupRouter Execution Test" -Success $false -Detail "SetupRouter.ps1 script is missing."
 }
 
 # Check 5: Live Server API Connectivity Check (Optional/Informational)
@@ -141,7 +160,7 @@ try {
     $pingDetail = "Failed to query server: $($_.Exception.Message)"
     $pingSuccess = $false
 }
-Report-Result -TestName "Live Server API Ping Check" -Success $pingSuccess -Detail $pingDetail
+Write-HealthResult -TestName "Live Server API Ping Check" -Success $pingSuccess -Detail $pingDetail
 
 # Final Health Verdict
 Write-Host "`n==========================================================" -ForegroundColor Green

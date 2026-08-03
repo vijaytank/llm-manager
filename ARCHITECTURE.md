@@ -20,7 +20,12 @@ The system classifies every GPU using two orthogonal dimensions. This avoids con
 
 Detection priority:
 1. **nvidia-smi** (preferred for NVIDIA) — queries all GPUs, selects the one with highest `memory.free` to handle multi-GPU and dual-GPU laptop configurations
-2. **WMI `Win32_VideoController`** fallback — filters to non-shared-memory adapters (avoids picking the iGPU on a laptop with both Intel and NVIDIA)
+   - **Windows**: Probes `C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe` and `C:\Windows\System32\nvidia-smi.exe`
+   - **macOS / Linux**: Probes `/usr/bin/nvidia-smi`, `/usr/local/bin/nvidia-smi`, and PATH
+2. **WMI `Win32_VideoController`** fallback — **Windows only** — filters to non-shared-memory adapters (avoids picking the iGPU on a laptop with both Intel and NVIDIA)
+3. **`system_profiler SPDisplaysDataType`** — **macOS only** — detects Apple Silicon (M-series unified memory) and discrete GPUs on Intel Macs
+4. **`rocm-smi`** — **Linux only** — detects AMD GPUs via ROCm when installed
+5. **`/sys/class/drm` sysfs** — **Linux only** — fallback for any GPU, reads `mem_info_vram_total` from the DRM subsystem
 
 ### PerformanceTier (inference policy)
 
@@ -138,6 +143,10 @@ maxCtxFromRam = floor(availRAM / kvMBPerKToken) × 1000 tokens (floored at 4096)
 ctxSize = largest of { 4096, 8192, 16384, 32768, 65536, 131072, 262144 } that fits within maxCtxFromRam
 ```
 
+#### CLI vs. UI Mathematical Discrepancies
+* **CLI Approximation (PowerShell)**: As shown above, `SetupRouter.ps1` uses a simplified linear approximation where `q8_0` KV cache is assumed to be exactly 50% of the size of `f16`, and `q4_0` is assumed to be exactly 25% of `f16` (`baseKV * 2.0` vs `baseKV` vs `baseKV * 0.5`).
+* **UI Exact Calculator (Tauri/React)**: The React diagnostics screen (`ui/src/lib/validation.ts`) calculates cache memory using precise element byte sizes: `f16` uses 2.0 bytes/element, `q8_0` uses 1.0625 bytes/element, and `q4_0` uses 0.5625 bytes/element. This leads to `q8_0` being calculated as 53.1% of `f16` (instead of 50%) and `q4_0` as 28.1% of `f16` (instead of 25%), introducing a slight mismatch in memory headroom estimates between the CLI output and the UI diagnostics.
+
 #### Integration-Aware Context Floor
 To prevent client initialization failures, a context floor is enforced if the **Claude Code** integration is active:
 * **CPU tier**: Floored at `32768` tokens
@@ -192,8 +201,16 @@ Auto-derived values fill all keys not present in `overrides`. This design means 
 ### A. Port Collision Auto-Scanner
 At launch, `start-server.ps1` checks active TCP listeners via .NET `IPGlobalProperties`. If port `8080` is occupied by another process, it scans upward (`port + 1`) until a free socket is found. All exported client environment URLs are updated to the resolved port.
 
-### B. Chat Template Heuristic Mapping
-`SetupRouter.ps1` scans GGUF file names (normalized to lowercase, hyphen-separated alias) and matches against `.jinja` files in the templates directory. An alias is matched when the template basename is a substring of the alias or vice versa. If no match is found, `use_default_template = true` in config applies `default.jinja`; otherwise the GGUF's internal template is used.
+### B. Chat Template & Grammar Dynamic Syncing
+To avoid outdated static prompt formats and grammar errors, the wizard dynamically retrieves the complete `models/templates` and `grammars` directories from the upstream `ggml-org/llama.cpp` GitHub repository.
+- **SHA-Based Smart Caching**: Files are synced via `FetchAssets.ps1`. Downstream runs fetch only the directory listing (lightweight REST API call) and check file SHA hashes against `.assets-manifest.json` to download only new/updated files, preventing redundant network requests.
+- **Offline Fallback**: If offline during setup and no templates are downloaded, the system prompts the user to optionally apply a bundled `default.jinja` template to all models.
+- **Priority-Based Mapping**: `SetupRouter.ps1` matches local GGUF models to templates in `templates/` using a multi-step priority algorithm:
+  1. Exact normalized name match (e.g., `qwen3.5-4b` -> `Qwen3.5-4B.jinja`).
+  2. Token substring match (scoring overlaps of model/version tokens).
+  3. Default template (`default.jinja`) if enabled via `use_default_template = true`.
+  4. Fallback to GGUF's internal metadata template if no matches exist.
+- **Grammar Constraints**: Dynamic `.gbnf` files (like `json.gbnf`, `json_arr.gbnf`) are placed in the `grammars/` directory, preventing structural output errors on client requests.
 
 ### C. Fallback & Bootstrap Routing
 When `$models.Count -eq 0` after scanning:
@@ -208,13 +225,25 @@ When `$models.Count -eq 0` after scanning:
 ### E. Client Integrations & Environment Provisioning
 To minimize integration friction, the manager provisions settings and environmental variables dynamically:
 - **VSCode Workspace generation**: `main.ps1` dynamically creates a `.vscode` folder containing:
-  - `tasks.json`: Registers automation tasks for starting/stopping the local server and running script compatibility audits.
-  - `settings.json`: Injects the necessary env keys into `terminal.integrated.env.windows` so every terminal launched inside the workspace is pre-routed to the local server.
+  - `tasks.json`: Registers automation tasks for starting/stopping the local server and running script compatibility audits. Uses `powershell.exe` on Windows and `pwsh` on macOS/Linux.
+  - `settings.json`: Injects the necessary env keys into `terminal.integrated.env.windows`, `terminal.integrated.env.osx`, and `terminal.integrated.env.linux` so every terminal launched inside the workspace on any OS is pre-routed to the local server.
 - **Claude Code CLI Proxying**: Sets `ANTHROPIC_BASE_URL` to the active server endpoint, configures `ANTHROPIC_AUTH_TOKEN = local`, and exports `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = 1` to disable remote telemetry. An interactive picker is offered at launch to start Claude Code directly on the selected local model.
 - **Claude Code Operational Limits**: If the `claude-code` integration is active:
   - Enforces `parallel = 2` (minimum floor) to prevent client deadlocks when invoking subagents.
   - Enforces `idle_timeout_sec` of at least `600` seconds (10 minutes) to prevent the server from going to sleep mid-task.
 - **Active Port Propagation**: When the port auto-scanner increments the target port, the new port is propagated to all environment definitions dynamically, ensuring clients connect seamlessly regardless of port collision events.
+
+### F. Tauri Desktop App Architecture & Command Dispatch
+The desktop application wraps the PowerShell scripting core inside a native GUI.
+* **Rust Command Layer**: Tauri commands located in `ui-src-tauri/src/commands/` (such as `config.rs`, `server.rs`, and `profile.rs`) serve as a dispatch bridge. They invoke PowerShell scripts in standard sub-shells (`powershell.exe` on Windows and `pwsh` on macOS/Linux) with the `-File` parameter.
+* **Configuration Directory Split**: The Tauri app loads and saves configuration from the user's AppData directory (`%APPDATA%\LLM Manager` on Windows and `~/.config/LLM Manager` on macOS/Linux), rather than the workspace root directory. When launching `start-server.ps1` or `stop-server.ps1`, Tauri explicitly passes its AppData config path via the `-ConfigFile` parameter to ensure the PowerShell backend acts on the GUI's configuration.
+* **Log Redirection**: The Tauri app captures standard output and standard error from the spawned server processes and redirects them to `logs/llama-server.log` and `logs/llama-server.err.log` inside the AppData directory. The React frontend tails these files dynamically via Rust filesystem streams to populate the live log viewer panel.
+
+### G. Legacy Configuration Promotions Override
+To maintain backward compatibility with flat configuration schemas, `SetupRouter.ps1` runs a mapping utility (`Map-LegacyConfigKeyToOverride`). 
+* **The Override Lock**: If any flat legacy configuration keys (like `cache_type_k` or `flash_attn`) are found in `llo-config.json`, they are automatically promoted into the `overrides` hashtable.
+* **Tuning Implications**: Because overrides take absolute priority over hardware detection, these promoted flat keys lock the derived parameters to their historical wizard values, preventing the dynamic tier-based hardware optimization from applying on subsequent server starts unless those keys are cleared.
+
 
 ---
 
@@ -223,17 +252,30 @@ To minimize integration friction, the manager provisions settings and environmen
 | File | Role |
 |---|---|
 | `main.ps1` | Interactive setup wizard — collects paths, writes `llo-config.json`, runs SetupRouter |
-| `llo-core/Profile.ps1` | Hardware profiler — CPU/RAM/GPU detection, AdapterClass + PerformanceTier classification |
+| `run-setup.sh` | Bash convenience entry point for macOS/Linux (wraps `pwsh -File main.ps1`) |
+| `llo-core/Profile.ps1` | Hardware profiler — CPU/RAM/GPU detection for Windows (WMI), macOS (sysctl/system_profiler), Linux (/proc, nvidia-smi, rocm-smi, sysfs) |
 | `llo-core/SetupRouter.ps1` | Parameter derivation + `models-preset.ini` generator |
 | `llo-core/ParseHelp.ps1` | llama-server `--help` parser for upstream compatibility checks |
 | `llo-core/GitDiff.ps1` | Detects argument changes after `git pull` |
 | `script/start-server.ps1` | Terminates old instances, invokes SetupRouter, launches llama-server, exports env vars |
-| `script/stop-server.ps1` | Gracefully stops the running llama-server process |
+| `script/start-server.sh` | Bash wrapper for macOS/Linux (invokes `start-server.ps1` via `pwsh`) |
+| `script/stop-server.ps1` | Gracefully stops the running llama-server process (Windows: Win32_Process; macOS/Linux: lsof/ss) |
+| `script/stop-server.sh` | Bash wrapper for macOS/Linux (invokes `stop-server.ps1` via `pwsh`) |
 | `script/test-health.ps1` | End-to-end and health checks: schema validation, syntax check, live server ping |
+| `script/test-health.sh` | Bash wrapper for macOS/Linux (invokes `test-health.ps1` via `pwsh`) |
 | `script/verify-scripts.ps1` | Flag compatibility checker: parses llama-server help output and verifies script args |
-| `templates/` | Jinja chat templates; matched to model aliases by SetupRouter |
+| `script/verify-scripts.sh` | Bash wrapper for macOS/Linux (invokes `verify-scripts.ps1` via `pwsh`) |
+| `llo-core/FetchAssets.ps1` | Handles downloading and smart SHA-caching of upstream templates/grammars |
+| `templates/` | Jinja chat templates; dynamically synced from llama.cpp |
+| `grammars/` | GBNF grammar files; dynamically synced from llama.cpp |
 | `llo-config.json` | Persistent configuration: model paths, cloud fallback, `overrides` block |
 | `models-preset.ini` | Generated at startup; consumed directly by llama-server `--models-preset` |
+| `.assets-manifest.json` | Tracks downloaded files' SHA hashes to prevent redundant network requests |
+| `ui/` | React + Vite + TypeScript frontend source code for the Tauri application |
+| `ui-src-tauri/` | Rust-based desktop application shell (cargo project) containing command dispatchers |
+| `%APPDATA%\LLM Manager\llo-config.json` | Primary configuration storage file used by the Tauri desktop GUI app |
+| `%APPDATA%\LLM Manager\logs\` | Storage directory for Tauri redirect logs (`llama-server.log` and `llama-server.err.log`) |
+
 
 ---
 

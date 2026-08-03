@@ -13,7 +13,19 @@ if ([string]::IsNullOrWhiteSpace($CacheFile)) {
     $CacheFile = Join-Path $ManagerDir ".cached_flags.json"
 }
 if ([string]::IsNullOrWhiteSpace($LlamaServerPath)) {
-    $configFile = Join-Path $ManagerDir "llo-config.json"
+    $appDataConfig = if ($env:APPDATA) {
+        Join-Path $env:APPDATA "LLM Manager\llo-config.json"
+    } elseif ($env:USERPROFILE) {
+        Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
+    } elseif ($env:HOME) {
+        Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
+    } else { $null }
+
+    $configFile = if ($appDataConfig -and (Test-Path $appDataConfig)) {
+        $appDataConfig
+    } else {
+        Join-Path $ManagerDir "llo-config.json"
+    }
     if (Test-Path $configFile) {
         try {
             $config = Get-Content $configFile -Raw | ConvertFrom-Json
@@ -31,13 +43,19 @@ function Get-LlamaServerFlags {
     param([string]$ServerPath)
 
     if (-not (Test-Path $ServerPath)) {
-        throw "llama-server.exe not found at: $ServerPath"
+        $binaryName = if ($IsWindows) { "llama-server.exe" } else { "llama-server" }
+        Write-Host "[WARNING] $binaryName not found at: $ServerPath. Skipping live help parsing." -ForegroundColor Yellow
+        return @()
     }
 
     Write-Host "Running $ServerPath --help to extract options..." -ForegroundColor Cyan
 
     # Execute and capture stdout+stderr. Some llama-server versions write help to stderr.
-    $helpLines = & $ServerPath --help 2>&1 | Out-String
+    # Use ErrorActionPreference = Continue and ForEach-Object to capture stderr as strings without triggering Stop errors or formatting them as Multi-line ErrorRecords.
+    $oldEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $helpLines = & $ServerPath --help 2>&1 | ForEach-Object { $_.ToString() } | Out-String
+    $ErrorActionPreference = $oldEAP
     $lines = $helpLines -split "`r?`n"
 
     $flags = New-Object System.Collections.Generic.List[object]
@@ -130,10 +148,17 @@ function Update-CachedFlags {
         [string]$CachePath = $CacheFile
     )
 
-    $currentFlags = Get-LlamaServerFlags -ServerPath $ServerPath
+    $currentFlags = try { Get-LlamaServerFlags -ServerPath $ServerPath } catch { @() }
     if ($currentFlags.Count -eq 0) {
-        Write-Host "Warning: No flags parsed from llama-server.exe --help." -ForegroundColor Yellow
-        return $null
+        Write-Host "Warning: No flags parsed from llama-server --help (binary missing or unreadable)." -ForegroundColor Yellow
+        if (Test-Path $CachePath) {
+            Write-Host "Preserving existing cached flags at $CachePath." -ForegroundColor Cyan
+        }
+        return [pscustomobject]@{
+            Added = @()
+            Removed = @()
+            TotalCurrent = 0
+        }
     }
 
     $diffResult = [pscustomobject]@{

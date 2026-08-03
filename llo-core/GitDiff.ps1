@@ -9,7 +9,19 @@ $ErrorActionPreference = "Stop"
 
 if ([string]::IsNullOrWhiteSpace($LlamaRepoPath)) {
     $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-    $configFile = Join-Path $ManagerDir "llo-config.json"
+    $appDataConfig = if ($env:APPDATA) {
+        Join-Path $env:APPDATA "LLM Manager\llo-config.json"
+    } elseif ($env:USERPROFILE) {
+        Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
+    } elseif ($env:HOME) {
+        Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
+    } else { $null }
+
+    $configFile = if ($appDataConfig -and (Test-Path $appDataConfig)) {
+        $appDataConfig
+    } else {
+        Join-Path $ManagerDir "llo-config.json"
+    }
     if (Test-Path $configFile) {
         try {
             $config = Get-Content $configFile -Raw | ConvertFrom-Json
@@ -33,26 +45,54 @@ function Get-LlamaGitStatus {
 
     try {
         Write-Host "Fetching latest updates from llama.cpp remote..." -ForegroundColor Cyan
-        # Run git fetch silently
-        git fetch origin 2>&1 | Out-Null
+        # Run git fetch silently (suppress NativeCommandError under ErrorActionPreference = Stop)
+        $oldEAP = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        git fetch origin 2>$null | Out-Null
+        $ErrorActionPreference = $oldEAP
 
-        # Check branch status
-        $status = (git status -uno) -join "`n"
+        # Check branch status machine-readably via git rev-list
         $isLatest = $true
         $statusMessage = "Up-to-date with remote."
         $aheadBy = 0
         $behindBy = 0
 
-        if ($status -match "Your branch is behind '([^']+)' by (\d+) commit") {
-            $isLatest = $false
-            $behindBy = [int]$Matches[2]
-            $statusMessage = "Behind remote by $behindBy commit(s). You should do a 'git pull'."
-        } elseif ($status -match "Your branch is ahead of '([^']+)' by (\d+) commit") {
-            $aheadBy = [int]$Matches[2]
-            $statusMessage = "Ahead of remote by $aheadBy commit(s)."
-        } elseif ($status -match "Your branch and '([^']+)' have diverged") {
-            $isLatest = $false
-            $statusMessage = "Diverged from remote. Clean manual merge or rebase required."
+        $oldEAP = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        $revCount = & git rev-list --left-right --count HEAD...@{u} 2>$null
+        $revSuccess = ($LastExitCode -eq 0)
+        $ErrorActionPreference = $oldEAP
+
+        if ($revSuccess -and $revCount) {
+            $parts = $revCount.Trim() -split '\s+'
+            if ($parts.Count -eq 2) {
+                $aheadBy = [int]$parts[0]
+                $behindBy = [int]$parts[1]
+
+                if ($aheadBy -gt 0 -and $behindBy -gt 0) {
+                    $isLatest = $false
+                    $statusMessage = "Diverged from remote (ahead by $aheadBy, behind by $behindBy). Clean manual merge or rebase required."
+                } elseif ($behindBy -gt 0) {
+                    $isLatest = $false
+                    $statusMessage = "Behind remote by $behindBy commit(s). You should do a 'git pull'."
+                } elseif ($aheadBy -gt 0) {
+                    $statusMessage = "Ahead of remote by $aheadBy commit(s)."
+                }
+            }
+        } else {
+            # Fallback to status parsing if upstream tracking branch is missing
+            $status = (git status -uno) -join "`n"
+            if ($status -match "Your branch is behind '([^']+)' by (\d+) commit") {
+                $isLatest = $false
+                $behindBy = [int]$Matches[2]
+                $statusMessage = "Behind remote by $behindBy commit(s). You should do a 'git pull'."
+            } elseif ($status -match "Your branch is ahead of '([^']+)' by (\d+) commit") {
+                $aheadBy = [int]$Matches[2]
+                $statusMessage = "Ahead of remote by $aheadBy commit(s)."
+            } elseif ($status -match "Your branch and '([^']+)' have diverged") {
+                $isLatest = $false
+                $statusMessage = "Diverged from remote. Clean manual merge or rebase required."
+            }
         }
 
         # Get active branch name
@@ -63,7 +103,13 @@ function Get-LlamaGitStatus {
         $isPullDiff = $false
 
         # Check if we have ORIG_HEAD (meaning we just pulled/merged)
-        if (git rev-parse --verify ORIG_HEAD 2>$null) {
+        $oldEAP = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        git rev-parse --verify ORIG_HEAD 2>$null | Out-Null
+        $hasOrigHead = ($LastExitCode -eq 0)
+        $ErrorActionPreference = $oldEAP
+
+        if ($hasOrigHead) {
             $origHead = (git rev-parse ORIG_HEAD).Substring(0, 8)
             $head = (git rev-parse HEAD).Substring(0, 8)
             if ($origHead -ne $head) {
@@ -75,8 +121,6 @@ function Get-LlamaGitStatus {
         Write-Host "Parsing commit history ($logRange)..." -ForegroundColor Cyan
         $commitsRaw = git log $logRange --oneline --no-merges
         $commits = New-Object System.Collections.Generic.List[object]
-
-        $keywords = "cuda|cpu|perf|breaking|deprecated|server|preset|flash-attn|vram|mmap|thread"
 
         foreach ($line in $commitsRaw) {
             if ([string]::IsNullOrWhiteSpace($line)) { continue }

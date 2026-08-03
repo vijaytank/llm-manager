@@ -20,3 +20,18 @@ Thumbs.db
 desktop.ini
 
 /.vscode/
+
+# Downloaded at setup time from llama.cpp — not committed to repo
+# NOTE: templates/default.jinja IS tracked (bundled offline fallback)
+templates/*.jinja
+!templates/default.jinja
+grammars/
+.assets-manifest.json
+
+# Graphify output directory
+/graphify-out/
+
+# UI build artifacts and dependencies
+ui/node_modules/
+ui/dist/
+ui/src-tauri/target/

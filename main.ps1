@@ -63,13 +63,26 @@ function Get-UserChoice {
 }
 
 # 2. Setup Config object
-$ConfigFile = Join-Path $ManagerDir "llo-config.json"
+$appDataConfig = if ($env:APPDATA) {
+    Join-Path $env:APPDATA "LLM Manager\llo-config.json"
+} elseif ($env:USERPROFILE) {
+    Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
+} elseif ($env:HOME) {
+    Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
+} else { $null }
+
+$ConfigFile = if ($appDataConfig -and (Test-Path $appDataConfig)) {
+    $appDataConfig
+} else {
+    Join-Path $ManagerDir "llo-config.json"
+}
 $config = @{
     installation_type = "none"
     llama_server_path = ""
     llama_repo_path = ""
     models_dir = ""
     templates_dir = ""                 # resolved dynamically during setup
+    grammars_dir = ""                  # resolved dynamically during setup
     use_default_template = $false
     cache_type_k = "f16"
     cache_type_v = "f16"
@@ -79,8 +92,17 @@ $config = @{
     fit_ctx_min = 8192          # minimum context --fit is allowed to reduce to
     cache_reuse_chunk = 256     # min prefix chunk size for KV cache reuse (0=off)
     ubatch_size = 512           # physical GPU batch size per kernel call
-    parallel_slots = 1          # max concurrent request slots
-    cache_idle_slots = $true    # cache KV state of idle slots between requests
+    parallel_slots = -1          # max concurrent request slots (-1 = auto)
+    threads = 0                  # CPU thread count (0 = auto)
+    numa = ""
+    cache_ram = 0
+    temperature = ""
+    top_k = ""
+    top_p = ""
+    samplers = ""
+    dynatemp_range = ""
+    dynatemp_exp = ""
+    mmproj_auto = $null
     spec_type = "none"          # speculative decoding type (none | ngram-simple)
     custom_args = ""
     integrations = @()
@@ -108,12 +130,16 @@ if (Test-Path $ConfigFile) {
     }
 }
 
-# Run hardware profiling first so it is available for auto-tuning defaults
-Write-Host "Profiling system hardware..." -ForegroundColor Cyan
+# Start hardware profiling in the background while the wizard continues
+Write-Host "Starting background hardware profiling..." -ForegroundColor Cyan
 $profileScript = Join-Path $ManagerDir "llo-core\Profile.ps1"
+$hwProfileJob = $null
 if (Test-Path $profileScript) {
-    . $profileScript
-    $hw = Get-SystemHardwareProfile
+    $hwProfileJob = Start-Job -ScriptBlock {
+        param($profileScriptPath)
+        . $profileScriptPath
+        Get-SystemHardwareProfile
+    } -ArgumentList $profileScript -Name "HWProfile"
 } else {
     Write-Host "[WARNING] Profile.ps1 not found in llo-core/." -ForegroundColor Yellow
     $hw = $null
@@ -128,11 +154,12 @@ if ($config.installation_type -eq "winget") {
 }
 
 Write-Host "Step 1: How is llama.cpp installed on your system?" -ForegroundColor Cyan
-Write-Host "  1) Pre-built package (installed via Winget / in PATH)" -ForegroundColor DarkGray
+Write-Host "  1) Pre-built package (Winget, Homebrew, apt, or in PATH)" -ForegroundColor DarkGray
 Write-Host "  2) Manual build (compiled from GitHub repository)" -ForegroundColor DarkGray
 Write-Host "  3) Custom path (provide binary location directly)" -ForegroundColor DarkGray
 
-$choice = Get-UserInput "Select option (1-3) or paste path to llama-server.exe / repository folder" -DefaultVal $defaultChoice
+$binaryLabel = if ($IsWindows) { "llama-server.exe" } else { "llama-server" }
+$choice = Get-UserInput "Select option (1-3) or paste path to $binaryLabel / repository folder" -DefaultVal $defaultChoice
 
 $llamaServerPath = ""
 $llamaRepoPath = ""
@@ -204,12 +231,22 @@ elseif ($config.installation_type -eq "github") {
     
     if (-not $llamaServerPath) {
         # Scan for compiled binary inside build outputs
+        # Windows paths
         $scanPaths = @(
             "build\bin\Release\llama-server.exe",
             "build\bin\Debug\llama-server.exe",
             "build\bin\llama-server.exe",
             "bin\llama-server.exe"
         )
+        # macOS / Linux paths (forward-slash, no .exe)
+        if (-not $IsWindows) {
+            $scanPaths = @(
+                "build/bin/Release/llama-server",
+                "build/bin/Debug/llama-server",
+                "build/bin/llama-server",
+                "bin/llama-server"
+            )
+        }
         $foundBinary = ""
         foreach ($sp in $scanPaths) {
             $fullSp = Join-Path $llamaRepoPath $sp
@@ -230,7 +267,7 @@ elseif ($config.installation_type -eq "github") {
         
         if (-not $llamaServerPath) {
             while ($true) {
-                $pathInput = Get-UserInput "Please enter the path to llama-server.exe manually" -DefaultVal $config.llama_server_path
+                $pathInput = Get-UserInput "Please enter the path to $binaryLabel manually" -DefaultVal $config.llama_server_path
                 if (Test-Path $pathInput -PathType Leaf) {
                     $llamaServerPath = [System.IO.Path]::GetFullPath($pathInput)
                     break
@@ -243,7 +280,7 @@ elseif ($config.installation_type -eq "github") {
 else {
     if (-not $llamaServerPath) {
         while ($true) {
-            $pathInput = Get-UserInput "`nPlease enter the full path to llama-server.exe" -DefaultVal $config.llama_server_path
+            $pathInput = Get-UserInput "`nPlease enter the full path to $binaryLabel" -DefaultVal $config.llama_server_path
             if (Test-Path $pathInput -PathType Leaf) {
                 $llamaServerPath = [System.IO.Path]::GetFullPath($pathInput)
                 break
@@ -287,36 +324,93 @@ while ($true) {
 }
 $config.models_dir = $modelsDir
 
-# Step 2.1: Jinja Chat Template Configuration
-Write-Host "`nStep 2.1: Jinja Chat Template Configuration..." -ForegroundColor Cyan
-# Templates live alongside the llm-manager folder, not derived from the models directory
+# Step 2.1: Sync Chat Templates & Grammars from llama.cpp
+Write-Host "`nStep 2.1: Syncing Chat Templates & Grammars..." -ForegroundColor Cyan
+
+$fetchScript = Join-Path $ManagerDir "llo-core\FetchAssets.ps1"
+if (Test-Path $fetchScript) {
+    . $fetchScript
+}
+
+$manifestPath = Join-Path $ManagerDir ".assets-manifest.json"
+$manifest = Read-AssetsManifest -ManifestPath $manifestPath
+
 $templatesDir = Join-Path $ManagerDir "templates"
-if (-not (Test-Path $templatesDir)) {
-    try {
-        New-Item -ItemType Directory -Path $templatesDir -Force | Out-Null
-    } catch {}
-}
+$grammarsDir  = Join-Path $ManagerDir "grammars"
+
+if (-not (Test-Path $templatesDir)) { New-Item -ItemType Directory -Path $templatesDir -Force | Out-Null }
+if (-not (Test-Path $grammarsDir))  { New-Item -ItemType Directory -Path $grammarsDir -Force | Out-Null }
+
 $config.templates_dir = $templatesDir
+$config.grammars_dir  = $grammarsDir
 
-# Copy packaged default.jinja to active templates folder if missing
-$defaultTemplateDest = Join-Path $templatesDir "default.jinja"
-$packagedTemplateSource = Join-Path $ManagerDir "templates\default.jinja"
-if (-not (Test-Path $defaultTemplateDest) -and (Test-Path $packagedTemplateSource)) {
-    try {
-        Copy-Item -Path $packagedTemplateSource -Destination $defaultTemplateDest -Force | Out-Null
-        Write-Host "  [OK] Copied default template to: $defaultTemplateDest" -ForegroundColor Green
-    } catch {
-        Write-Host "  [WARNING] Failed to copy default template: $($_.Exception.Message)" -ForegroundColor Yellow
+$templateResult = Sync-GitHubFolder `
+    -ApiUrl "https://api.github.com/repos/ggml-org/llama.cpp/contents/models/templates" `
+    -DestDir $templatesDir `
+    -ManifestKey "templates" `
+    -Manifest $manifest `
+    -SkipNames @("README.md")
+
+$grammarResult = Sync-GitHubFolder `
+    -ApiUrl "https://api.github.com/repos/ggml-org/llama.cpp/contents/grammars" `
+    -DestDir $grammarsDir `
+    -ManifestKey "grammars" `
+    -Manifest $manifest `
+    -SkipNames @("README.md")
+
+Write-AssetsManifest -ManifestPath $manifestPath -Manifest $manifest
+
+# Check available downloaded templates (excluding default.jinja)
+$downloadedTemplates = @(Get-ChildItem -Path $templatesDir -Filter *.jinja -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne "default.jinja" })
+
+if ($templateResult.NetworkError -and $downloadedTemplates.Count -eq 0) {
+    Write-Host "  [!] Could not reach GitHub and no templates were previously downloaded." -ForegroundColor Yellow
+    Write-Host "  A bundled default template (default.jinja) is available." -ForegroundColor White
+    $useFallback = Get-UserInput "Use bundled default.jinja as fallback template? (Y/N)" -DefaultVal "N"
+    $config.use_default_template = ($useFallback.ToUpper() -eq "Y")
+    if ($config.use_default_template) {
+        Write-Host "  [OK] Using bundled default.jinja for all models." -ForegroundColor Green
+    } else {
+        Write-Host "  [OK] No template applied - models will use their GGUF internal templates." -ForegroundColor DarkCyan
     }
-}
+} else {
+    $tDownloaded = $templateResult.Downloaded
+    $tSkipped    = $templateResult.Skipped
+    if ($tDownloaded -gt 0) {
+        Write-Host "  [OK] Downloaded $tDownloaded template file(s) from llama.cpp." -ForegroundColor Green
+    } elseif ($tSkipped -gt 0) {
+        Write-Host "  [OK] Templates are up to date ($tSkipped templates)." -ForegroundColor Green
+    }
 
-$defaultUseTemplate = if ($null -ne $config.use_default_template) { if ($config.use_default_template) { "Y" } else { "N" } } else { "N" }
-Write-Host "A default chat template (default.jinja) is available in $templatesDir." -ForegroundColor White
-Write-Host "[WARNING] Using a custom default template is optional. If you see chat formatting or system instruction issues, select 'N' to fall back to the models' built-in GGUF internal templates." -ForegroundColor Yellow
-$useDefaultTemplateInput = Get-UserInput "Apply default.jinja template to all local models? (Y/N)" -DefaultVal $defaultUseTemplate
-$config.use_default_template = ($useDefaultTemplateInput.ToUpper() -eq "Y")
+    $gDownloaded = $grammarResult.Downloaded
+    $gSkipped    = $grammarResult.Skipped
+    if ($gDownloaded -gt 0) {
+        Write-Host "  [OK] Downloaded $gDownloaded grammar file(s) from llama.cpp." -ForegroundColor Green
+    } elseif ($gSkipped -gt 0) {
+        Write-Host "  [OK] Grammars are up to date ($gSkipped grammars)." -ForegroundColor Green
+    }
+
+    $defaultUseTemplate = if ($null -ne $config.use_default_template) { if ($config.use_default_template) { "Y" } else { "N" } } else { "Y" }
+    Write-Host "Auto-matching maps model aliases to appropriate Jinja chat templates." -ForegroundColor White
+    $useDefaultTemplateInput = Get-UserInput "Auto-match chat templates to your models? (Y/N)" -DefaultVal $defaultUseTemplate
+    $config.use_default_template = ($useDefaultTemplateInput.ToUpper() -eq "Y")
+}
 
 # Step 2.2: Automated Memory & Performance Optimization
+if ($null -ne $hwProfileJob) {
+    Write-Host "`nWaiting for hardware profiling to finish..." -ForegroundColor DarkGray
+    try {
+        Wait-Job -Job $hwProfileJob -Timeout 30 | Out-Null
+        $hw = Receive-Job -Job $hwProfileJob -ErrorAction SilentlyContinue
+        Write-Host "Hardware profiling complete." -ForegroundColor Green
+    } catch {
+        Write-Host "[WARNING] Hardware profiling failed or timed out: $($_.Exception.Message)" -ForegroundColor Yellow
+        $hw = $null
+    } finally {
+        Remove-Job -Job $hwProfileJob -Force -ErrorAction SilentlyContinue
+        $hwProfileJob = $null
+    }
+}
 Write-Host "`nStep 2.2: Automatically tuning performance parameters for your system..." -ForegroundColor Cyan
 
 $flashAttn = "auto"
@@ -396,20 +490,43 @@ Write-Host "  -> Flash Attention    : $flashAttn" -ForegroundColor Green
 Write-Host "  -> KV Cache Type      : $cacheType" -ForegroundColor Green
 Write-Host "  -> Context Size       : $defaultCtxSize tokens" -ForegroundColor Green
 Write-Host "  -> Context Shift      : Enabled" -ForegroundColor Green
-Write-Host "  -> Fit Ctx Floor      : $fitCtxMin tokens (--fit will not go below this)" -ForegroundColor Green
+Write-Host "  -> Fit Ctx Floor      : $fitCtxMin tokens (fit will not go below this)" -ForegroundColor Green
 Write-Host "  -> UBatch Size        : $ubatchSize tokens/kernel" -ForegroundColor Green
-Write-Host "  -> Parallel Slots     : $(if ($parallelSlots -eq -1) { 'Auto' } else { $parallelSlots })" -ForegroundColor Green
+$parallelDisplay = if ($parallelSlots -eq -1) { 'Auto' } else { $parallelSlots }
+Write-Host "  -> Parallel Slots     : $parallelDisplay" -ForegroundColor Green
 Write-Host "  -> KV Cache Reuse     : Enabled ($cacheReuseChunk token prefix threshold)" -ForegroundColor Green
 Write-Host "  -> Idle Slot Caching  : Enabled" -ForegroundColor Green
 
 # Optional: Speculative decoding via n-gram (no draft model required)
 Write-Host "`n[Optional] N-Gram Speculative Decoding" -ForegroundColor Yellow
-Write-Host "  Enabling 'ngram-simple' can improve generation speed by ~10-15%." -ForegroundColor DarkGray
-Write-Host "  It works purely from token history - no secondary draft model needed." -ForegroundColor DarkGray
-Write-Host "  Works well with coding models (Qwen, etc.). May be less effective on reasoning models." -ForegroundColor DarkGray
-$defaultSpecChoice = if ($config.spec_type -and $config.spec_type -ne "none") { "Y" } else { "N" }
-$enableSpec = Get-UserInput "Enable ngram-simple speculative decoding? (Y/N)" -DefaultVal $defaultSpecChoice
-$config.spec_type = if ($enableSpec.ToUpper() -eq "Y") { "ngram-simple" } else { "none" }
+if ($vramGB -gt 0 -and $vramGB -lt 6.0) {
+    Write-Host "  [!] Low VRAM GPU detected ($vramGB GB). Speculative decoding is disabled to prevent OOM." -ForegroundColor Yellow
+    $config.spec_type = "none"
+} else {
+    Write-Host "  Enabling 'ngram-simple' can improve generation speed by ~10-15%." -ForegroundColor DarkGray
+    Write-Host "  It works purely from token history - no secondary draft model needed." -ForegroundColor DarkGray
+    Write-Host "  Works well with coding models (Qwen, etc.). May be less effective on reasoning models." -ForegroundColor DarkGray
+    $defaultSpecChoice = if ($config.spec_type -and $config.spec_type -ne "none") { "Y" } else { "N" }
+    $enableSpec = Get-UserInput "Enable ngram-simple speculative decoding? (Y/N)" -DefaultVal $defaultSpecChoice
+    $config.spec_type = if ($enableSpec.ToUpper() -eq "Y") { "ngram-simple" } else { "none" }
+}
+
+# Optional advanced generation and platform tuning
+Write-Host "`n[Optional] Advanced generation and memory tuning" -ForegroundColor Yellow
+$advancedChoice = Get-UserInput "Configure advanced options? (Y/N)" -DefaultVal "N"
+if ($advancedChoice.ToUpper() -eq "Y") {
+    $config.temperature = Get-UserInput "Temperature (0.0-1.5, blank to skip)" -DefaultVal $config.temperature
+    $config.top_k = Get-UserInput "Top-K sampling (0 = disabled, blank to skip)" -DefaultVal $config.top_k
+    $config.top_p = Get-UserInput "Top-P sampling (0.0-1.0, blank to skip)" -DefaultVal $config.top_p
+    $config.samplers = Get-UserInput "Sampler sequence (blank to keep llama.cpp default)" -DefaultVal $config.samplers
+    $config.dynatemp_range = Get-UserInput "Dynamic temperature range (0.0=disabled, blank to skip)" -DefaultVal $config.dynatemp_range
+    $config.dynatemp_exp = Get-UserInput "Dynamic temperature exponent (blank to skip)" -DefaultVal $config.dynatemp_exp
+    $config.numa = Get-UserInput "NUMA mode (distribute|isolate|numactl or blank to skip)" -DefaultVal $config.numa
+    $config.cache_ram = Get-UserInput "Cache RAM limit in MB (0 disables custom limit, blank to skip)" -DefaultVal $config.cache_ram
+    $config.threads = Get-UserInput "Threads count (0 = auto, blank to keep recommended)" -DefaultVal $config.threads
+    $mmprojAutoChoice = Get-UserInput "Enable mmproj-auto if available? (Y/N/blank to keep current)" -DefaultVal ""
+    if ($mmprojAutoChoice -match '^(?i)y(es)?$') { $config.mmproj_auto = $true } elseif ($mmprojAutoChoice -match '^(?i)n(o)?$') { $config.mmproj_auto = $false }
+}
 
 # 4. Optional Custom Arguments Override
 $defaultCustom = if ($config.custom_args) { $config.custom_args } else { "" }
@@ -481,18 +598,28 @@ if ($config.llama_repo_path) {
     Write-Host "    * Repo Path   : $($config.llama_repo_path)" -ForegroundColor White
 }
 Write-Host "    * Models Dir  : $($config.models_dir)" -ForegroundColor White
-Write-Host "    * Default Template: $(if ($config.use_default_template) { 'Applied (default.jinja)' } else { 'Disabled (Using GGUF internal templates)' })" -ForegroundColor White
+$tmplDisp = if ($config.use_default_template) { 'Applied (default.jinja)' } else { 'Disabled (Using GGUF internal templates)' }
+$ctxShiftDisp = if ($config.context_shift) { 'Enabled' } else { 'Disabled' }
+$parallelDisp = if ($config.parallel_slots -eq -1) { 'Auto' } elseif ($config.parallel_slots -eq 1) { '1 (Safe mode - prevents OOM)' } else { $config.parallel_slots }
+$threadsDisp = if ($config.threads -eq 0) { 'Auto' } else { $config.threads }
+$reuseChunk = $config.cache_reuse_chunk
+$reuseDisp = if ($reuseChunk -gt 0) { "Enabled ($reuseChunk token chunks)" } else { 'Disabled' }
+$idleSlotDisp = if ($config.cache_idle_slots) { 'Enabled' } else { 'Disabled' }
+$specDisp = if ($config.spec_type -ne 'none') { $config.spec_type } else { 'Disabled' }
+
+Write-Host "    * Default Template: $tmplDisp" -ForegroundColor White
 Write-Host "`n  [Optimizations & Performance]" -ForegroundColor Cyan
 Write-Host "    * Flash Attention : $($config.flash_attn)" -ForegroundColor White
 Write-Host "    * KV Cache Type   : $($config.cache_type_k)" -ForegroundColor White
 Write-Host "    * Context Size    : $($config.default_context_size) tokens" -ForegroundColor White
-Write-Host "    * Context Shift   : $(if ($config.context_shift) { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
+Write-Host "    * Context Shift   : $ctxShiftDisp" -ForegroundColor White
 Write-Host "    * Fit Ctx Floor   : $($config.fit_ctx_min) tokens" -ForegroundColor White
 Write-Host "    * UBatch Size     : $($config.ubatch_size) tokens" -ForegroundColor White
-Write-Host "    * Parallel Slots  : $(if ($config.parallel_slots -eq -1) { 'Auto' } elseif ($config.parallel_slots -eq 1) { '1 (Safe mode - prevents OOM)' } else { $config.parallel_slots })" -ForegroundColor White
-Write-Host "    * KV Cache Reuse  : $(if ($config.cache_reuse_chunk -gt 0) { "Enabled ($($config.cache_reuse_chunk) token chunks)" } else { 'Disabled' })" -ForegroundColor White
-Write-Host "    * Idle Slot Cache : $(if ($config.cache_idle_slots) { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
-Write-Host "    * Speculative Dec : $(if ($config.spec_type -ne 'none') { $config.spec_type } else { 'Disabled' })" -ForegroundColor White
+Write-Host "    * Parallel Slots  : $parallelDisp" -ForegroundColor White
+Write-Host "    * Threads         : $threadsDisp" -ForegroundColor White
+Write-Host "    * KV Cache Reuse  : $reuseDisp" -ForegroundColor White
+Write-Host "    * Idle Slot Cache : $idleSlotDisp" -ForegroundColor White
+Write-Host "    * Speculative Dec : $specDisp" -ForegroundColor White
 if ($config.custom_args) {
     Write-Host "    * Custom Args     : $($config.custom_args)" -ForegroundColor White
 }
@@ -507,7 +634,17 @@ $apply = Get-UserInput "Apply and save this configuration? (Y/N/Update)" -Defaul
 if ($apply.ToUpper() -eq "Y") {
     # Save config to llo-config.json
     $config | ConvertTo-Json -Depth 5 | Set-Content -Path $ConfigFile -Encoding UTF8
-    Write-Host "`n[OK] Configuration saved successfully to llo-config.json!" -ForegroundColor Green
+    Write-Host "`n[OK] Configuration saved successfully to $ConfigFile!" -ForegroundColor Green
+    
+    # Mirror config to AppData folder for Tauri GUI app compatibility if saving to workspace root
+    if ($appDataConfig -and $ConfigFile -ne $appDataConfig) {
+        try {
+            $appDataDir = Split-Path -Parent $appDataConfig
+            if (-not (Test-Path $appDataDir)) { New-Item -ItemType Directory -Force -Path $appDataDir | Out-Null }
+            Copy-Item -Path $ConfigFile -Destination $appDataConfig -Force
+            Write-Host "[OK] Configuration synchronized to AppData ($appDataConfig) for Tauri GUI app." -ForegroundColor DarkGray
+        } catch {}
+    }
     
     # Run SetupRouter.ps1 to write presets.ini
     Write-Host "Running router configuration setup..." -ForegroundColor Cyan
@@ -531,14 +668,17 @@ if ($apply.ToUpper() -eq "Y") {
             # Write tasks.json if not present
             $tasksFile = Join-Path $vsCodeDir "tasks.json"
             if (-not (Test-Path $tasksFile)) {
+                # Use the appropriate PowerShell command for each platform
+                $psCmd = if ($IsWindows) { "powershell.exe" } else { "pwsh" }
+                $psCmdArgs = if ($IsWindows) { @("-ExecutionPolicy", "Bypass", "-File") } else { @("-File") }
                 $tasksJson = @{
                     version = "2.0.0"
                     tasks = @(
                         @{
                             label = "Start LLM Server"
                             type = "shell"
-                            command = "powershell.exe"
-                            args = @("-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/script/start-server.ps1")
+                            command = $psCmd
+                            args = $psCmdArgs + @("${workspaceFolder}/script/start-server.ps1")
                             group = "none"
                             presentation = @{ reveal = "always"; panel = "new"; focus = $true; close = $false }
                             problemMatcher = @()
@@ -546,8 +686,8 @@ if ($apply.ToUpper() -eq "Y") {
                         @{
                             label = "Stop LLM Server"
                             type = "shell"
-                            command = "powershell.exe"
-                            args = @("-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/script/stop-server.ps1")
+                            command = $psCmd
+                            args = $psCmdArgs + @("${workspaceFolder}/script/stop-server.ps1")
                             group = "none"
                             presentation = @{ reveal = "always"; panel = "dedicated"; focus = $false; close = $true }
                             problemMatcher = @()
@@ -555,8 +695,8 @@ if ($apply.ToUpper() -eq "Y") {
                         @{
                             label = "Audit Script Compatibility"
                             type = "shell"
-                            command = "powershell.exe"
-                            args = @("-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/script/verify-scripts.ps1")
+                            command = $psCmd
+                            args = $psCmdArgs + @("${workspaceFolder}/script/verify-scripts.ps1")
                             group = "none"
                             presentation = @{ reveal = "always"; panel = "new"; focus = $true; close = $false }
                             problemMatcher = @()
@@ -568,23 +708,50 @@ if ($apply.ToUpper() -eq "Y") {
             
             # Write/Update settings.json
             $settingsFile = Join-Path $vsCodeDir "settings.json"
+            $targetPort = if ($config.port) { $config.port } else { 8080 }
+            $baseUrl = "http://127.0.0.1:$targetPort"
+            $baseV1Url = "http://127.0.0.1:$targetPort/v1"
             $settings = @{
                 "terminal.integrated.env.windows" = @{
-                    "LLAMA_BASE_URL" = "http://127.0.0.1:8080"
-                    "LLAMA_OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
-                    "OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
-                    "OPENAI_API_BASE" = "http://127.0.0.1:8080/v1"
+                    "LLAMA_BASE_URL" = $baseUrl
+                    "LLAMA_OPENAI_BASE_URL" = $baseV1Url
+                    "OPENAI_BASE_URL" = $baseV1Url
+                    "OPENAI_API_BASE" = $baseV1Url
                     "OPENAI_API_KEY" = "local-key"
-                    "ANTHROPIC_BASE_URL" = "http://127.0.0.1:8080"
+                    "ANTHROPIC_BASE_URL" = $baseUrl
+                    "ANTHROPIC_AUTH_TOKEN" = "local"
+                    "ANTHROPIC_API_KEY" = "local-key"
+                    "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY" = "1"
+                    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" = "1"
+                }
+                "terminal.integrated.env.osx" = @{
+                    "LLAMA_BASE_URL" = $baseUrl
+                    "LLAMA_OPENAI_BASE_URL" = $baseV1Url
+                    "OPENAI_BASE_URL" = $baseV1Url
+                    "OPENAI_API_BASE" = $baseV1Url
+                    "OPENAI_API_KEY" = "local-key"
+                    "ANTHROPIC_BASE_URL" = $baseUrl
+                    "ANTHROPIC_AUTH_TOKEN" = "local"
+                    "ANTHROPIC_API_KEY" = "local-key"
+                    "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY" = "1"
+                    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" = "1"
+                }
+                "terminal.integrated.env.linux" = @{
+                    "LLAMA_BASE_URL" = $baseUrl
+                    "LLAMA_OPENAI_BASE_URL" = $baseV1Url
+                    "OPENAI_BASE_URL" = $baseV1Url
+                    "OPENAI_API_BASE" = $baseV1Url
+                    "OPENAI_API_KEY" = "local-key"
+                    "ANTHROPIC_BASE_URL" = $baseUrl
                     "ANTHROPIC_AUTH_TOKEN" = "local"
                     "ANTHROPIC_API_KEY" = "local-key"
                     "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY" = "1"
                     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" = "1"
                 }
                 "llmManager.integrationGuide" = @{
-                    "claudeCode" = "Run: `$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8080'; `$env:ANTHROPIC_AUTH_TOKEN='local'; `$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC='1'; claude"
-                    "continueExtension" = "Configure config.json with a provider of type 'openai' and apiBase 'http://127.0.0.1:8080/v1'"
-                    "cursor" = "Go to settings -> Models -> OpenAI -> Base URL: http://localhost:8080/v1, API Key: local-key"
+                    "claudeCode" = "Run: `$env:ANTHROPIC_BASE_URL='$baseUrl'; `$env:ANTHROPIC_AUTH_TOKEN='local'; `$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC='1'; claude"
+                    "continueExtension" = "Configure config.json with a provider of type 'openai' and apiBase '$baseV1Url'"
+                    "cursor" = "Go to settings -> Models -> OpenAI -> Base URL: http://localhost:$targetPort/v1, API Key: local-key"
                 }
             }
             $settings | ConvertTo-Json -Depth 5 | Set-Content -Path $settingsFile -Encoding UTF8
@@ -625,10 +792,15 @@ if ($apply.ToUpper() -eq "Y") {
     $startNow = Get-UserInput "`nWould you like to start the llama-server now? (Y/N)" -DefaultVal "Y"
     if ($startNow.ToUpper() -eq "Y") {
         Write-Host "`nStarting server..." -ForegroundColor Cyan
-        $startServerScript = Join-Path $ManagerDir "script\start-server.ps1"
+        $startServerScript = Join-Path $ManagerDir "script" | Join-Path -ChildPath "start-server.ps1"
         if (Test-Path $startServerScript) {
             # Start-Process in new window so it runs persistently without blocking the setup console
-            Start-Process powershell -ArgumentList "-NoExit", "-File", "`"$startServerScript`""
+            if ($IsWindows) {
+                Start-Process powershell -ArgumentList "-NoExit", "-File", "`"$startServerScript`""
+            } else {
+                # macOS/Linux: PowerShell 7 binary is 'pwsh'
+                Start-Process pwsh -ArgumentList "-NoExit", "-File", "`"$startServerScript`""
+            }
             Write-Host "[OK] llama-server has been launched in a new window." -ForegroundColor Green
         } else {
             Write-Host "[ERROR] start-server.ps1 not found in script/." -ForegroundColor Red
