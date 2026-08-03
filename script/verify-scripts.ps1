@@ -14,7 +14,19 @@ $CacheFile = Join-Path $ManagerDir ".cached_flags.json"
 $DocsDir = Join-Path $ManagerDir "docs"
 $SystemCommandsDoc = Join-Path $DocsDir "SYSTEM_COMMANDS.md"
 if ([string]::IsNullOrWhiteSpace($ConfigFile)) {
-    $ConfigFile = Join-Path $ManagerDir "llo-config.json"
+    $appDataConfig = if ($env:APPDATA) {
+        Join-Path $env:APPDATA "LLM Manager\llo-config.json"
+    } elseif ($env:USERPROFILE) {
+        Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
+    } elseif ($env:HOME) {
+        Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
+    } else { $null }
+
+    if ($appDataConfig -and (Test-Path $appDataConfig)) {
+        $ConfigFile = $appDataConfig
+    } else {
+        $ConfigFile = Join-Path $ManagerDir "llo-config.json"
+    }
 }
 
 # Load config to get paths if parameters are not provided

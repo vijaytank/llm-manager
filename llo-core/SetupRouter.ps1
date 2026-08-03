@@ -25,7 +25,21 @@ param(
 $ErrorActionPreference = "Stop"
 
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-if ([string]::IsNullOrWhiteSpace($ConfigFile))   { $ConfigFile   = Join-Path $ManagerDir "llo-config.json" }
+if ([string]::IsNullOrWhiteSpace($ConfigFile)) {
+    $appDataConfig = if ($env:APPDATA) {
+        Join-Path $env:APPDATA "LLM Manager\llo-config.json"
+    } elseif ($env:USERPROFILE) {
+        Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
+    } elseif ($env:HOME) {
+        Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
+    } else { $null }
+
+    if ($appDataConfig -and (Test-Path $appDataConfig)) {
+        $ConfigFile = $appDataConfig
+    } else {
+        $ConfigFile = Join-Path $ManagerDir "llo-config.json"
+    }
+}
 $ConfigFile = [System.IO.Path]::GetFullPath($ConfigFile)
 
 if ([string]::IsNullOrWhiteSpace($PresetFile))   { $PresetFile   = Join-Path (Split-Path -Parent $ConfigFile) "models-preset.ini" }
@@ -119,17 +133,8 @@ function Map-LegacyConfigKeyToOverride {
     }
 }
 
-Map-LegacyConfigKeyToOverride "parallel_slots" "parallel"
-Map-LegacyConfigKeyToOverride "cache_type_k" "cache_type_k"
-Map-LegacyConfigKeyToOverride "cache_type_v" "cache_type_v"
-Map-LegacyConfigKeyToOverride "ubatch_size" "ubatch_size"
-Map-LegacyConfigKeyToOverride "fit_ctx_min" "fit_ctx_min"
-Map-LegacyConfigKeyToOverride "spec_type" "spec_type"
-Map-LegacyConfigKeyToOverride "context_shift" "context_shift"
-Map-LegacyConfigKeyToOverride "mmap" "mmap"
-Map-LegacyConfigKeyToOverride "cache_idle_slots" "cache_idle_slots"
-Map-LegacyConfigKeyToOverride "n_gpu_layers" "n_gpu_layers"
-Map-LegacyConfigKeyToOverride "flash_attn" "flash_attn"
+# Explicit config.overrides remain active. Flat top-level keys are maintained as baseline configuration
+# and do not override hardware-adaptive tier settings unless placed in config.overrides.
 
 # Enforce operational limits for Claude Code
 if ($config.integrations -contains "claude-code" -and $config.idle_timeout_sec -lt 600) {
@@ -301,34 +306,19 @@ function Get-InferenceParams {
         Write-Host "  [config] parallel = $($params.parallel)  (from config.parallel_slots)" -ForegroundColor DarkYellow
     }
 
-    if ($config.ContainsKey("cache_type_k") -and -not [string]::IsNullOrWhiteSpace($config.cache_type_k)) {
-        $params.cache_type_k = $config.cache_type_k
-    }
-    if ($config.ContainsKey("cache_type_v") -and -not [string]::IsNullOrWhiteSpace($config.cache_type_v)) {
-        $params.cache_type_v = $config.cache_type_v
-    }
-    if ($config.ContainsKey("flash_attn") -and -not [string]::IsNullOrWhiteSpace($config.flash_attn)) {
-        $params.flash_attn = $config.flash_attn
-    }
-    if ($config.ContainsKey("ubatch_size") -and [int]$config.ubatch_size -gt 0) {
-        $params.ubatch_size = [int]$config.ubatch_size
-    }
-    if ($config.ContainsKey("spec_type") -and -not [string]::IsNullOrWhiteSpace($config.spec_type)) {
-        $params.spec_type = $config.spec_type
-    }
-    if ($config.ContainsKey("context_shift") -and $null -ne $config.context_shift) {
-        $params.context_shift = [bool]$config.context_shift
-    }
-    if ($config.ContainsKey("cache_reuse") -and [int]$config.cache_reuse -ge 0) {
-        $params.cache_reuse = [int]$config.cache_reuse
-    }
-
     # Claude Code integration requires at least 2 parallel slots to avoid subagent deadlocks.
     if ($config.integrations -contains "claude-code") {
         if ($params.parallel -lt 2) {
             $params.parallel = 2
             Write-Host "    [Claude Code] Enforced parallel = 2 floor to prevent subagent deadlock." -ForegroundColor Cyan
         }
+    }
+
+    # ── Safeguard validations ──────────────────────────────────────────────────
+    # Low-VRAM Speculative Decoding Safeguard (Issue 2.1)
+    if ($tier -eq "low" -and $params.spec_type -ne "none") {
+        Write-Host "  [!] Low VRAM tier ('low') detected. Enforcing spec_type = 'none' to prevent out-of-memory errors." -ForegroundColor Yellow
+        $params.spec_type = "none"
     }
 
     # ── Post-override validation ──────────────────────────────────────────────
@@ -378,12 +368,21 @@ function Get-SafeContextSize {
     $modelGB = $modelMB / 1024.0
     $baseKV = 12.0 * $modelGB
     
-    $kvMBPerKToken = switch ($CacheTypeK) {
-        "f16"   { $baseKV * 2.0 }   # f16 is double the size of q8_0
-        "q8_0"  { $baseKV }         # baseline
-        "q4_0"  { $baseKV * 0.5 }   # q4_0 is half the size of q8_0
-        default { $baseKV }
+    # Mathematically exact element byte calculator matching ui/src/lib/validation.ts
+    $getBytesPerElem = {
+        param([string]$Type)
+        switch ($Type) {
+            "q4_0"  { 0.5625 }
+            "q8_0"  { 1.0625 }
+            "f16"   { 2.0 }
+            "bf16"  { 2.0 }
+            default { 1.0625 }
+        }
     }
+    $elemBytesK = & $getBytesPerElem $CacheTypeK
+    # Assume symmetric K/V cache quant unless specified
+    $kvRatio = ($elemBytesK * 2.0) / 2.125  # 2.125 = q8_0 (1.0625) + q8_0 (1.0625) baseline
+    $kvMBPerKToken = $baseKV * $kvRatio
     
     # Floor the estimate at a minimum of 5.0 MB per 1000 tokens for safety
     $kvMBPerKToken = [math]::Max($kvMBPerKToken, 5.0)

@@ -16,7 +16,19 @@ $ErrorActionPreference = "Stop"
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 
 if ([string]::IsNullOrWhiteSpace($ConfigFile)) {
-    $ConfigFile = Join-Path $ManagerDir "llo-config.json"
+    $appDataConfig = if ($env:APPDATA) {
+        Join-Path $env:APPDATA "LLM Manager\llo-config.json"
+    } elseif ($env:USERPROFILE) {
+        Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
+    } elseif ($env:HOME) {
+        Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
+    } else { $null }
+
+    if ($appDataConfig -and (Test-Path $appDataConfig)) {
+        $ConfigFile = $appDataConfig
+    } else {
+        $ConfigFile = Join-Path $ManagerDir "llo-config.json"
+    }
 }
 $ConfigFile = [System.IO.Path]::GetFullPath($ConfigFile)
 
@@ -153,6 +165,49 @@ if ($usedPorts -contains $Port) {
 # 3. Determine running mode
 $localBase = "http://$HostAddr`:$Port"
 $openaiBase = "$localBase/v1"
+
+# Update static .vscode/settings.json if present to prevent client port mismatches
+$vsCodeSettings = Join-Path $ManagerDir ".vscode\settings.json"
+if (Test-Path $vsCodeSettings) {
+    try {
+        $vsJson = Get-Content $vsCodeSettings -Raw | ConvertFrom-Json
+        $updated = $false
+        $targetUrl = "http://${HostAddr}:${Port}"
+        $targetV1Url = "http://${HostAddr}:${Port}/v1"
+
+        foreach ($osEnv in @("terminal.integrated.env.windows", "terminal.integrated.env.osx", "terminal.integrated.env.linux")) {
+            if ($vsJson.PSObject.Properties.Name -contains $osEnv) {
+                $envObj = $vsJson.$osEnv
+                if ($envObj.LLAMA_BASE_URL -and $envObj.LLAMA_BASE_URL -ne $targetUrl) {
+                    $envObj.LLAMA_BASE_URL = $targetUrl
+                    $updated = $true
+                }
+                if ($envObj.LLAMA_OPENAI_BASE_URL -and $envObj.LLAMA_OPENAI_BASE_URL -ne $targetV1Url) {
+                    $envObj.LLAMA_OPENAI_BASE_URL = $targetV1Url
+                    $updated = $true
+                }
+                if ($envObj.OPENAI_BASE_URL -and $envObj.OPENAI_BASE_URL -ne $targetV1Url) {
+                    $envObj.OPENAI_BASE_URL = $targetV1Url
+                    $updated = $true
+                }
+                if ($envObj.OPENAI_API_BASE -and $envObj.OPENAI_API_BASE -ne $targetV1Url) {
+                    $envObj.OPENAI_API_BASE = $targetV1Url
+                    $updated = $true
+                }
+                if ($envObj.ANTHROPIC_BASE_URL -and $envObj.ANTHROPIC_BASE_URL -ne $targetUrl) {
+                    $envObj.ANTHROPIC_BASE_URL = $targetUrl
+                    $updated = $true
+                }
+            }
+        }
+        if ($updated) {
+            $vsJson | ConvertTo-Json -Depth 10 | Set-Content -Path $vsCodeSettings -Encoding UTF8
+            Write-Host "[VSCode] Synchronized .vscode/settings.json environment variables to active port $Port." -ForegroundColor Cyan
+        }
+    } catch {
+        Write-Host "[WARNING] Could not update .vscode/settings.json: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
 
 # Safe default environment variables
 $env:CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY = "1"

@@ -63,7 +63,19 @@ function Get-UserChoice {
 }
 
 # 2. Setup Config object
-$ConfigFile = Join-Path $ManagerDir "llo-config.json"
+$appDataConfig = if ($env:APPDATA) {
+    Join-Path $env:APPDATA "LLM Manager\llo-config.json"
+} elseif ($env:USERPROFILE) {
+    Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
+} elseif ($env:HOME) {
+    Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
+} else { $null }
+
+$ConfigFile = if ($appDataConfig -and (Test-Path $appDataConfig)) {
+    $appDataConfig
+} else {
+    Join-Path $ManagerDir "llo-config.json"
+}
 $config = @{
     installation_type = "none"
     llama_server_path = ""
@@ -385,7 +397,7 @@ if ($templateResult.NetworkError -and $downloadedTemplates.Count -eq 0) {
 }
 
 # Step 2.2: Automated Memory & Performance Optimization
-if ($hwProfileJob -ne $null) {
+if ($null -ne $hwProfileJob) {
     Write-Host "`nWaiting for hardware profiling to finish..." -ForegroundColor DarkGray
     try {
         Wait-Job -Job $hwProfileJob -Timeout 30 | Out-Null
@@ -487,12 +499,17 @@ Write-Host "  -> Idle Slot Caching  : Enabled" -ForegroundColor Green
 
 # Optional: Speculative decoding via n-gram (no draft model required)
 Write-Host "`n[Optional] N-Gram Speculative Decoding" -ForegroundColor Yellow
-Write-Host "  Enabling 'ngram-simple' can improve generation speed by ~10-15%." -ForegroundColor DarkGray
-Write-Host "  It works purely from token history - no secondary draft model needed." -ForegroundColor DarkGray
-Write-Host "  Works well with coding models (Qwen, etc.). May be less effective on reasoning models." -ForegroundColor DarkGray
-$defaultSpecChoice = if ($config.spec_type -and $config.spec_type -ne "none") { "Y" } else { "N" }
-$enableSpec = Get-UserInput "Enable ngram-simple speculative decoding? (Y/N)" -DefaultVal $defaultSpecChoice
-$config.spec_type = if ($enableSpec.ToUpper() -eq "Y") { "ngram-simple" } else { "none" }
+if ($vramGB -gt 0 -and $vramGB -lt 6.0) {
+    Write-Host "  [!] Low VRAM GPU detected ($vramGB GB). Speculative decoding is disabled to prevent OOM." -ForegroundColor Yellow
+    $config.spec_type = "none"
+} else {
+    Write-Host "  Enabling 'ngram-simple' can improve generation speed by ~10-15%." -ForegroundColor DarkGray
+    Write-Host "  It works purely from token history - no secondary draft model needed." -ForegroundColor DarkGray
+    Write-Host "  Works well with coding models (Qwen, etc.). May be less effective on reasoning models." -ForegroundColor DarkGray
+    $defaultSpecChoice = if ($config.spec_type -and $config.spec_type -ne "none") { "Y" } else { "N" }
+    $enableSpec = Get-UserInput "Enable ngram-simple speculative decoding? (Y/N)" -DefaultVal $defaultSpecChoice
+    $config.spec_type = if ($enableSpec.ToUpper() -eq "Y") { "ngram-simple" } else { "none" }
+}
 
 # Optional advanced generation and platform tuning
 Write-Host "`n[Optional] Advanced generation and memory tuning" -ForegroundColor Yellow
@@ -617,7 +634,17 @@ $apply = Get-UserInput "Apply and save this configuration? (Y/N/Update)" -Defaul
 if ($apply.ToUpper() -eq "Y") {
     # Save config to llo-config.json
     $config | ConvertTo-Json -Depth 5 | Set-Content -Path $ConfigFile -Encoding UTF8
-    Write-Host "`n[OK] Configuration saved successfully to llo-config.json!" -ForegroundColor Green
+    Write-Host "`n[OK] Configuration saved successfully to $ConfigFile!" -ForegroundColor Green
+    
+    # Mirror config to AppData folder for Tauri GUI app compatibility if saving to workspace root
+    if ($appDataConfig -and $ConfigFile -ne $appDataConfig) {
+        try {
+            $appDataDir = Split-Path -Parent $appDataConfig
+            if (-not (Test-Path $appDataDir)) { New-Item -ItemType Directory -Force -Path $appDataDir | Out-Null }
+            Copy-Item -Path $ConfigFile -Destination $appDataConfig -Force
+            Write-Host "[OK] Configuration synchronized to AppData ($appDataConfig) for Tauri GUI app." -ForegroundColor DarkGray
+        } catch {}
+    }
     
     # Run SetupRouter.ps1 to write presets.ini
     Write-Host "Running router configuration setup..." -ForegroundColor Cyan
@@ -681,47 +708,50 @@ if ($apply.ToUpper() -eq "Y") {
             
             # Write/Update settings.json
             $settingsFile = Join-Path $vsCodeDir "settings.json"
+            $targetPort = if ($config.port) { $config.port } else { 8080 }
+            $baseUrl = "http://127.0.0.1:$targetPort"
+            $baseV1Url = "http://127.0.0.1:$targetPort/v1"
             $settings = @{
                 "terminal.integrated.env.windows" = @{
-                    "LLAMA_BASE_URL" = "http://127.0.0.1:8080"
-                    "LLAMA_OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
-                    "OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
-                    "OPENAI_API_BASE" = "http://127.0.0.1:8080/v1"
+                    "LLAMA_BASE_URL" = $baseUrl
+                    "LLAMA_OPENAI_BASE_URL" = $baseV1Url
+                    "OPENAI_BASE_URL" = $baseV1Url
+                    "OPENAI_API_BASE" = $baseV1Url
                     "OPENAI_API_KEY" = "local-key"
-                    "ANTHROPIC_BASE_URL" = "http://127.0.0.1:8080"
+                    "ANTHROPIC_BASE_URL" = $baseUrl
                     "ANTHROPIC_AUTH_TOKEN" = "local"
                     "ANTHROPIC_API_KEY" = "local-key"
                     "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY" = "1"
                     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" = "1"
                 }
                 "terminal.integrated.env.osx" = @{
-                    "LLAMA_BASE_URL" = "http://127.0.0.1:8080"
-                    "LLAMA_OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
-                    "OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
-                    "OPENAI_API_BASE" = "http://127.0.0.1:8080/v1"
+                    "LLAMA_BASE_URL" = $baseUrl
+                    "LLAMA_OPENAI_BASE_URL" = $baseV1Url
+                    "OPENAI_BASE_URL" = $baseV1Url
+                    "OPENAI_API_BASE" = $baseV1Url
                     "OPENAI_API_KEY" = "local-key"
-                    "ANTHROPIC_BASE_URL" = "http://127.0.0.1:8080"
+                    "ANTHROPIC_BASE_URL" = $baseUrl
                     "ANTHROPIC_AUTH_TOKEN" = "local"
                     "ANTHROPIC_API_KEY" = "local-key"
                     "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY" = "1"
                     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" = "1"
                 }
                 "terminal.integrated.env.linux" = @{
-                    "LLAMA_BASE_URL" = "http://127.0.0.1:8080"
-                    "LLAMA_OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
-                    "OPENAI_BASE_URL" = "http://127.0.0.1:8080/v1"
-                    "OPENAI_API_BASE" = "http://127.0.0.1:8080/v1"
+                    "LLAMA_BASE_URL" = $baseUrl
+                    "LLAMA_OPENAI_BASE_URL" = $baseV1Url
+                    "OPENAI_BASE_URL" = $baseV1Url
+                    "OPENAI_API_BASE" = $baseV1Url
                     "OPENAI_API_KEY" = "local-key"
-                    "ANTHROPIC_BASE_URL" = "http://127.0.0.1:8080"
+                    "ANTHROPIC_BASE_URL" = $baseUrl
                     "ANTHROPIC_AUTH_TOKEN" = "local"
                     "ANTHROPIC_API_KEY" = "local-key"
                     "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY" = "1"
                     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" = "1"
                 }
                 "llmManager.integrationGuide" = @{
-                    "claudeCode" = "Run: `$env:ANTHROPIC_BASE_URL='http://127.0.0.1:8080'; `$env:ANTHROPIC_AUTH_TOKEN='local'; `$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC='1'; claude"
-                    "continueExtension" = "Configure config.json with a provider of type 'openai' and apiBase 'http://127.0.0.1:8080/v1'"
-                    "cursor" = "Go to settings -> Models -> OpenAI -> Base URL: http://localhost:8080/v1, API Key: local-key"
+                    "claudeCode" = "Run: `$env:ANTHROPIC_BASE_URL='$baseUrl'; `$env:ANTHROPIC_AUTH_TOKEN='local'; `$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC='1'; claude"
+                    "continueExtension" = "Configure config.json with a provider of type 'openai' and apiBase '$baseV1Url'"
+                    "cursor" = "Go to settings -> Models -> OpenAI -> Base URL: http://localhost:$targetPort/v1, API Key: local-key"
                 }
             }
             $settings | ConvertTo-Json -Depth 5 | Set-Content -Path $settingsFile -Encoding UTF8

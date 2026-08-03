@@ -27,18 +27,22 @@ These class and function abstractions are the key logical hubs of the system.
 The following clusters represent tightly-coupled functional modules detected in the graph.
 
 ### Module 1: ui Cluster
-- **Size**: 13 nodes
-- **Key Files**: ui/src/pages/__tests__/OverviewFlow.test.ts, ui/src/pages/Models.tsx, ui/src/lib/__tests__/validation.test.ts, ui/src/store/__tests__/modelsStore.test.ts, ui/src/store/__tests__/hardwareStore.test.ts...
+- **Size**: 10 nodes
+- **Key Files**: ui/src/lib/validation.ts, ui/src/store/modelsStore.ts, ui/src/pages/Models.tsx, ui/src/lib/__tests__/validation.test.ts, ui/src/components/__tests__/InfoTooltip.test.ts...
 
 ### Module 2: ui Cluster
-- **Size**: 12 nodes
-- **Key Files**: ui/src/pages/Diagnostics.tsx, ui/src/store/__tests__/serverStore.test.ts, ui/src/components/InfoTooltip.tsx, ui/src/pages/Logs.tsx, ui/src/App.tsx...
+- **Size**: 10 nodes
+- **Key Files**: ui/src/pages/__tests__/AllScreensAndActions.test.ts, ui/src/pages/Integrations.tsx, ui/src/store/__tests__/configStore.test.ts, ui/src/pages/__tests__/ParameterCLIForwarding.test.ts, ui/src/store/__tests__/serverStore.test.ts...
 
 ### Module 3: ui Cluster
-- **Size**: 8 nodes
-- **Key Files**: ui/src/store/__tests__/configStore.test.ts, ui/src/components/layout/__tests__/TopBar.test.ts, ui/src/pages/__tests__/ParameterCLIForwarding.test.ts, ui/src/components/layout/TopBar.tsx, ui/src/pages/__tests__/SetupFlow.test.ts...
+- **Size**: 9 nodes
+- **Key Files**: ui/src/pages/Performance.tsx, ui/src/pages/Logs.tsx, ui/src/pages/Diagnostics.tsx, ui/src/components/layout/Sidebar.tsx, ui/src/components/layout/PageShell.tsx...
 
 ### Module 4: ui Cluster
+- **Size**: 4 nodes
+- **Key Files**: ui/src/components/ImpactBanner.tsx, ui/src/pages/Setup.tsx, ui/src/pages/Overview.tsx, ui/src/store/validationStore.ts
+
+### Module 5: ui Cluster
 - **Size**: 1 nodes
 - **Key Files**: ui/vite.config.ts
 

@@ -10,7 +10,19 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = $PSScriptRoot
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $ScriptDir ".."))
 if ([string]::IsNullOrWhiteSpace($ConfigFile)) {
-    $ConfigFile = Join-Path $ManagerDir "llo-config.json"
+    $appDataConfig = if ($env:APPDATA) {
+        Join-Path $env:APPDATA "LLM Manager\llo-config.json"
+    } elseif ($env:USERPROFILE) {
+        Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
+    } elseif ($env:HOME) {
+        Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
+    } else { $null }
+
+    if ($appDataConfig -and (Test-Path $appDataConfig)) {
+        $ConfigFile = $appDataConfig
+    } else {
+        $ConfigFile = Join-Path $ManagerDir "llo-config.json"
+    }
 }
 
 Write-Host "==========================================================" -ForegroundColor Green
@@ -106,7 +118,7 @@ if (Test-Path $setupRouterScript) {
         
         $modelsList = & $setupRouterScript -PresetFile $tempPreset -ConfigFile $tempConfig
         $success = (Test-Path $tempPreset)
-        $modelsCount = if ($modelsList -ne $null) { @($modelsList).Count } else { 0 }
+        $modelsCount = if ($null -ne $modelsList) { @($modelsList).Count } else { 0 }
         Write-HealthResult -TestName "SetupRouter Execution Test" -Success $success -Detail "Router generated models list successfully. Found $modelsCount models."
         
         # Clean up temporary test files
