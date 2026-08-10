@@ -271,12 +271,34 @@ $serverArgs = @(
     "--sleep-idle-seconds", "$($config.idle_timeout_sec)"
 )
 
+# 3.5 Auto-start Context Manager Proxy if enabled in config (default: true)
+$cmEnabled = $true
+if ($config.context_manager) {
+    if ($config.context_manager.enabled -eq $false -or $config.context_manager.enabled -eq "false") {
+        $cmEnabled = $false
+    }
+}
+
+if ($cmEnabled) {
+    $cmPort = if ($config.context_manager -and $config.context_manager.proxy_port) { [int]$config.context_manager.proxy_port } else { 8090 }
+    $cmScript = Join-Path $PSScriptRoot "StartContextManager.ps1"
+    if (Test-Path $cmScript) {
+        Write-Host "`n[Context Manager Proxy]" -ForegroundColor Cyan
+        Write-Host "Auto-launching Context Manager Proxy on port $cmPort..." -ForegroundColor Cyan
+        try {
+            & $cmScript -Port $cmPort -ConfigFile $ConfigFile
+        } catch {
+            Write-Host "[WARNING] Failed to start Context Manager Proxy: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
+}
+
 $defaultModelId = ""
 $logPath = Join-Path $LogDir "llama-server.log"
 $errPath = Join-Path $LogDir "llama-server.err.log"
 
-if (Test-Path $logPath) { Remove-Item $logPath -Force }
-if (Test-Path $errPath) { Remove-Item $errPath -Force }
+if (Test-Path $logPath) { try { Clear-Content $logPath -ErrorAction SilentlyContinue } catch {} }
+if (Test-Path $errPath) { try { Clear-Content $errPath -ErrorAction SilentlyContinue } catch {} }
 
 if ($models.Count -gt 0) {
     # Use the generated models preset config file

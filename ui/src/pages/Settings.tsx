@@ -150,6 +150,128 @@ export const SettingsPage: React.FC = () => {
                 onChange={(e) => updateConfig({ default_context_size: Number(e.target.value) })}
               />
             </div>
+
+            <hr style={{ borderColor: 'rgba(255, 255, 255, 0.1)', margin: '12px 0' }} />
+
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              Context Manager Proxy
+              <InfoTooltip
+                title="Context Manager Proxy"
+                description="Prevent model crashes and speed collapse by automatically summarizing chat history when approaching token limits."
+                recommendation="Enable for long-running coding agents like Claude Code."
+              />
+            </h2>
+
+            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <input
+                type="checkbox"
+                id="cm-enabled"
+                checked={config?.context_manager?.enabled ?? false}
+                onChange={(e) => updateConfig({
+                  context_manager: {
+                    enabled: e.target.checked,
+                    warn_threshold: config?.context_manager?.warn_threshold ?? 0.70,
+                    keep_turns: config?.context_manager?.keep_turns ?? 6,
+                    proxy_port: config?.context_manager?.proxy_port ?? 8090,
+                    ctx_limit: config?.context_manager?.ctx_limit ?? 0,
+                    tokenizer_repo: config?.context_manager?.tokenizer_repo ?? '',
+                    summary_max_tokens: config?.context_manager?.summary_max_tokens ?? 768,
+                    summarize_with_model: config?.context_manager?.summarize_with_model ?? 'same'
+                  }
+                })}
+              />
+              <label htmlFor="cm-enabled" style={{ cursor: 'pointer', fontWeight: 600 }}>
+                Enable Context Manager Proxy
+              </label>
+            </div>
+
+            {config?.context_manager?.enabled && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">
+                    Warn Threshold Ratio
+                    <InfoTooltip
+                      title="Warn Threshold"
+                      description="Percentage of context limit at which compression triggers (e.g. 0.70 = 70%)."
+                    />
+                  </label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0.4"
+                    max="0.95"
+                    className="form-input font-mono"
+                    value={config?.context_manager?.warn_threshold ?? 0.70}
+                    onChange={(e) => updateConfig({
+                      context_manager: {
+                        ...config.context_manager!,
+                        warn_threshold: Number(e.target.value)
+                      }
+                    })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Recent Turns to Keep
+                    <InfoTooltip
+                      title="Keep Turns"
+                      description="Number of recent chat turns preserved verbatim without compression."
+                    />
+                  </label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="20"
+                    className="form-input font-mono"
+                    value={config?.context_manager?.keep_turns ?? 6}
+                    onChange={(e) => updateConfig({
+                      context_manager: {
+                        ...config.context_manager!,
+                        keep_turns: Number(e.target.value)
+                      }
+                    })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Proxy Listen Port</label>
+                  <input
+                    type="number"
+                    className="form-input font-mono"
+                    value={config?.context_manager?.proxy_port ?? 8090}
+                    onChange={(e) => updateConfig({
+                      context_manager: {
+                        ...config.context_manager!,
+                        proxy_port: Number(e.target.value)
+                      }
+                    })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    HuggingFace Tokenizer Override
+                    <InfoTooltip
+                      title="Tokenizer Repo Override"
+                      description="Optional HuggingFace repository ID (e.g. google/gemma-2-2b-it) to override auto-detected tokenizer."
+                    />
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Auto-detected from model alias"
+                    className="form-input font-mono"
+                    value={config?.context_manager?.tokenizer_repo ?? ''}
+                    onChange={(e) => updateConfig({
+                      context_manager: {
+                        ...config.context_manager!,
+                        tokenizer_repo: e.target.value
+                      }
+                    })}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="glass-card card-padding">

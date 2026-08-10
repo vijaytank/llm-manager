@@ -3,17 +3,18 @@
 # Supports Windows, macOS, and Linux.
 
 param(
-    [int]$Port = 8080
+    [int]$Port = 8080,
+    [string]$ConfigFile = ""
 )
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Searching for active llama-server processes on port $Port..." -ForegroundColor Cyan
+Write-Host "Searching for active llama-server processes..." -ForegroundColor Cyan
 
-if ($IsWindows) {
-    # Windows: use WMI Win32_Process (original Windows codepath — unchanged)
+if ($env:OS -match "Windows" -or $IsWindows) {
+    # Windows: find all llama-server.exe processes
     $running = @(Get-CimInstance Win32_Process | Where-Object {
-        $_.Name -eq "llama-server.exe" -and $_.CommandLine -match [regex]::Escape("--port $Port")
+        $_.Name -eq "llama-server.exe"
     })
 
     if ($running) {
@@ -30,6 +31,20 @@ if ($IsWindows) {
         Write-Host "llama-server stopped successfully." -ForegroundColor Green
     } else {
         Write-Host "No active llama-server found listening on port $Port." -ForegroundColor Green
+    }
+
+    # Stop Context Manager Proxy process if active
+    $cmProcs = @(Get-CimInstance Win32_Process | Where-Object {
+        $_.Name -eq "python.exe" -and ($_.ExecutablePath -like "*context_manager*" -or $_.CommandLine -like "*context_manager*")
+    })
+    if ($cmProcs -and $cmProcs.Count -gt 0) {
+        Write-Host "Stopping Context Manager Proxy process..." -ForegroundColor Yellow
+        $cmProcs | ForEach-Object {
+            try {
+                Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+                Write-Host "  Terminated Context Manager PID: $($_.ProcessId)" -ForegroundColor DarkGray
+            } catch {}
+        }
     }
 } else {
     # macOS / Linux: find the PID bound to the target port using lsof or ss/fuser
@@ -96,4 +111,9 @@ if ($IsWindows) {
     } else {
         Write-Host "No active llama-server found listening on port $Port." -ForegroundColor Green
     }
+
+    try {
+        $cmProcs = @(Get-Process | Where-Object { $_.CommandLine -match 'proxy:app' } -ErrorAction SilentlyContinue)
+        $cmProcs | Stop-Process -Force -ErrorAction SilentlyContinue
+    } catch {}
 }

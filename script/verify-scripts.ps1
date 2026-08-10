@@ -127,6 +127,8 @@ foreach ($s in $scriptsToScan) {
         "--pretty", "--abbrev-commit", "--since", "--follow",
         # nvidia-smi query args
         "--nounits", "--csv", "--noheader",
+        # uv / python package runner flags
+        "--quiet", "--directory", "--host", "--port", "--python",
         # PowerShell / general CLI flags that may appear in scripts
         "--help", "--version", "--verbose", "--debug", "--dry-run",
         # markdown table separators (--- inside table rows) — not real flags

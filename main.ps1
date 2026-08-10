@@ -577,6 +577,25 @@ if ($config.integrations -contains "claude-code") {
     $config.claude_disable_telemetry = if ($switchChoice.ToUpper() -eq "Y") { $false } else { $true }
 }
 
+# 4.2 Context Manager Proxy Option
+Write-Host "`n[Context Manager Proxy Option]" -ForegroundColor Cyan
+Write-Host "Context Manager prevents LLM crashes and slowdowns by summarizing older chat history when context limits are approached." -ForegroundColor White
+$defaultCm = if ($config.context_manager -and $config.context_manager.enabled) { "Y" } else { "N" }
+$cmChoice = Get-UserInput "Enable Context Manager Proxy? (Y/N)" -DefaultVal $defaultCm
+if (-not $config.context_manager) {
+    $config.context_manager = @{
+        enabled = $false
+        warn_threshold = 0.70
+        keep_turns = 6
+        proxy_port = 8090
+        ctx_limit = 0
+        tokenizer_repo = ""
+        summary_max_tokens = 768
+        summarize_with_model = "same"
+    }
+}
+$config.context_manager.enabled = if ($cmChoice.ToUpper() -eq "Y") { $true } else { $false }
+
 # Step 4: Proposed Configuration Preview
 Write-Host "`nStep 4: Proposed Configuration Preview..." -ForegroundColor Cyan
 

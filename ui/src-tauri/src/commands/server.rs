@@ -110,7 +110,7 @@ async fn emit_log_file_lines(app: AppHandle, path: PathBuf, default_level: &'sta
                     sleep(Duration::from_millis(300)).await;
                 }
                 Ok(_) => {
-                    current_pos = match reader.seek(SeekFrom::Current(0)) {
+                    current_pos = match reader.stream_position() {
                         Ok(pos) => pos,
                         Err(_) => current_pos,
                     };
