@@ -87,6 +87,18 @@ $config = @{
     custom_args          = ""
     integrations         = @()
 
+    # Context Manager Proxy operational settings
+    context_manager      = @{
+        enabled              = $false
+        warn_threshold       = 0.70
+        keep_turns           = 6
+        proxy_port           = 8090
+        ctx_limit            = 0
+        tokenizer_repo       = ""
+        summary_max_tokens   = 768
+        summarize_with_model = "same"
+    }
+
     # Explicit user overrides (hardware-adaptive params only; these always win)
     # Example: "overrides": { "ubatch_size": 512, "ctx_size": 8192, "parallel": 1 }
     overrides            = @{}
@@ -498,6 +510,8 @@ Write-Host "    ubatch-size  : $($inferParams.ubatch_size)" -ForegroundColor Whi
 Write-Host "    parallel     : $($inferParams.parallel)" -ForegroundColor White
 Write-Host "    spec-type    : $($inferParams.spec_type)  (validated per-model)" -ForegroundColor White
 Write-Host "    threads      : $($hardware.CPU.OptimalThreads)" -ForegroundColor White
+$cmStr = if ($config.context_manager -and $config.context_manager.enabled) { "ENABLED (port $($config.context_manager.proxy_port), threshold $([int]($config.context_manager.warn_threshold * 100))%)" } else { "disabled" }
+Write-Host "    context-mgr  : $cmStr" -ForegroundColor White
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host ""
 

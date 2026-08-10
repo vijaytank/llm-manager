@@ -25,6 +25,33 @@ desktop.ini
 # NOTE: templates/default.jinja IS tracked (bundled offline fallback)
 templates/*.jinja
 !templates/default.jinja
+# Caches and logs
+/cache/
+/work/
+*.log
+*.tmp
+
+# Option registries & run configs
+/llo-config.json
+/models-preset.ini
+/.cached_flags.json
+/docs/SYSTEM_COMMANDS.md
+
+# Model files (don't commit large GGUFs)
+*.gguf
+/models/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+/.vscode/
+
+# Downloaded at setup time from llama.cpp — not committed to repo
+# NOTE: templates/default.jinja IS tracked (bundled offline fallback)
+templates/*.jinja
+!templates/default.jinja
 grammars/
 .assets-manifest.json
 
@@ -34,4 +61,13 @@ grammars/
 # UI build artifacts and dependencies
 ui/node_modules/
 ui/dist/
-ui/src-tauri/target/
+ui/src-tauri/target/
+.nexus/
+
+# Python virtual environments & bytecode caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.pytest_cache/

@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
 
+export interface ContextManagerSettings {
+  enabled: boolean;
+  warn_threshold: number;
+  keep_turns: number;
+  proxy_port: number;
+  ctx_limit: number;
+  tokenizer_repo: string;
+  summary_max_tokens: number;
+  summarize_with_model: string;
+}
+
 export interface AppConfig {
   installation_type: string;
   llama_server_path: string;
@@ -18,6 +29,9 @@ export interface AppConfig {
   fit_ctx_min: number;
   ubatch_size: number;
   parallel_slots: number;
+
+  // Context Manager Proxy
+  context_manager?: ContextManagerSettings;
 
   // SYSTEM_COMMANDS.md Advanced Parameters
   threads?: number;

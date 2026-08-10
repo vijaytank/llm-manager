@@ -119,7 +119,43 @@ pub struct AppConfig {
 
     #[serde(default)]
     pub active_template: String,
+
+    #[serde(default)]
+    pub context_manager: Option<ContextManagerSettings>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextManagerSettings {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+
+    #[serde(default = "default_warn_threshold")]
+    pub warn_threshold: f64,
+
+    #[serde(default = "default_keep_turns")]
+    pub keep_turns: u32,
+
+    #[serde(default = "default_proxy_port")]
+    pub proxy_port: u16,
+
+    #[serde(default)]
+    pub ctx_limit: u32,
+
+    #[serde(default)]
+    pub tokenizer_repo: String,
+
+    #[serde(default = "default_summary_max_tokens")]
+    pub summary_max_tokens: u32,
+
+    #[serde(default = "default_same")]
+    pub summarize_with_model: String,
+}
+
+fn default_warn_threshold() -> f64 { 0.70 }
+fn default_keep_turns() -> u32 { 6 }
+fn default_proxy_port() -> u16 { 8090 }
+fn default_summary_max_tokens() -> u32 { 768 }
+fn default_same() -> String { "same".to_string() }
 
 fn default_installation_type() -> String { "none".to_string() }
 fn default_cache_type() -> String { "f16".to_string() }
@@ -180,6 +216,31 @@ impl Default for AppConfig {
             mmproj_path: String::new(),
             mmproj_no_offload: false,
             active_template: String::new(),
+            context_manager: Some(ContextManagerSettings {
+                enabled: true,
+                warn_threshold: 0.70,
+                keep_turns: 6,
+                proxy_port: 8090,
+                ctx_limit: 0,
+                tokenizer_repo: String::new(),
+                summary_max_tokens: 768,
+                summarize_with_model: "same".to_string(),
+            }),
+        }
+    }
+}
+
+impl Default for ContextManagerSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            warn_threshold: 0.70,
+            keep_turns: 6,
+            proxy_port: 8090,
+            ctx_limit: 0,
+            tokenizer_repo: String::new(),
+            summary_max_tokens: 768,
+            summarize_with_model: "same".to_string(),
         }
     }
 }
@@ -212,8 +273,12 @@ pub fn load_config() -> Result<AppConfig, String> {
     let contents = fs::read_to_string(&user_config_path)
         .map_err(|e| format!("Failed to read llo-config.json at {:?}: {}", user_config_path, e))?;
 
-    let config: AppConfig = serde_json::from_str(&contents)
+    let mut config: AppConfig = serde_json::from_str(&contents)
         .map_err(|e| format!("Failed to parse llo-config.json: {}", e))?;
+
+    if config.context_manager.is_none() {
+        config.context_manager = Some(ContextManagerSettings::default());
+    }
 
     Ok(config)
 }
