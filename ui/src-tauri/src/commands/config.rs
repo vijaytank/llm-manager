@@ -126,7 +126,7 @@ pub struct AppConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextManagerSettings {
-    #[serde(default = "default_true")]
+    #[serde(default = "default_false")]
     pub enabled: bool,
 
     #[serde(default = "default_warn_threshold")]
@@ -161,6 +161,7 @@ fn default_installation_type() -> String { "none".to_string() }
 fn default_cache_type() -> String { "f16".to_string() }
 fn default_flash_attn() -> String { "auto".to_string() }
 fn default_true() -> bool { true }
+fn default_false() -> bool { false }
 fn default_context_size() -> u32 { 32768 }
 fn default_fit_ctx_min() -> u32 { 8192 }
 fn default_ubatch_size() -> u32 { 512 }
@@ -169,7 +170,7 @@ fn default_integrations() -> Vec<String> { vec!["server-only".to_string()] }
 fn default_idle_timeout() -> u32 { 60 }
 fn default_idle_timeout_i32() -> i32 { 60 }
 fn default_fallback_provider() -> String { "none".to_string() }
-fn default_spec_type() -> String { "ngram-simple".to_string() }
+fn default_spec_type() -> String { "none".to_string() }
 fn default_spec_ngram_size() -> u32 { 12 }
 fn default_cache_reuse() -> u32 { 256 }
 fn default_auto() -> String { "auto".to_string() }
@@ -217,7 +218,7 @@ impl Default for AppConfig {
             mmproj_no_offload: false,
             active_template: String::new(),
             context_manager: Some(ContextManagerSettings {
-                enabled: true,
+                enabled: false,
                 warn_threshold: 0.70,
                 keep_turns: 6,
                 proxy_port: 8090,
@@ -233,7 +234,7 @@ impl Default for AppConfig {
 impl Default for ContextManagerSettings {
     fn default() -> Self {
         Self {
-            enabled: true,
+            enabled: false,
             warn_threshold: 0.70,
             keep_turns: 6,
             proxy_port: 8090,
@@ -344,7 +345,7 @@ mod tests {
         let json = serde_json::to_string(&config).expect("Must serialize default config");
         assert!(json.contains("\"installation_type\":\"none\""));
         assert!(json.contains("\"default_context_size\":32768"));
-        assert!(json.contains("\"spec_type\":\"ngram-simple\""));
+        assert!(json.contains("\"spec_type\":\"none\""));
     }
 
     #[test]
@@ -354,6 +355,6 @@ mod tests {
         assert_eq!(config.installation_type, "winget");
         assert_eq!(config.default_context_size, 65536);
         assert_eq!(config.fit_ctx_min, 8192);
-        assert_eq!(config.spec_type, "ngram-simple");
+        assert_eq!(config.spec_type, "none");
     }
 }

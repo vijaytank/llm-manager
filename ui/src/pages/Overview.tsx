@@ -21,10 +21,11 @@ export const OverviewPage: React.FC = () => {
   const [backendModelInfo, setBackendModelInfo] = useState<{ active_model?: string; models_preset_path?: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [templates, setTemplates] = useState<string[]>([]);
+  const [pendingRestart, setPendingRestart] = useState(false);
 
   useEffect(() => {
     fetchHardware();
-  }, [fetchHardware]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchModels(config?.models_dir);
@@ -37,12 +38,20 @@ export const OverviewPage: React.FC = () => {
   }, [config?.templates_dir]);
 
   useEffect(() => {
-    invoke('get_active_model_info')
-      .then((result) => setBackendModelInfo(result as { active_model?: string; models_preset_path?: string }))
-      .catch((error) => {
-        console.warn('Failed to fetch active model info from backend:', error);
-      });
-  }, []);
+    if (status === 'running') {
+      invoke('get_active_model_info')
+        .then((result) => setBackendModelInfo(result as { active_model?: string; models_preset_path?: string }))
+        .catch((error) => {
+          console.warn('Failed to fetch active model info from backend:', error);
+        });
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (status === 'stopped' || status === 'starting') {
+      setPendingRestart(false);
+    }
+  }, [status]);
 
   const [selectedModelFilename, setSelectedModelFilename] = useState<string>('');
 
@@ -106,9 +115,17 @@ export const OverviewPage: React.FC = () => {
 
   return (
     <PageShell title="Overview">
+      {/* Restart Required Warning Banner */}
+      {pendingRestart && (
+        <div className="impact-banner severity-caution" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ShieldAlert size={18} />
+          <span>Configuration saved. Restart the server to apply updated settings.</span>
+        </div>
+      )}
+
       {/* Dynamic Validation Banners */}
-      {assessments.map((a, i) => (
-        <ImpactBanner key={i} assessment={a} />
+      {assessments.map((a) => (
+        <ImpactBanner key={`${a.param}-${a.severity}`} assessment={a} />
       ))}
 
       {/* Pre-Flight Model Launch Verdict Card */}
@@ -273,6 +290,14 @@ export const OverviewPage: React.FC = () => {
                     <ShieldAlert size={16} /> Launch Blocked (Insufficient RAM)
                   </button>
                 )
+              ) : status === 'stopping' ? (
+                <button className="btn btn-outline btn-danger" disabled style={{ opacity: 0.6, cursor: 'not-allowed' }}>
+                  <RefreshCw size={16} className="spin" /> Stopping Server...
+                </button>
+              ) : status === 'starting' ? (
+                <button className="btn btn-outline" disabled style={{ opacity: 0.8, cursor: 'wait' }}>
+                  <RefreshCw size={16} className="spin" /> Starting Server...
+                </button>
               ) : (
                 <button className="btn btn-outline btn-danger" onClick={handleStop}>
                   <Square size={16} /> Stop Server

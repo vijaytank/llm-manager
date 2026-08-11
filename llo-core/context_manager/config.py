@@ -41,7 +41,7 @@ def load_config(config_path: Optional[str] = None) -> ContextManagerConfig:
 
     if config_path and Path(config_path).is_file():
         try:
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, "r", encoding="utf-8-sig") as f:
                 data = json.load(f)
                 cm_data = data.get("context_manager", {})
                 return ContextManagerConfig(**cm_data)

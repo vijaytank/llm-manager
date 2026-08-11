@@ -23,14 +23,11 @@ interface ServerState {
 export const useServerStore = create<ServerState>((set) => ({
   status: 'stopped',
   port: 8080,
-  logs: [
-    { timestamp: '14:32:01', level: 'INFO', message: 'LLM Manager server state initialized' },
-    { timestamp: '14:32:02', level: 'INFO', message: 'Ready to launch server process' }
-  ],
+  logs: [],
   configSnapshot: null,
   setStatus: (status) => set({ status }),
   setPort: (port) => set({ port }),
-  addLog: (log) => set((state) => ({ logs: [...state.logs.slice(-4999), log] })),
+  addLog: (log) => set((state) => ({ logs: [...state.logs.slice(-499), log] })),
   clearLogs: () => set({ logs: [] }),
   setConfigSnapshot: (configSnapshot) => set({ configSnapshot }),
 }));

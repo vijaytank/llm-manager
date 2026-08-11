@@ -1,13 +1,11 @@
+import os
 import hashlib
 import json
 import httpx
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 
-try:
-    from .tokenizer_cache import TokenizerCache
-except ImportError:
-    from tokenizer_cache import TokenizerCache
+from .tokenizer_cache import TokenizerCache
 
 SUMMARIZER_SYSTEM_PROMPT = """
 You are a precise technical summarizer for multi-turn developer conversations.
@@ -94,18 +92,48 @@ class ContextEngine:
         keep_turns: int = 6,
         llama_server_url: str = "http://127.0.0.1:8080",
         summary_max_tokens: int = 768,
+        summarize_with_model: str = "same",
         tokenizer_cache: Optional[TokenizerCache] = None,
     ):
         self.warn_threshold = warn_threshold
         self.keep_turns = keep_turns
         self.llama_server_url = llama_server_url.rstrip('/')
         self.summary_max_tokens = summary_max_tokens
+        self.summarize_with_model = summarize_with_model
         self.tokenizer_cache = tokenizer_cache or TokenizerCache()
         self.sessions: Dict[str, SessionState] = {}
 
+    def _get_checkpoint_path(self, session_id: str) -> str:
+        appdata = (
+            os.getenv("APPDATA") or
+            (os.path.join(os.getenv("USERPROFILE", ""), ".config") if os.getenv("USERPROFILE") else None) or
+            (os.path.join(os.getenv("HOME", ""), ".config") if os.getenv("HOME") else None) or
+            "."
+        )
+        cp_dir = os.path.join(appdata, "LLM Manager", "checkpoints")
+        os.makedirs(cp_dir, exist_ok=True)
+        return os.path.join(cp_dir, f"{session_id}.json")
+
+    def _load_checkpoint_from_disk(self, session_id: str) -> Optional[SessionState]:
+        try:
+            filepath = self._get_checkpoint_path(session_id)
+            if not os.path.exists(filepath):
+                return None
+            with open(filepath, "r", encoding="utf-8-sig") as f:
+                data = json.load(f)
+            s = SessionState(session_id=session_id)
+            s.summary_block = data.get("summary_block")
+            s.summary_up_to_turn = data.get("summary_up_to_turn", 0)
+            s.last_compress_hash = data.get("last_compress_hash", "")
+            s.messages = data.get("messages", [])
+            return s
+        except Exception:
+            return None
+
     def get_or_create_session(self, session_id: str) -> SessionState:
         if session_id not in self.sessions:
-            self.sessions[session_id] = SessionState(session_id=session_id)
+            loaded = self._load_checkpoint_from_disk(session_id)
+            self.sessions[session_id] = loaded if loaded else SessionState(session_id=session_id)
         return self.sessions[session_id]
 
     def count_tokens_messages(self, messages: List[Dict[str, Any]], model_alias: str = "") -> int:
@@ -115,11 +143,9 @@ class ContextEngine:
             if isinstance(content, str):
                 total += self.tokenizer_cache.count_tokens(content, model_alias)
             elif isinstance(content, list):
-                # Handle structured content (e.g. text blocks)
                 for item in content:
                     if isinstance(item, dict) and "text" in item:
                         total += self.tokenizer_cache.count_tokens(item["text"], model_alias)
-        # Account for per-message framing overhead (~4 tokens per turn)
         total += len(messages) * 4
         return total
 
@@ -150,7 +176,6 @@ class ContextEngine:
     ) -> str:
         prompt_system = SUMMARIZER_SYSTEM_PROMPT.format(max_tokens=self.summary_max_tokens)
 
-        # Build structured user message matching the prompt's INPUT contract
         user_parts = []
         if prior_summary:
             user_parts.append(f"PRIOR_SUMMARY:\n{prior_summary}")
@@ -166,8 +191,12 @@ class ContextEngine:
             "temperature": 0.2,
             "stream": False
         }
-        if model_alias:
-            payload["model"] = model_alias
+        
+        effective_model = model_alias
+        if self.summarize_with_model and self.summarize_with_model != "same":
+            effective_model = self.summarize_with_model
+        if effective_model:
+            payload["model"] = effective_model
 
         url = f"{self.llama_server_url}/v1/chat/completions"
         try:
@@ -182,19 +211,18 @@ class ContextEngine:
         except Exception as e:
             print(f"[ContextEngine] Summarizer request failed: {e}")
 
-        # Fallback summary if LLM call fails
         return f"[Summary of previous conversation up to turn: {len(conversation_text.splitlines())} lines]"
 
     async def compress(
         self,
         session: SessionState,
         messages: List[Dict[str, Any]],
-        model_alias: str = ""
+        model_alias: str = "",
+        ctx_limit: int = 32768
     ) -> List[Dict[str, Any]]:
         if not messages:
             return messages
 
-        # 1. Separate system prompts, existing compressed blocks, and conversation turns
         system_prompts = []
         conversation_turns = []
 
@@ -204,18 +232,16 @@ class ContextEngine:
             if role == "system" and name != "compressed_history":
                 system_prompts.append(msg)
             elif role == "system" and name == "compressed_history":
-                continue # Replaced by new summary
+                continue
             else:
                 conversation_turns.append(msg)
 
-        # 2. If conversation turns are few but message is huge, adapt keep_turns
         effective_keep = self.keep_turns
         if len(conversation_turns) > 2 and len(conversation_turns) <= effective_keep:
             effective_keep = max(1, len(conversation_turns) - 1)
 
         if len(conversation_turns) <= effective_keep:
-            # Apply safety clamp if single prompt turn is oversized
-            max_allowed = int(self._get_ctx_limit_from_messages(messages) * 0.85)
+            max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
             return self._clamp_message_tokens(messages, max_allowed, model_alias)
 
         split_idx = len(conversation_turns) - effective_keep
@@ -225,9 +251,9 @@ class ContextEngine:
         # Idempotency check
         current_hash = self._compute_hash(session.session_id, to_summarize)
         if current_hash == session.last_compress_hash and session.messages:
-            return session.messages
+            max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
+            return self._clamp_message_tokens(session.messages, max_allowed, model_alias)
 
-        # Build conversation text from turns to summarize (no prior summary mixed in)
         conversation_lines = []
         for turn in to_summarize:
             r = turn.get("role", "user")
@@ -238,20 +264,16 @@ class ContextEngine:
 
         conversation_text = "\n\n".join(conversation_lines)
 
-        # Call summarizer — prior_summary passed separately so the model
-        # can apply PRIOR_SUMMARY merge semantics from the system prompt
         new_summary = await self._request_summary(
             conversation_text,
             model_alias,
             prior_summary=session.summary_block
         )
 
-        # Update session state
         session.summary_block = new_summary
         session.summary_up_to_turn += len(to_summarize)
         session.last_compress_hash = current_hash
 
-        # Reconstruct rebuilt messages
         summary_msg = {
             "role": "system",
             "name": "compressed_history",
@@ -261,49 +283,44 @@ class ContextEngine:
         rebuilt = system_prompts + [summary_msg] + recent_window
         session.messages = rebuilt
 
-        # Persist checkpoint to disk
         self._save_checkpoint_to_disk(session)
 
-        # Ensure total payload does not exceed safety ceiling
-        max_allowed = int(self._get_ctx_limit_from_messages(messages) * 0.85)
+        max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
         return self._clamp_message_tokens(rebuilt, max_allowed, model_alias)
-
-    def _get_ctx_limit_from_messages(self, messages: List[Dict[str, Any]]) -> int:
-        return 32768
 
     def _clamp_message_tokens(self, messages: List[Dict[str, Any]], max_allowed_tokens: int, model_alias: str = "") -> List[Dict[str, Any]]:
         total = self.count_tokens_messages(messages, model_alias)
         if total <= max_allowed_tokens:
             return messages
 
-        clamped = []
         excess_tokens = total - max_allowed_tokens
-        excess_chars = excess_tokens * 4
-
+        clamped = []
         for msg in messages:
             c_msg = dict(msg)
             content = c_msg.get("content")
-            if isinstance(content, str) and len(content) > 1000 and excess_chars > 0:
-                new_len = max(500, len(content) - excess_chars - 300)
-                c_msg["content"] = content[:new_len] + "\n\n[... Truncated by Context Manager Proxy to fit context limit ...]"
-                excess_chars = 0  # Truncated main payload
+            if isinstance(content, str) and len(content) > 500:
+                current_tokens = self.tokenizer_cache.count_tokens(content, model_alias)
+                if current_tokens > 0 and excess_tokens > 0:
+                    share = current_tokens / max(total, 1)
+                    chars_to_remove = int(share * excess_tokens * 4)
+                    if chars_to_remove > 0:
+                        new_len = max(200, len(content) - chars_to_remove)
+                        c_msg["content"] = content[:new_len] + "\n\n[... Truncated by Context Manager to fit context limit ...]"
+                        excess_tokens -= max(0, current_tokens - max(1, new_len // 4))
             clamped.append(c_msg)
 
         return clamped
 
     def _save_checkpoint_to_disk(self, session: SessionState):
         try:
-            import os
-            appdata = os.getenv("APPDATA") or os.getenv("USERPROFILE") or "."
-            cp_dir = os.path.join(appdata, "LLM Manager", "checkpoints")
-            os.makedirs(cp_dir, exist_ok=True)
-            filepath = os.path.join(cp_dir, f"{session.session_id}.json")
+            filepath = self._get_checkpoint_path(session.session_id)
             data = {
                 "session_id": session.session_id,
                 "summary_block": session.summary_block,
                 "summary_up_to_turn": session.summary_up_to_turn,
                 "last_compress_hash": session.last_compress_hash,
-                "message_count": len(session.messages)
+                "message_count": len(session.messages),
+                "messages": session.messages
             }
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
@@ -321,7 +338,6 @@ class ContextEngine:
         session = self.get_or_create_session(session_id)
         if self.needs_compression(messages, max_tokens_requested, ctx_limit, model_alias):
             print(f"[ContextEngine] Context limit threshold reached ({self.count_tokens_messages(messages, model_alias)} tokens). Triggering compression for session '{session_id}'...")
-            return await self.compress(session, messages, model_alias)
-        # Apply safety clamp even if threshold is not reached to prevent 400 Context Exceeded crashes on huge single messages
+            return await self.compress(session, messages, model_alias, ctx_limit=ctx_limit)
         max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
         return self._clamp_message_tokens(messages, max_allowed, model_alias)

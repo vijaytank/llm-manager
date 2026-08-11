@@ -8,6 +8,7 @@ use tokio::time::sleep;
 use crate::scripts::run_powershell_script;
 
 static IS_RUNNING: AtomicBool = AtomicBool::new(false);
+static IS_STARTING: AtomicBool = AtomicBool::new(false);
 
 fn get_log_path() -> PathBuf {
     crate::scripts::get_user_log_dir().join("llama-server.log")
@@ -37,7 +38,7 @@ async fn emit_log_file_lines(app: AppHandle, path: PathBuf, default_level: &'sta
     let file_label = if default_level == "ERROR" { "stderr" } else { "stdout" };
 
     loop {
-        if !IS_RUNNING.load(Ordering::SeqCst) {
+        if !IS_RUNNING.load(Ordering::SeqCst) && !IS_STARTING.load(Ordering::SeqCst) {
             return;
         }
 
@@ -90,7 +91,7 @@ async fn emit_log_file_lines(app: AppHandle, path: PathBuf, default_level: &'sta
         }));
 
         loop {
-            if !IS_RUNNING.load(Ordering::SeqCst) {
+            if !IS_RUNNING.load(Ordering::SeqCst) && !IS_STARTING.load(Ordering::SeqCst) {
                 return;
             }
 
@@ -140,10 +141,14 @@ async fn emit_log_file_lines(app: AppHandle, path: PathBuf, default_level: &'sta
 
 #[tauri::command]
 pub async fn start_server(app: AppHandle, port: Option<u16>) -> Result<String, String> {
-    let p = port.unwrap_or(8080);
-    IS_RUNNING.store(true, Ordering::SeqCst);
+    if IS_RUNNING.load(Ordering::SeqCst) || IS_STARTING.load(Ordering::SeqCst) {
+        return Err("Server process is already running or starting".to_string());
+    }
 
-    let _ = app.emit("server-status-changed", "running");
+    let p = port.unwrap_or(8080);
+    IS_STARTING.store(true, Ordering::SeqCst);
+
+    let _ = app.emit("server-status-changed", "starting");
     let _ = app.emit("server-log", serde_json::json!({
         "timestamp": chrono::Local::now().format("%H:%M:%S").to_string(),
         "level": "INFO",
@@ -175,15 +180,35 @@ pub async fn start_server(app: AppHandle, port: Option<u16>) -> Result<String, S
                 "-ModelsDir", &models_dir_str,
             ],
         );
-        if let Err(e) = result {
-            // Emit the actual error text so it appears in the Logs panel
-            let _ = app_err.emit("server-log", serde_json::json!({
-                "timestamp": chrono::Local::now().format("%H:%M:%S").to_string(),
-                "level": "ERROR",
-                "message": format!("start-server.ps1 failed:\n{}", e)
-            }));
-            IS_RUNNING.store(false, Ordering::SeqCst);
-            let _ = app_err.emit("server-status-changed", "stopped");
+        match result {
+            Ok(_) => {
+                // Only transition to "running" if stop_server was NOT called while
+                // the start script was executing. stop_server sets IS_STARTING=false,
+                // so if IS_STARTING is still true here, startup completed without interruption.
+                if IS_STARTING.load(Ordering::SeqCst) {
+                    IS_RUNNING.store(true, Ordering::SeqCst);
+                    IS_STARTING.store(false, Ordering::SeqCst);
+                    let _ = app_err.emit("server-status-changed", "running");
+                } else {
+                    // stop_server was called during startup — stay in stopped state.
+                    IS_RUNNING.store(false, Ordering::SeqCst);
+                    let _ = app_err.emit("server-log", serde_json::json!({
+                        "timestamp": chrono::Local::now().format("%H:%M:%S").to_string(),
+                        "level": "INFO",
+                        "message": "Server startup was cancelled by stop request."
+                    }));
+                }
+            }
+            Err(e) => {
+                IS_RUNNING.store(false, Ordering::SeqCst);
+                IS_STARTING.store(false, Ordering::SeqCst);
+                let _ = app_err.emit("server-log", serde_json::json!({
+                    "timestamp": chrono::Local::now().format("%H:%M:%S").to_string(),
+                    "level": "ERROR",
+                    "message": format!("start-server.ps1 failed:\n{}", e)
+                }));
+                let _ = app_err.emit("server-status-changed", "stopped");
+            }
         }
     });
 
@@ -199,33 +224,50 @@ pub async fn start_server(app: AppHandle, port: Option<u16>) -> Result<String, S
         emit_log_file_lines(app.clone(), stderr_path, "ERROR").await;
     });
 
-    Ok(format!("Server started on port {}", p))
+    Ok(format!("Server launch initiated on port {}", p))
 }
 
 #[tauri::command]
 pub async fn stop_server(app: AppHandle) -> Result<String, String> {
-    IS_RUNNING.store(false, Ordering::SeqCst);
+    // Prevent double-stop if already stopped
+    if !IS_RUNNING.load(Ordering::SeqCst) && !IS_STARTING.load(Ordering::SeqCst) {
+        return Ok("Server already stopped".to_string());
+    }
 
-    let _ = app.emit("server-status-changed", "stopped");
+    // Clear the running/starting flags immediately so the spawn_blocking
+    // startup closure (if still running) will not re-emit "running".
+    IS_RUNNING.store(false, Ordering::SeqCst);
+    IS_STARTING.store(false, Ordering::SeqCst);
+
+    let _ = app.emit("server-status-changed", "stopping");
     let _ = app.emit("server-log", serde_json::json!({
         "timestamp": chrono::Local::now().format("%H:%M:%S").to_string(),
         "level": "INFO",
         "message": "Stopping llama-server process..."
     }));
 
+    let app_clone = app.clone();
     let config_file = crate::scripts::get_user_data_dir().join("llo-config.json");
     let config_file_str = config_file.to_string_lossy().to_string();
     tokio::task::spawn_blocking(move || {
         let _ = run_powershell_script("script/stop-server.ps1", &["-ConfigFile", &config_file_str]);
+        let _ = app_clone.emit("server-status-changed", "stopped");
+        let _ = app_clone.emit("server-log", serde_json::json!({
+            "timestamp": chrono::Local::now().format("%H:%M:%S").to_string(),
+            "level": "INFO",
+            "message": "llama-server process stopped."
+        }));
     });
 
-    Ok("Server stopped successfully".to_string())
+    Ok("Stop request sent".to_string())
 }
 
 #[tauri::command]
 pub fn get_server_status() -> String {
     if IS_RUNNING.load(Ordering::SeqCst) {
         "running".to_string()
+    } else if IS_STARTING.load(Ordering::SeqCst) {
+        "starting".to_string()
     } else {
         "stopped".to_string()
     }
@@ -261,17 +303,35 @@ pub fn get_active_model_info() -> Result<serde_json::Value, String> {
 #[tauri::command]
 pub fn launch_claude_terminal(port: Option<u16>, model: Option<String>) -> Result<String, String> {
     let p = port.unwrap_or(8080);
-    let base_url = format!("http://127.0.0.1:{}", p);
+    
+    // Check if Context Manager Proxy is enabled in config
+    let config_path = crate::commands::config::get_config_path();
+    let target_port = if config_path.exists() {
+        let config_raw = std::fs::read_to_string(&config_path).unwrap_or_default();
+        let config_value: serde_json::Value = serde_json::from_str(&config_raw).unwrap_or_default();
+        let cm = config_value.get("context_manager");
+        let enabled = cm.and_then(|c| c.get("enabled")).and_then(|v| v.as_bool()).unwrap_or(false);
+        let proxy_port = cm.and_then(|c| c.get("proxy_port")).and_then(|v| v.as_u64()).map(|v| v as u16).unwrap_or(8090);
+        if enabled { proxy_port } else { p }
+    } else {
+        p
+    };
+
+    let base_url = format!("http://127.0.0.1:{}", target_port);
     let m = model.unwrap_or_else(|| "local".to_string());
 
     let script = format!(
-        "$env:ANTHROPIC_BASE_URL='{}'; $env:ANTHROPIC_AUTH_TOKEN='local'; $env:CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY='1'; claude --model {}",
-        base_url, m
+        "$env:ANTHROPIC_BASE_URL='{}'; $env:ANTHROPIC_AUTH_TOKEN='local'; $env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC='1'; $env:CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY='1'; claude --model $env:_LLO_MODEL",
+        base_url
     );
 
     let executable = if cfg!(target_os = "windows") { "powershell.exe" } else { "pwsh" };
     let mut command = std::process::Command::new(executable);
-    command.arg("-NoExit").arg("-Command").arg(&script);
+    command
+        .arg("-NoExit")
+        .arg("-Command")
+        .arg(&script)
+        .env("_LLO_MODEL", &m);
     command.spawn().map_err(|e| format!("Failed to launch terminal: {}", e))?;
 
     Ok("Terminal launched successfully".to_string())

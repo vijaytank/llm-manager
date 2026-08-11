@@ -32,8 +32,6 @@
       "../../script/**/*",
       "../../templates/**/*",
       "../../grammars/**/*",
-      "../../llo-config.json",
-      "../../models-preset.ini",
       "../../main.ps1"
     ],
     "icon": [

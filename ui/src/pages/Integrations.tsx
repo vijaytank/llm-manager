@@ -10,7 +10,9 @@ import './Integrations.css';
 export const IntegrationsPage: React.FC = () => {
   const { port } = useServerStore();
   const { config } = useConfigStore();
-  const baseUrl = `http://127.0.0.1:${port}`;
+  const isCmEnabled = config?.context_manager?.enabled ?? false;
+  const activePort = isCmEnabled ? (config?.context_manager?.proxy_port || 8090) : port;
+  const baseUrl = `http://127.0.0.1:${activePort}`;
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
   const handleCopy = (text: string, section: string) => {

@@ -8,7 +8,13 @@ param(
     [string]$LlamaDir = "",
     [string]$ConfigFile = "",
     [string]$LogDir = "",
-    [string]$ModelsDir = ""
+    [string]$ModelsDir = "",
+    [int]$Parallel = 0,
+    [int]$CtxSize = 0,
+    [int]$UbatchSize = 0,
+    [string]$FlashAttn = "",
+    [string]$CacheTypeK = "",
+    [string]$CacheTypeV = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -160,6 +166,19 @@ if ($usedPorts -contains $Port) {
         $Port++
     }
     Write-Host "Automatically shifted server port to $Port." -ForegroundColor Green
+
+    if ($Port -ne 8080 -and (Test-Path $ConfigFile)) {
+        try {
+            $cfgJson = Get-Content $ConfigFile -Raw | ConvertFrom-Json
+            $cfgJson | Add-Member -Force -NotePropertyName "port" -NotePropertyValue $Port
+            if ($cfgJson.context_manager) {
+                $cfgJson.context_manager | Add-Member -Force -NotePropertyName "llama_server_url" -NotePropertyValue "http://127.0.0.1:$Port"
+            }
+            $cfgJson | ConvertTo-Json -Depth 5 | Set-Content -Path $ConfigFile -Encoding UTF8
+        } catch {
+            Write-Host "[WARNING] Could not update port in llo-config.json: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
 }
 
 # 3. Determine running mode
@@ -271,25 +290,11 @@ $serverArgs = @(
     "--sleep-idle-seconds", "$($config.idle_timeout_sec)"
 )
 
-# 3.5 Auto-start Context Manager Proxy if enabled in config (default: true)
-$cmEnabled = $true
+# 3.5 Check Context Manager Proxy status in config (default: false)
+$cmEnabled = $false
 if ($config.context_manager) {
-    if ($config.context_manager.enabled -eq $false -or $config.context_manager.enabled -eq "false") {
-        $cmEnabled = $false
-    }
-}
-
-if ($cmEnabled) {
-    $cmPort = if ($config.context_manager -and $config.context_manager.proxy_port) { [int]$config.context_manager.proxy_port } else { 8090 }
-    $cmScript = Join-Path $PSScriptRoot "StartContextManager.ps1"
-    if (Test-Path $cmScript) {
-        Write-Host "`n[Context Manager Proxy]" -ForegroundColor Cyan
-        Write-Host "Auto-launching Context Manager Proxy on port $cmPort..." -ForegroundColor Cyan
-        try {
-            & $cmScript -Port $cmPort -ConfigFile $ConfigFile
-        } catch {
-            Write-Host "[WARNING] Failed to start Context Manager Proxy: $($_.Exception.Message)" -ForegroundColor Yellow
-        }
+    if ($config.context_manager.enabled -eq $true -or $config.context_manager.enabled -eq "true") {
+        $cmEnabled = $true
     }
 }
 
@@ -323,16 +328,49 @@ if ($models.Count -gt 0) {
     $serverArgs += @("-m", $selectedEntry.Path)
     Write-Host "Selected Active Model for Inference: $($selectedEntry.Alias) ($($selectedEntry.Path))" -ForegroundColor Green
 
-    if ($selectedEntry.CtxSize -and [int]$selectedEntry.CtxSize -gt 0) {
-        $serverArgs += @("-c", "$($selectedEntry.CtxSize)")
-        Write-Host "Configured Context Size: $($selectedEntry.CtxSize) tokens" -ForegroundColor Green
+    # ── Context Size (-c) Resolution Hierarchy: CLI > UI Config > SetupRouter ──
+    $finalCtxSize = 0
+    if ($PSBoundParameters.ContainsKey("CtxSize") -and $CtxSize -gt 0) {
+        $finalCtxSize = $CtxSize
+        Write-Host "Context Size: $finalCtxSize tokens (from CLI switch)" -ForegroundColor DarkYellow
+    } elseif ($config.ContainsKey("default_context_size") -and [int]$config.default_context_size -gt 0) {
+        $finalCtxSize = [int]$config.default_context_size
+        Write-Host "Context Size: $finalCtxSize tokens (from UI config.default_context_size)" -ForegroundColor Green
+    } elseif ($selectedEntry.CtxSize -and [int]$selectedEntry.CtxSize -gt 0) {
+        $finalCtxSize = [int]$selectedEntry.CtxSize
+        Write-Host "Context Size: $finalCtxSize tokens (from hardware auto-tune)" -ForegroundColor DarkGray
+    }
+    if ($finalCtxSize -gt 0) {
+        $serverArgs += @("-c", "$finalCtxSize")
     }
 
-    if ($config.cache_type_k) {
-        $serverArgs += @("--cache-type-k", "$($config.cache_type_k)")
-        $cacheV = if ($config.cache_type_v) { "$($config.cache_type_v)" } else { "$($config.cache_type_k)" }
-        $serverArgs += @("--cache-type-v", $cacheV)
-        Write-Host "KV Cache Precision: $($config.cache_type_k)" -ForegroundColor Green
+    # ── Parallel Slots (-np) Resolution Hierarchy: CLI > UI Config > Default (1) ──
+    $finalParallel = 0
+    if ($PSBoundParameters.ContainsKey("Parallel") -and $Parallel -gt 0) {
+        $finalParallel = $Parallel
+        Write-Host "Parallel Slots: $finalParallel (from CLI switch)" -ForegroundColor DarkYellow
+    } elseif ($config.ContainsKey("parallel_slots") -and [int]$config.parallel_slots -gt 0) {
+        $finalParallel = [int]$config.parallel_slots
+        Write-Host "Parallel Slots: $finalParallel (from UI config.parallel_slots)" -ForegroundColor Green
+    } elseif ($selectedEntry.Parallel -and [int]$selectedEntry.Parallel -gt 0) {
+        $finalParallel = [int]$selectedEntry.Parallel
+        Write-Host "Parallel Slots: $finalParallel (from preset config)" -ForegroundColor DarkGray
+    } else {
+        $finalParallel = 1
+    }
+    $serverArgs += @("-np", "$finalParallel")
+
+    # ── Micro-batch Size (-ub) Resolution Hierarchy: CLI > UI Config > Default (512) ──
+    $finalUbatch = 0
+    if ($PSBoundParameters.ContainsKey("UbatchSize") -and $UbatchSize -gt 0) {
+        $finalUbatch = $UbatchSize
+        Write-Host "Micro-Batch Size: $finalUbatch tokens (from CLI switch)" -ForegroundColor DarkYellow
+    } elseif ($config.ContainsKey("ubatch_size") -and [int]$config.ubatch_size -gt 0) {
+        $finalUbatch = [int]$config.ubatch_size
+        Write-Host "Micro-Batch Size: $finalUbatch tokens (from UI config.ubatch_size)" -ForegroundColor Green
+    }
+    if ($finalUbatch -gt 0) {
+        $serverArgs += @("-ub", "$finalUbatch")
     }
 
     # Explicitly pass --mmproj and --no-mmproj-offload CLI flags if configured
@@ -374,41 +412,6 @@ if ($models.Count -gt 0) {
     if ($resolvedTemplate) {
         $serverArgs += @("--chat-template-file", $resolvedTemplate)
         Write-Host "Chat Template File: $resolvedTemplate" -ForegroundColor Green
-    }
-
-    # Explicitly pass --parallel slot count if configured
-    if ($config.parallel_slots -and [int]$config.parallel_slots -gt 0) {
-        $serverArgs += @("--parallel", "$($config.parallel_slots)")
-        Write-Host "Configured Parallel Slots: $($config.parallel_slots)" -ForegroundColor Green
-    }
-
-    # Explicitly pass --ubatch-size if configured
-    if ($config.ubatch_size -and [int]$config.ubatch_size -gt 0) {
-        $serverArgs += @("--ubatch-size", "$($config.ubatch_size)")
-        Write-Host "Configured Micro-Batch Size: $($config.ubatch_size)" -ForegroundColor Green
-    }
-
-    # Explicitly pass --spec-type speculative decoding flag if configured
-    if ($config.spec_type -and $config.spec_type -ne "none") {
-        $serverArgs += @("--spec-type", "$($config.spec_type)")
-        Write-Host "Selected Speculative Decoding: $($config.spec_type)" -ForegroundColor Green
-    }
-
-    # Explicitly pass Flash Attention flag
-    if ($config.flash_attn -and $config.flash_attn -ne "auto") {
-        if ($config.flash_attn -eq "on") {
-            $serverArgs += @("--flash-attn", "on")
-            Write-Host "Flash Attention: ON" -ForegroundColor Green
-        } elseif ($config.flash_attn -eq "off") {
-            $serverArgs += @("--flash-attn", "off")
-            Write-Host "Flash Attention: OFF" -ForegroundColor Yellow
-        }
-    }
-
-    # Explicitly pass CPU inference threads if configured
-    if ($config.threads -and [int]$config.threads -gt 0) {
-        $serverArgs += @("-t", "$($config.threads)")
-        Write-Host "CPU Threads: $($config.threads)" -ForegroundColor Green
     }
 
     # Explicitly pass process priority if configured
@@ -484,6 +487,29 @@ if (-not $ready) {
     throw "llama-server failed to respond to API requests on port $Port within 30 seconds."
 }
 
+# Auto-start Context Manager Proxy if enabled once llama-server is ready
+$activeCmPort = 8090
+if ($ready -and $cmEnabled) {
+    $cmPort = if ($config.context_manager -and $config.context_manager.proxy_port) { [int]$config.context_manager.proxy_port } else { 8090 }
+    $cmScript = Join-Path $PSScriptRoot "StartContextManager.ps1"
+    if (Test-Path $cmScript) {
+        Write-Host "`n[Context Manager Proxy]" -ForegroundColor Cyan
+        Write-Host "Auto-launching Context Manager Proxy on port $cmPort (Upstream llama-server port $Port)..." -ForegroundColor Cyan
+        try {
+            & $cmScript -Port $cmPort -UpstreamPort $Port -ConfigFile $ConfigFile
+            # Read updated proxy_port in case StartContextManager shifted it
+            if (Test-Path $ConfigFile) {
+                $reloadedCfg = Get-Content $ConfigFile -Raw | ConvertFrom-Json
+                if ($reloadedCfg.context_manager -and $reloadedCfg.context_manager.proxy_port) {
+                    $activeCmPort = [int]$reloadedCfg.context_manager.proxy_port
+                }
+            }
+        } catch {
+            Write-Host "[WARNING] Failed to start Context Manager Proxy: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
+}
+
 # 5. Extract active models
 $liveModels = @()
 try {
@@ -498,13 +524,17 @@ if ($liveModels.Count -gt 0) {
 }
 
 # 6. Export local API environment variables
-$env:LLAMA_BASE_URL = $localBase
-$env:LLAMA_OPENAI_BASE_URL = $openaiBase
-$env:OPENAI_BASE_URL = $openaiBase
-$env:OPENAI_API_BASE = $openaiBase
+# If Context Manager is enabled, client traffic routes to the Proxy port; otherwise directly to llama-server.
+$clientBase = if ($cmEnabled) { "http://$HostAddr`:$activeCmPort" } else { $localBase }
+$clientOpenaiBase = "$clientBase/v1"
+
+$env:LLAMA_BASE_URL = $clientBase
+$env:LLAMA_OPENAI_BASE_URL = $clientOpenaiBase
+$env:OPENAI_BASE_URL = $clientOpenaiBase
+$env:OPENAI_API_BASE = $clientOpenaiBase
 $env:OPENAI_API_KEY = "local-key"
 
-$env:ANTHROPIC_BASE_URL = $localBase
+$env:ANTHROPIC_BASE_URL = $clientBase
 $env:ANTHROPIC_AUTH_TOKEN = "local"
 $env:ANTHROPIC_API_KEY = "local-key"
 $env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = $disableTeleVal
@@ -516,6 +546,9 @@ $env:LOCAL_REASONING_MODEL = $defaultModelId
 $env:LOCAL_FAST_MODEL = $defaultModelId
 
 Write-Host "llama-server is live at $localBase!" -ForegroundColor Green
+if ($cmEnabled) {
+    Write-Host "Context Manager Proxy is active at $clientBase -> proxying to $localBase" -ForegroundColor Cyan
+}
 Write-Host "Active Model: $defaultModelId" -ForegroundColor Yellow
 Write-Host "Available Models:" -ForegroundColor Cyan
 if ($liveModels.Count -gt 0) {
@@ -552,9 +585,9 @@ if ([Environment]::UserInteractive) {
                 
                 Write-Host "Launching Claude Code with model '$selectedModel' in a new window..." -ForegroundColor Green
                 
-                # Prepare the startup command for the new window
+                # Prepare the startup command for the new window (pointing to $clientBase)
                 $startupCmds = @(
-                    "`$env:ANTHROPIC_BASE_URL = '$localBase'",
+                    "`$env:ANTHROPIC_BASE_URL = '$clientBase'",
                     "`$env:ANTHROPIC_AUTH_TOKEN = 'local'",
                     "`$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '$disableTeleVal'",
                     "`$env:CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY = '1'",

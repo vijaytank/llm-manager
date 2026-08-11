@@ -31,7 +31,7 @@ def read_preset_ctx_limit(preset_path: Optional[str] = None, model_alias: Option
 
     config = configparser.ConfigParser()
     try:
-        config.read(preset_path, encoding="utf-8")
+        config.read(preset_path, encoding="utf-8-sig")
         
         # 1. Check exact model section if provided
         if model_alias and config.has_section(model_alias):

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # LLO run-setup.sh
 # Convenience entry point for macOS and Linux users.
 # Equivalent of: pwsh -File main.ps1
@@ -11,7 +11,15 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if ! command -v pwsh &>/dev/null; then
+PWSH=""
+for candidate in "$(command -v pwsh 2>/dev/null)" /usr/bin/pwsh /snap/bin/pwsh /usr/local/bin/pwsh; do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+        PWSH="$candidate"
+        break
+    fi
+done
+
+if [ -z "$PWSH" ]; then
     echo "[ERROR] PowerShell 7 (pwsh) is not installed or not in PATH."
     echo "  macOS  : brew install powershell"
     echo "  Ubuntu : sudo apt install powershell"
@@ -20,4 +28,4 @@ if ! command -v pwsh &>/dev/null; then
     exit 1
 fi
 
-exec pwsh -File "$SCRIPT_DIR/main.ps1" "$@"
+exec "$PWSH" -File "$SCRIPT_DIR/main.ps1" "$@"

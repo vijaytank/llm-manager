@@ -23,20 +23,29 @@ export interface ValidationResult {
   correctedConfig: AppConfig;
 }
 
+export function estimateBlockCount(fileSizeGb: number): number {
+  if (fileSizeGb < 3)   return 22;   // ~1B
+  if (fileSizeGb < 6)   return 32;   // 3B–7B
+  if (fileSizeGb < 12)  return 40;   // 8B–13B
+  if (fileSizeGb < 25)  return 60;   // 14B–30B
+  return 80;                          // 32B+
+}
+
 /// Mathematically Exact KV Cache Memory Calculator
 /// Formula: (ctxTokens * layers * kvDim * (bytesPerElemK + bytesPerElemV)) / 1024^3
 export function calculateKvCacheGb(
   ctxTokens: number,
   blockCount: number = 32,
   cacheTypeK: string = 'f16',
-  cacheTypeV: string = 'f16'
+  cacheTypeV: string = 'f16',
+  parallelSlots: number = 1
 ): number {
   const bytesPerElemK = cacheTypeK === 'q4_0' ? 0.5625 : cacheTypeK === 'q8_0' ? 1.0625 : 2.0;
   const bytesPerElemV = cacheTypeV === 'q4_0' ? 0.5625 : cacheTypeV === 'q8_0' ? 1.0625 : 2.0;
 
-  const kvDim = blockCount > 40 ? 2048 : 1024;
+  const kvDim = 1024;
   const bytesPerToken = blockCount * kvDim * (bytesPerElemK + bytesPerElemV);
-  const totalBytes = ctxTokens * bytesPerToken;
+  const totalBytes = ctxTokens * Math.max(1, parallelSlots) * bytesPerToken;
 
   return Number((totalBytes / (1024 * 1024 * 1024)).toFixed(2));
 }
@@ -105,7 +114,13 @@ export function validateConfiguration(
 
   // Rule 4: Context Size vs. VRAM Memory Overflow
   const ctx = config.default_context_size || 32768;
-  const estimatedKvGb = calculateKvCacheGb(ctx, 32, config.cache_type_k, config.cache_type_v);
+  const estimatedKvGb = calculateKvCacheGb(
+    ctx,
+    estimateBlockCount(activeModelSizeGb),
+    config.cache_type_k,
+    config.cache_type_v,
+    config.parallel_slots || 1
+  );
   const totalMem = activeModelSizeGb + estimatedKvGb;
 
   if (!isCpuOnly && totalMem > vramGb * 0.90) {
@@ -182,7 +197,13 @@ export function validateModelLaunch(
   const ramGb = hardware.totalRamGb || 16;
 
   const ctx = config.default_context_size || 32768;
-  const estimatedKvGb = calculateKvCacheGb(ctx, 32, config.cache_type_k, config.cache_type_v);
+  const estimatedKvGb = calculateKvCacheGb(
+    ctx,
+    estimateBlockCount(model.fileSizeGb),
+    config.cache_type_k,
+    config.cache_type_v,
+    config.parallel_slots || 1
+  );
   const totalModelMem = model.fileSizeGb + estimatedKvGb + 0.5;
 
   // Case D: Severe RAM Deficit (Blocked launch)

@@ -11,6 +11,27 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "Searching for active llama-server processes..." -ForegroundColor Cyan
 
+# Stop Context Manager Proxy process if PID file exists
+$userAppDir = if ($env:APPDATA) {
+    Join-Path $env:APPDATA "LLM Manager"
+} elseif ($env:USERPROFILE) {
+    Join-Path $env:USERPROFILE ".config\LLM Manager"
+} elseif ($env:HOME) {
+    Join-Path $env:HOME ".config/LLM Manager"
+} else { $null }
+
+if ($userAppDir) {
+    $pidFile = Join-Path $userAppDir "context-manager.pid"
+    if (Test-Path $pidFile) {
+        try {
+            $cmPid = [int](Get-Content $pidFile -Raw).Trim()
+            Stop-Process -Id $cmPid -Force -ErrorAction SilentlyContinue
+            Write-Host "  Terminated Context Manager Proxy (PID: $cmPid)" -ForegroundColor DarkGray
+        } catch {}
+        Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+    }
+}
+
 if ($env:OS -match "Windows" -or $IsWindows) {
     # Windows: find all llama-server.exe processes
     $running = @(Get-CimInstance Win32_Process | Where-Object {
@@ -33,7 +54,7 @@ if ($env:OS -match "Windows" -or $IsWindows) {
         Write-Host "No active llama-server found listening on port $Port." -ForegroundColor Green
     }
 
-    # Stop Context Manager Proxy process if active
+    # Fallback cleanup for Context Manager process
     $cmProcs = @(Get-CimInstance Win32_Process | Where-Object {
         $_.Name -eq "python.exe" -and ($_.ExecutablePath -like "*context_manager*" -or $_.CommandLine -like "*context_manager*")
     })
@@ -113,7 +134,7 @@ if ($env:OS -match "Windows" -or $IsWindows) {
     }
 
     try {
-        $cmProcs = @(Get-Process | Where-Object { $_.CommandLine -match 'proxy:app' } -ErrorAction SilentlyContinue)
+        $cmProcs = @(Get-Process | Where-Object { $_.CommandLine -match 'context_manager' } -ErrorAction SilentlyContinue)
         $cmProcs | Stop-Process -Force -ErrorAction SilentlyContinue
     } catch {}
 }

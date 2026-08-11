@@ -131,20 +131,6 @@ if ($config.overrides -is [system.management.automation.pscustomobject]) {
     $config.overrides = @{}
 }
 
-function Map-LegacyConfigKeyToOverride {
-    param(
-        [string]$LegacyKey,
-        [string]$OverrideKey
-    )
-    if ($config.ContainsKey($LegacyKey) -and -not $config.overrides.ContainsKey($OverrideKey) -and $loadedKeys -contains $LegacyKey) {
-        $value = $config[$LegacyKey]
-        if ($null -ne $value -and $value -ne "") {
-            $config.overrides[$OverrideKey] = $value
-            Write-Host "  [legacy] '$LegacyKey' mapped to config.overrides.$OverrideKey" -ForegroundColor Yellow
-        }
-    }
-}
-
 # Explicit config.overrides remain active. Flat top-level keys are maintained as baseline configuration
 # and do not override hardware-adaptive tier settings unless placed in config.overrides.
 
@@ -415,7 +401,7 @@ function Get-SafeContextSize {
     if ($rawCtx -le 0) { $chosen = 4096 } else {
         # Calculate the largest power of two less than or equal to rawCtx
         $exponent = [math]::Floor([math]::Log($rawCtx) / [math]::Log(2))
-        $chosen = [math]::Pow(2, $exponent)
+        $chosen = [int][math]::Pow(2, $exponent)
     }
 
     # Upper bounds by tier to avoid aggressive context sizes on mid/low VRAM.
@@ -437,7 +423,7 @@ function Get-SafeContextSize {
         if ($hasClaude) { 65536 } else { 8192 }
     }
 
-    return [math]::Max($chosen, $minFloor)
+    return [int][math]::Max([int]$chosen, [int]$minFloor)
 }
 
 function Get-ValidatedSpecType {
@@ -549,8 +535,9 @@ function Find-MatchingTemplate {
     # Priority 2: Substring token match scoring
     $bestMatch = $null
     $bestScore = 0
+    $skipTokens = @('q4','q5','q6','q8','iq2','iq3','iq4','iq5','iq6','k','m','s','l','xs','nl','gguf','0','1','2','3')
     $aliasTokens = $normalizedAlias -split '-' | Where-Object {
-        $_.Length -gt 1 -and $_ -notmatch '^\d+$' -and $_ -ne 'gguf' -and $_ -ne 'q4' -and $_ -ne 'q5' -and $_ -ne 'q8' -and $_ -ne 'k' -and $_ -ne 'm' -and $_ -ne 's' -and $_ -ne 'l'
+        $_.Length -gt 2 -and $_ -notmatch '^\d+$' -and $skipTokens -notcontains $_
     }
     if ($aliasTokens.Count -gt 0) {
         foreach ($f in $files) {
@@ -602,6 +589,10 @@ foreach ($gguf in $ggufs) {
     # User context size configuration or override takes priority
     if ($config.ContainsKey("default_context_size") -and $config.default_context_size -and [int]$config.default_context_size -gt 0) {
         $ctxSize = [int]$config.default_context_size
+        if ($config.integrations -contains "claude-code" -and $ctxSize -lt 32768) {
+            $ctxSize = 32768
+            Write-Host "    [Claude Code] Enforced minimum ctx-size = 32768 for agent prompts" -ForegroundColor Cyan
+        }
         Write-Host "    [config] ctx-size = $ctxSize  (from config.default_context_size)" -ForegroundColor Green
     } elseif ($config.overrides.ContainsKey("ctx_size")) {
         $ctxSize = [int]$config.overrides["ctx_size"]

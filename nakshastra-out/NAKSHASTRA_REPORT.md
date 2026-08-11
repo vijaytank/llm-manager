@@ -5,53 +5,53 @@
 ## 🏆 High-Impact Files
 These files have the highest centrality (PageRank) and are critical to the system architecture.
 
-- [ui/src/store/configStore.ts](file:///E:/Projects/llm-manager/ui/src/store/configStore.ts) (Score: 0.5103)
-- [ui/src/store/hardwareStore.ts](file:///E:/Projects/llm-manager/ui/src/store/hardwareStore.ts) (Score: 0.3708)
-- [ui/src/store/serverStore.ts](file:///E:/Projects/llm-manager/ui/src/store/serverStore.ts) (Score: 0.2881)
-- [ui/src/store/modelsStore.ts](file:///E:/Projects/llm-manager/ui/src/store/modelsStore.ts) (Score: 0.2441)
-- [ui/src/components/layout/TopBar.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/TopBar.tsx) (Score: 0.2131)
-- [ui/src/lib/validation.ts](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts) (Score: 0.2117)
-- [ui/src/components/InfoTooltip.tsx](file:///E:/Projects/llm-manager/ui/src/components/InfoTooltip.tsx) (Score: 0.2053)
-- [ui/src/components/layout/PageShell.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/PageShell.tsx) (Score: 0.2053)
-- [llo-core/context_manager/context_engine.py](file:///E:/Projects/llm-manager/llo-core/context_manager/context_engine.py) (Score: 0.1549)
-- [ui/src/App.tsx](file:///E:/Projects/llm-manager/ui/src/App.tsx) (Score: 0.1395)
+- [ui/src/store/configStore.ts](file:///E:/Projects/llm-manager/ui/src/store/configStore.ts) (Score: 0.5922)
+- [ui/src/store/hardwareStore.ts](file:///E:/Projects/llm-manager/ui/src/store/hardwareStore.ts) (Score: 0.4289)
+- [ui/src/store/serverStore.ts](file:///E:/Projects/llm-manager/ui/src/store/serverStore.ts) (Score: 0.3371)
+- [ui/src/store/modelsStore.ts](file:///E:/Projects/llm-manager/ui/src/store/modelsStore.ts) (Score: 0.2807)
+- [ui/src/components/layout/TopBar.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/TopBar.tsx) (Score: 0.2493)
+- [ui/src/lib/validation.ts](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts) (Score: 0.2477)
+- [ui/src/components/layout/PageShell.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/PageShell.tsx) (Score: 0.2402)
+- [ui/src/components/InfoTooltip.tsx](file:///E:/Projects/llm-manager/ui/src/components/InfoTooltip.tsx) (Score: 0.2402)
+- [llo-core/context_manager/context_engine.py](file:///E:/Projects/llm-manager/llo-core/context_manager/context_engine.py) (Score: 0.1831)
+- [ui/src/App.tsx](file:///E:/Projects/llm-manager/ui/src/App.tsx) (Score: 0.1632)
 
 ## 🧬 High-Impact Symbols
 These class and function abstractions are the key logical hubs of the system.
 
-- [TokenizerCache](file:///E:/Projects/llm-manager/llo-core/context_manager/tokenizer_cache.py#L23-L96) (class in `llo-core/context_manager/tokenizer_cache.py` · Score: 1.0000)
-- [count_tokens](file:///E:/Projects/llm-manager/llo-core/context_manager/tokenizer_cache.py#L82-L96) (method in `llo-core/context_manager/tokenizer_cache.py` · Score: 0.9914)
-- [get_tokenizer](file:///E:/Projects/llm-manager/llo-core/context_manager/tokenizer_cache.py#L46-L80) (method in `llo-core/context_manager/tokenizer_cache.py` · Score: 0.7549)
-- [ContextEngine](file:///E:/Projects/llm-manager/llo-core/context_manager/context_engine.py#L90-L327) (class in `llo-core/context_manager/context_engine.py` · Score: 0.6902)
-- [count_tokens_messages](file:///E:/Projects/llm-manager/llo-core/context_manager/context_engine.py#L111-L124) (method in `llo-core/context_manager/context_engine.py` · Score: 0.6647)
-- [get_repo_for_alias](file:///E:/Projects/llm-manager/llo-core/context_manager/tokenizer_cache.py#L32-L44) (method in `llo-core/context_manager/tokenizer_cache.py` · Score: 0.6543)
-- [SessionState](file:///E:/Projects/llm-manager/llo-core/context_manager/context_engine.py#L83-L88) (class in `llo-core/context_manager/context_engine.py` · Score: 0.5473)
-- [extract_session_id](file:///E:/Projects/llm-manager/llo-core/context_manager/proxy.py#L28-L45) (function in `llo-core/context_manager/proxy.py` · Score: 0.4507)
-- [__init__](file:///E:/Projects/llm-manager/llo-core/context_manager/tokenizer_cache.py#L24-L30) (method in `llo-core/context_manager/tokenizer_cache.py` · Score: 0.4163)
-- [calculateKvCacheGb](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts#L28-L42) (function in `ui/src/lib/validation.ts` · Score: 0.3835)
+- [count_tokens_messages](file:///E:/Projects/llm-manager/llo-core/context_manager/context_engine.py#L139-L150) (method in `llo-core/context_manager/context_engine.py` · Score: 0.7762)
+- [ContextEngine](file:///E:/Projects/llm-manager/llo-core/context_manager/context_engine.py#L88-L343) (class in `llo-core/context_manager/context_engine.py` · Score: 0.7324)
+- [SessionState](file:///E:/Projects/llm-manager/llo-core/context_manager/context_engine.py#L81-L86) (class in `llo-core/context_manager/context_engine.py` · Score: 0.7189)
+- [extract_session_id](file:///E:/Projects/llm-manager/llo-core/context_manager/proxy.py#L24-L41) (function in `llo-core/context_manager/proxy.py` · Score: 0.5282)
+- [TokenizerCache](file:///E:/Projects/llm-manager/llo-core/context_manager/tokenizer_cache.py#L23-L96) (class in `llo-core/context_manager/tokenizer_cache.py` · Score: 0.4949)
+- [convert_anthropic_to_openai_messages](file:///E:/Projects/llm-manager/llo-core/context_manager/proxy.py#L53-L97) (function in `llo-core/context_manager/proxy.py` · Score: 0.4156)
+- [read_preset_ctx_limit](file:///E:/Projects/llm-manager/llo-core/context_manager/preset_reader.py#L6-L60) (function in `llo-core/context_manager/preset_reader.py` · Score: 0.4149)
+- [get_repo_for_alias](file:///E:/Projects/llm-manager/llo-core/context_manager/tokenizer_cache.py#L32-L44) (method in `llo-core/context_manager/tokenizer_cache.py` · Score: 0.4060)
+- [get_tokenizer](file:///E:/Projects/llm-manager/llo-core/context_manager/tokenizer_cache.py#L46-L80) (method in `llo-core/context_manager/tokenizer_cache.py` · Score: 0.3770)
+- [_get_checkpoint_path](file:///E:/Projects/llm-manager/llo-core/context_manager/context_engine.py#L106-L115) (method in `llo-core/context_manager/context_engine.py` · Score: 0.3636)
 
 ## 📦 Module Communities (Louvain)
 The following clusters represent tightly-coupled functional modules detected in the graph.
 
 ### Module 1: ui Cluster
-- **Size**: 13 nodes
-- **Key Files**: ui/src/pages/Overview.tsx, ui/src/components/__tests__/InfoTooltip.test.ts, ui/src/pages/Models.tsx, ui/src/components/ImpactBanner.tsx, ui/src/store/modelsStore.ts...
+- **Size**: 17 nodes
+- **Key Files**: ui/src/pages/__tests__/OverviewFlow.test.ts, ui/src/store/configStore.ts, ui/src/pages/__tests__/SetupFlow.test.ts, ui/src/lib/validation.ts, ui/src/store/modelsStore.ts...
 
 ### Module 2: ui Cluster
-- **Size**: 11 nodes
-- **Key Files**: ui/src/pages/Logs.tsx, ui/src/components/layout/TopBar.tsx, ui/src/pages/__tests__/PerformanceAndSettings.test.ts, ui/src/components/layout/__tests__/TopBar.test.ts, ui/src/store/__tests__/configStore.test.ts...
+- **Size**: 9 nodes
+- **Key Files**: ui/src/pages/Diagnostics.tsx, ui/src/components/layout/Sidebar.tsx, ui/src/App.tsx, ui/src/pages/Settings.tsx, ui/src/components/layout/PageShell.tsx...
 
 ### Module 3: ui Cluster
-- **Size**: 9 nodes
-- **Key Files**: ui/src/pages/Integrations.tsx, ui/src/components/InfoTooltip.tsx, ui/src/main.tsx, ui/src/components/layout/Sidebar.tsx, ui/src/pages/Settings.tsx...
+- **Size**: 7 nodes
+- **Key Files**: ui/src/store/__tests__/serverStore.test.ts, ui/src/store/serverStore.ts, ui/src/components/layout/__tests__/TopBar.test.ts, ui/src/pages/__tests__/PerformanceAndSettings.test.ts, ui/src/pages/Logs.tsx...
 
 ### Module 4: llo-core Cluster
-- **Size**: 9 nodes
-- **Key Files**: llo-core/context_manager/context_engine.py, llo-core/context_manager/tests/test_token_counting.py, llo-core/context_manager/tests/test_session_id.py, llo-core/context_manager/proxy.py, llo-core/context_manager/tokenizer_cache.py...
+- **Size**: 5 nodes
+- **Key Files**: llo-core/context_manager/tests/test_compress.py, llo-core/context_manager/tests/test_token_counting.py, llo-core/context_manager/tests/test_needs_compression.py, llo-core/context_manager/tokenizer_cache.py, llo-core/context_manager/context_engine.py
 
 ### Module 5: llo-core Cluster
-- **Size**: 1 nodes
-- **Key Files**: llo-core/context_manager/config.py
+- **Size**: 3 nodes
+- **Key Files**: llo-core/context_manager/proxy.py, llo-core/context_manager/tests/test_session_id.py, llo-core/context_manager/tests/test_anthropic_conversion.py
 
 
 ## ⚠️ Blast Radius Warnings

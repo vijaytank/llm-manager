@@ -34,14 +34,14 @@ class TokenizerCache:
             return override_repo.strip()
 
         if not model_alias:
-            return "Qwen/Qwen2.5-1.5B-Instruct"
+            return None
 
         alias_lower = model_alias.lower()
         for key, repo in ALIAS_TO_HF_REPO.items():
             if key in alias_lower:
                 return repo
 
-        return "Qwen/Qwen2.5-1.5B-Instruct"
+        return None
 
     def get_tokenizer(self, model_alias: str, override_repo: Optional[str] = None) -> Any:
         repo = self.get_repo_for_alias(model_alias, override_repo)
