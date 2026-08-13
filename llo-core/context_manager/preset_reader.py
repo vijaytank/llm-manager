@@ -26,6 +26,13 @@ def read_preset_ctx_limit(preset_path: Optional[str] = None, model_alias: Option
                 preset_path = str(cand)
                 break
 
+    if model_alias:
+        alias_lower = model_alias.lower()
+        if "claude" in alias_lower:
+            return 200000
+        if "gpt-4" in alias_lower or "gpt4" in alias_lower or "o1" in alias_lower or "o3" in alias_lower:
+            return 128000
+
     if not preset_path or not Path(preset_path).is_file():
         return 65536
 
@@ -50,9 +57,12 @@ def read_preset_ctx_limit(preset_path: Optional[str] = None, model_alias: Option
                     if config.has_option(sec, "ctx_size"):
                         return config.getint(sec, "ctx_size")
 
-        # 3. Check fallback section [*] or [DEFAULT]
-        if config.has_section("*") and config.has_option("*", "fit-ctx"):
-            return config.getint("*", "fit-ctx")
+        # 3. Check fallback section [*] or [DEFAULT] for ctx-size
+        if config.has_section("*"):
+            if config.has_option("*", "ctx-size"):
+                return config.getint("*", "ctx-size")
+            if config.has_option("*", "ctx_size"):
+                return config.getint("*", "ctx_size")
 
     except Exception as e:
         print(f"[ContextManager] Error reading preset INI file {preset_path}: {e}")

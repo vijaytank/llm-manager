@@ -7,7 +7,7 @@ ALIAS_TO_HF_REPO: Dict[str, str] = {
     "gemma": "google/gemma-2-2b-it",
     "gemma2": "google/gemma-2-2b-it",
     "gemma3": "google/gemma-3-4b-it",
-    "gemma4": "google/gemma-2-2b-it",
+    "gemma4": "google/gemma-3-4b-it",
     "qwen": "Qwen/Qwen2.5-1.5B-Instruct",
     "qwen2": "Qwen/Qwen2.5-1.5B-Instruct",
     "qwen3": "Qwen/Qwen2.5-1.5B-Instruct",
@@ -18,6 +18,9 @@ ALIAS_TO_HF_REPO: Dict[str, str] = {
     "ministral": "mistralai/Mistral-7B-v0.1",
     "phi": "microsoft/phi-2",
     "deepseek": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+    "claude": "Qwen/Qwen2.5-1.5B-Instruct",
+    "gpt": "Qwen/Qwen2.5-1.5B-Instruct",
+    "openai": "Qwen/Qwen2.5-1.5B-Instruct",
 }
 
 class TokenizerCache:

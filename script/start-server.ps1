@@ -20,19 +20,16 @@ param(
 $ErrorActionPreference = "Stop"
 
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+$lloCoreDir = Join-Path $ManagerDir "llo-core"
+if (Test-Path (Join-Path $lloCoreDir "Paths.ps1")) {
+    . (Join-Path $lloCoreDir "Paths.ps1")
+}
 
 if ([string]::IsNullOrWhiteSpace($ConfigFile)) {
-    $appDataConfig = if ($env:APPDATA) {
-        Join-Path $env:APPDATA "LLM Manager\llo-config.json"
-    } elseif ($env:USERPROFILE) {
-        Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
-    } elseif ($env:HOME) {
-        Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
-    } else { $null }
-
-    if ($appDataConfig -and (Test-Path $appDataConfig)) {
-        $ConfigFile = $appDataConfig
-    } else {
+    if (Get-Command "Get-LLMManagerConfigPath" -ErrorAction SilentlyContinue) {
+        $ConfigFile = Get-LLMManagerConfigPath -ManagerDir $ManagerDir
+    }
+    if (-not $ConfigFile) {
         $ConfigFile = Join-Path $ManagerDir "llo-config.json"
     }
 }
@@ -328,37 +325,41 @@ if ($models.Count -gt 0) {
     $serverArgs += @("-m", $selectedEntry.Path)
     Write-Host "Selected Active Model for Inference: $($selectedEntry.Alias) ($($selectedEntry.Path))" -ForegroundColor Green
 
-    # ── Context Size (-c) Resolution Hierarchy: CLI > UI Config > SetupRouter ──
+    # ── Context Size (-c) Resolution Hierarchy: CLI > SetupRouter Per-Model > UI Config Fallback ──
     $finalCtxSize = 0
     if ($PSBoundParameters.ContainsKey("CtxSize") -and $CtxSize -gt 0) {
         $finalCtxSize = $CtxSize
         Write-Host "Context Size: $finalCtxSize tokens (from CLI switch)" -ForegroundColor DarkYellow
-    } elseif ($config.ContainsKey("default_context_size") -and [int]$config.default_context_size -gt 0) {
-        $finalCtxSize = [int]$config.default_context_size
-        Write-Host "Context Size: $finalCtxSize tokens (from UI config.default_context_size)" -ForegroundColor Green
     } elseif ($selectedEntry.CtxSize -and [int]$selectedEntry.CtxSize -gt 0) {
         $finalCtxSize = [int]$selectedEntry.CtxSize
-        Write-Host "Context Size: $finalCtxSize tokens (from hardware auto-tune)" -ForegroundColor DarkGray
+        Write-Host "Context Size: $finalCtxSize tokens (from per-model hardware auto-tune)" -ForegroundColor Green
+    } elseif ($config.ContainsKey("default_context_size") -and [int]$config.default_context_size -gt 0) {
+        $finalCtxSize = [int]$config.default_context_size
+        Write-Host "Context Size: $finalCtxSize tokens (from UI config fallback)" -ForegroundColor DarkGray
     }
     if ($finalCtxSize -gt 0) {
         $serverArgs += @("-c", "$finalCtxSize")
     }
 
-    # ── Parallel Slots (-np) Resolution Hierarchy: CLI > UI Config > Default (1) ──
-    $finalParallel = 0
+    # ── Parallel Slots (-np) Resolution Hierarchy: CLI > UI Config > SetupRouter > Default ──
     if ($PSBoundParameters.ContainsKey("Parallel") -and $Parallel -gt 0) {
-        $finalParallel = $Parallel
-        Write-Host "Parallel Slots: $finalParallel (from CLI switch)" -ForegroundColor DarkYellow
+        $serverArgs += @("-np", "$Parallel")
+        Write-Host "Parallel Slots: $Parallel (from CLI switch)" -ForegroundColor DarkYellow
+    } elseif ($PSBoundParameters.ContainsKey("Parallel") -and $Parallel -eq -1) {
+        Write-Host "Parallel Slots: auto (from CLI switch -1)" -ForegroundColor DarkYellow
     } elseif ($config.ContainsKey("parallel_slots") -and [int]$config.parallel_slots -gt 0) {
         $finalParallel = [int]$config.parallel_slots
+        $serverArgs += @("-np", "$finalParallel")
         Write-Host "Parallel Slots: $finalParallel (from UI config.parallel_slots)" -ForegroundColor Green
+    } elseif ($config.ContainsKey("parallel_slots") -and [int]$config.parallel_slots -eq -1) {
+        Write-Host "Parallel Slots: auto (from UI config -1)" -ForegroundColor DarkGray
     } elseif ($selectedEntry.Parallel -and [int]$selectedEntry.Parallel -gt 0) {
         $finalParallel = [int]$selectedEntry.Parallel
+        $serverArgs += @("-np", "$finalParallel")
         Write-Host "Parallel Slots: $finalParallel (from preset config)" -ForegroundColor DarkGray
     } else {
-        $finalParallel = 1
+        $serverArgs += @("-np", "1")
     }
-    $serverArgs += @("-np", "$finalParallel")
 
     # ── Micro-batch Size (-ub) Resolution Hierarchy: CLI > UI Config > Default (512) ──
     $finalUbatch = 0
@@ -371,6 +372,20 @@ if ($models.Count -gt 0) {
     }
     if ($finalUbatch -gt 0) {
         $serverArgs += @("-ub", "$finalUbatch")
+    }
+
+    # ── CLI Switches Overrides: Flash Attention & KV Cache Precision ──
+    if ($PSBoundParameters.ContainsKey("FlashAttn") -and -not [string]::IsNullOrWhiteSpace($FlashAttn)) {
+        $serverArgs += @("--flash-attn", $FlashAttn)
+        Write-Host "Flash Attention: $FlashAttn (from CLI switch)" -ForegroundColor DarkYellow
+    }
+    if ($PSBoundParameters.ContainsKey("CacheTypeK") -and -not [string]::IsNullOrWhiteSpace($CacheTypeK)) {
+        $serverArgs += @("--cache-type-k", $CacheTypeK)
+        Write-Host "KV Cache K Precision: $CacheTypeK (from CLI switch)" -ForegroundColor DarkYellow
+    }
+    if ($PSBoundParameters.ContainsKey("CacheTypeV") -and -not [string]::IsNullOrWhiteSpace($CacheTypeV)) {
+        $serverArgs += @("--cache-type-v", $CacheTypeV)
+        Write-Host "KV Cache V Precision: $CacheTypeV (from CLI switch)" -ForegroundColor DarkYellow
     }
 
     # Explicitly pass --mmproj and --no-mmproj-offload CLI flags if configured

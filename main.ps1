@@ -475,15 +475,9 @@ if ($hw) {
     }
 }
 
-$config.cache_type_k = $cacheType
-$config.cache_type_v = $cacheType
-$config.flash_attn = $flashAttn
 $config.context_shift = $contextShift
-$config.default_context_size = $defaultCtxSize
 $config.fit_ctx_min = $fitCtxMin
 $config.cache_reuse_chunk = $cacheReuseChunk
-$config.ubatch_size = $ubatchSize
-$config.parallel_slots = $parallelSlots
 $config.cache_idle_slots = $true   # always safe to enable
 
 Write-Host "  -> Flash Attention    : $flashAttn" -ForegroundColor Green

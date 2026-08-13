@@ -13,11 +13,13 @@ interface ServerState {
   port: number;
   logs: LogEntry[];
   configSnapshot: string | null;
+  pendingRestart: boolean;
   setStatus: (status: ServerStatus) => void;
   setPort: (port: number) => void;
   addLog: (log: LogEntry) => void;
   clearLogs: () => void;
   setConfigSnapshot: (snapshot: string | null) => void;
+  setPendingRestart: (pending: boolean) => void;
 }
 
 export const useServerStore = create<ServerState>((set) => ({
@@ -25,9 +27,14 @@ export const useServerStore = create<ServerState>((set) => ({
   port: 8080,
   logs: [],
   configSnapshot: null,
-  setStatus: (status) => set({ status }),
+  pendingRestart: false,
+  setStatus: (status) => set((state) => ({
+    status,
+    pendingRestart: (status === 'stopped' || status === 'starting') ? false : state.pendingRestart,
+  })),
   setPort: (port) => set({ port }),
   addLog: (log) => set((state) => ({ logs: [...state.logs.slice(-499), log] })),
   clearLogs: () => set({ logs: [] }),
   setConfigSnapshot: (configSnapshot) => set({ configSnapshot }),
+  setPendingRestart: (pendingRestart) => set({ pendingRestart }),
 }));

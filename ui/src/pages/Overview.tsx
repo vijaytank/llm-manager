@@ -15,13 +15,12 @@ import './Overview.css';
 export const OverviewPage: React.FC = () => {
   const { profile, fetchHardware, loading: hardwareLoading } = useHardwareStore();
   const { config, updateConfig, saveConfig } = useConfigStore();
-  const { status, port, logs, clearLogs } = useServerStore();
+  const { status, port, logs, clearLogs, pendingRestart } = useServerStore();
   const { models, fetchModels } = useModelsStore();
   const { assessments } = useValidationStore();
   const [backendModelInfo, setBackendModelInfo] = useState<{ active_model?: string; models_preset_path?: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [templates, setTemplates] = useState<string[]>([]);
-  const [pendingRestart, setPendingRestart] = useState(false);
 
   useEffect(() => {
     fetchHardware();
@@ -47,20 +46,18 @@ export const OverviewPage: React.FC = () => {
     }
   }, [status]);
 
-  useEffect(() => {
-    if (status === 'stopped' || status === 'starting') {
-      setPendingRestart(false);
-    }
-  }, [status]);
-
   const [selectedModelFilename, setSelectedModelFilename] = useState<string>('');
 
   useEffect(() => {
-    if (models.length > 0 && !selectedModelFilename) {
+    if (models.length > 0) {
       const active = models.find((m) => m.name === config?.active_model);
-      setSelectedModelFilename(active ? active.filename : models[0].filename);
+      if (active && active.filename !== selectedModelFilename) {
+        setSelectedModelFilename(active.filename);
+      } else if (!selectedModelFilename) {
+        setSelectedModelFilename(models[0].filename);
+      }
     }
-  }, [models, config?.active_model, selectedModelFilename]);
+  }, [models, config?.active_model]);
 
   const baseModels = models.filter((m) => !m.isMmproj);
   const mmprojModels = models.filter((m) => m.isMmproj);

@@ -41,6 +41,47 @@ impl Default for GgufMetadata {
     }
 }
 
+fn read_u32<R: Read>(r: &mut R) -> Result<u32, String> {
+    let mut b = [0u8; 4];
+    r.read_exact(&mut b).map_err(|e| e.to_string())?;
+    Ok(u32::from_le_bytes(b))
+}
+
+fn read_u64<R: Read>(r: &mut R) -> Result<u64, String> {
+    let mut b = [0u8; 8];
+    r.read_exact(&mut b).map_err(|e| e.to_string())?;
+    Ok(u64::from_le_bytes(b))
+}
+
+fn read_string<R: Read>(r: &mut R) -> Result<String, String> {
+    let len = read_u64(r)? as usize;
+    if len > 10000 {
+        return Err("String length unreasonably large in GGUF header".to_string());
+    }
+    let mut buf = vec![0u8; len];
+    r.read_exact(&mut buf).map_err(|e| e.to_string())?;
+    Ok(String::from_utf8_lossy(&buf).to_string())
+}
+
+fn skip_gguf_value<R: Read>(r: &mut R, val_type: u32) -> Result<(), String> {
+    match val_type {
+        0 | 1 | 7 => { let mut b = [0u8; 1]; r.read_exact(&mut b).map_err(|e| e.to_string())?; }
+        2 | 3 => { let mut b = [0u8; 2]; r.read_exact(&mut b).map_err(|e| e.to_string())?; }
+        4 | 5 | 6 => { let mut b = [0u8; 4]; r.read_exact(&mut b).map_err(|e| e.to_string())?; }
+        8 => { let _ = read_string(r)?; }
+        9 => {
+            let elem_type = read_u32(r)?;
+            let arr_len = read_u64(r)? as usize;
+            for _ in 0..arr_len {
+                skip_gguf_value(r, elem_type)?;
+            }
+        }
+        10 | 11 | 12 => { let mut b = [0u8; 8]; r.read_exact(&mut b).map_err(|e| e.to_string())?; }
+        _ => return Err(format!("Unknown GGUF value type: {}", val_type)),
+    }
+    Ok(())
+}
+
 /// Reads binary GGUF header metadata (magic, version, KV metadata count, KV entries) safely.
 pub fn parse_gguf_file<P: AsRef<Path>>(path: P) -> Result<GgufMetadata, String> {
     let p = path.as_ref();
@@ -55,37 +96,85 @@ pub fn parse_gguf_file<P: AsRef<Path>>(path: P) -> Result<GgufMetadata, String> 
         return Err(format!("File {:?} is not a valid GGUF file (invalid magic)", p));
     }
 
-    let mut ver_buf = [0u8; 4];
-    file.read_exact(&mut ver_buf).map_err(|e| format!("Failed to read version: {}", e))?;
-    let _version = u32::from_le_bytes(ver_buf);
+    let _version = read_u32(&mut file)?;
+    let _tensor_count = read_u64(&mut file)?;
+    let kv_count = read_u64(&mut file)?;
 
     let filename = p.file_stem().unwrap_or_default().to_string_lossy().to_string();
-    
-    let quant = if filename.to_lowercase().contains("q4") {
-        "Q4_K_M".to_string()
-    } else if filename.to_lowercase().contains("q8") {
-        "Q8_0".to_string()
-    } else if filename.to_lowercase().contains("q5") {
-        "Q5_K_M".to_string()
-    } else {
-        "Q4_K_M".to_string()
+
+    let mut architecture = "llama".to_string();
+    let mut context_length: u32 = 0;
+    let mut block_count: u32 = 0;
+    let mut file_type: Option<u32> = None;
+
+    // Parse binary KV entries up to kv_count
+    for _ in 0..kv_count.min(500) {
+        let key = match read_string(&mut file) {
+            Ok(k) => k,
+            Err(_) => break,
+        };
+        let val_type = match read_u32(&mut file) {
+            Ok(vt) => vt,
+            Err(_) => break,
+        };
+
+        if key == "general.architecture" && val_type == 8 {
+            if let Ok(arch) = read_string(&mut file) {
+                architecture = arch;
+            }
+        } else if (key == "llm.context_length" || key.ends_with(".context_length")) && (val_type == 4 || val_type == 5 || val_type == 10) {
+            if val_type == 4 || val_type == 5 {
+                if let Ok(val) = read_u32(&mut file) { context_length = val; }
+            } else if val_type == 10 {
+                if let Ok(val) = read_u64(&mut file) { context_length = val as u32; }
+            }
+        } else if (key == "llm.block_count" || key.ends_with(".block_count")) && (val_type == 4 || val_type == 5 || val_type == 10) {
+            if val_type == 4 || val_type == 5 {
+                if let Ok(val) = read_u32(&mut file) { block_count = val; }
+            } else if val_type == 10 {
+                if let Ok(val) = read_u64(&mut file) { block_count = val as u32; }
+            }
+        } else if key == "general.file_type" && (val_type == 4 || val_type == 5) {
+            if let Ok(val) = read_u32(&mut file) { file_type = Some(val); }
+        } else {
+            if skip_gguf_value(&mut file, val_type).is_err() {
+                break;
+            }
+        }
+    }
+
+    // Fallbacks if metadata keys were missing from header
+    if context_length == 0 {
+        context_length = 32768;
+    }
+    if block_count == 0 {
+        block_count = if file_size_gb > 20.0 { 64 } else if file_size_gb > 8.0 { 40 } else { 32 };
+    }
+
+    let quant = match file_type {
+        Some(2) | Some(3) => "Q4_K_M".to_string(),
+        Some(7) => "Q8_0".to_string(),
+        _ => {
+            let fn_lower = filename.to_lowercase();
+            if fn_lower.contains("q8") { "Q8_0".to_string() }
+            else if fn_lower.contains("q5") { "Q5_K_M".to_string() }
+            else { "Q4_K_M".to_string() }
+        }
     };
 
-    let layers = if file_size_gb > 20.0 { 64 } else if file_size_gb > 8.0 { 40 } else { 32 };
-    let kv_dim = if layers > 40 { 2048.0 } else { 1024.0 };
+    let kv_dim = if block_count > 40 { 2048.0 } else { 1024.0 };
     let bytes_per_gb = 1024.0 * 1024.0 * 1024.0;
 
-    // Mathematically exact KV cache formula: (tokens * layers * kv_dim * 2 * 2_bytes_f16) / 1024^3
-    let kv_8k = ((8192.0 * layers as f64 * kv_dim * 4.0 / bytes_per_gb) * 10.0).round() / 10.0;
-    let kv_32k = ((32768.0 * layers as f64 * kv_dim * 4.0 / bytes_per_gb) * 10.0).round() / 10.0;
-    let kv_64k = ((65536.0 * layers as f64 * kv_dim * 4.0 / bytes_per_gb) * 10.0).round() / 10.0;
+    let kv_8k = ((8192.0 * block_count as f64 * kv_dim * 4.0 / bytes_per_gb) * 10.0).round() / 10.0;
+    let kv_32k = ((32768.0 * block_count as f64 * kv_dim * 4.0 / bytes_per_gb) * 10.0).round() / 10.0;
+    let kv_64k = ((65536.0 * block_count as f64 * kv_dim * 4.0 / bytes_per_gb) * 10.0).round() / 10.0;
 
     Ok(GgufMetadata {
         name: filename,
-        architecture: "llama".to_string(),
+        architecture,
         quantization: quant,
-        context_length: 32768,
-        block_count: layers,
+        context_length,
+        block_count,
         file_size_gb,
         model_vram_gb: file_size_gb,
         kv_cache_gb_at_8k: kv_8k,

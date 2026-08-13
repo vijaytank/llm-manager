@@ -13,6 +13,7 @@ import { useConfigStore } from './store/configStore';
 import { useHardwareStore } from './store/hardwareStore';
 import { useServerStore } from './store/serverStore';
 import { useValidationStore } from './store/validationStore';
+import { useModelsStore } from './store/modelsStore';
 import './styles/index.css';
 
 export const App: React.FC = () => {
@@ -22,36 +23,40 @@ export const App: React.FC = () => {
   const { profile, fetchHardware } = useHardwareStore();
   const { setStatus, addLog } = useServerStore();
   const { validate } = useValidationStore();
+  const { models } = useModelsStore();
+
+  const activeModel = models.find((m) => m.name === config?.active_model);
 
   useEffect(() => {
     fetchConfig();
     fetchHardware();
 
-    const unlistenStatus = listen<string>('server-status-changed', (event) => {
-      setStatus(event.payload as any);
-    });
-
-    const unlistenLogs = listen<any>('server-log', (event) => {
-      addLog(event.payload);
-    });
-
-    const unlistenNav = listen<string>('navigate-to', (event) => {
-      setActivePage(event.payload as PageId);
-    });
+    let cleanupFns: Array<() => void> = [];
+    Promise.all([
+      listen<string>('server-status-changed', (event) => {
+        setStatus(event.payload as any);
+      }),
+      listen<any>('server-log', (event) => {
+        addLog(event.payload);
+      }),
+      listen<string>('navigate-to', (event) => {
+        setActivePage(event.payload as PageId);
+      }),
+    ]).then((unlistens) => {
+      cleanupFns = unlistens;
+    }).catch((err) => console.warn('Failed to register IPC event listeners:', err));
 
     return () => {
-      unlistenStatus.then((fn) => fn());
-      unlistenLogs.then((fn) => fn());
-      unlistenNav.then((fn) => fn());
+      cleanupFns.forEach((fn) => fn());
     };
   }, [fetchConfig, fetchHardware, setStatus, addLog]);
 
   // Real-time config & hardware safety validation
   useEffect(() => {
     if (config && profile) {
-      validate(config, profile);
+      validate(config, profile, activeModel?.fileSizeGb);
     }
-  }, [config, profile, validate]);
+  }, [config, profile, validate, activeModel?.fileSizeGb]);
 
   // Smart Routing: First time installation -> Setup Step 1. Returning user -> Overview Dashboard
   useEffect(() => {

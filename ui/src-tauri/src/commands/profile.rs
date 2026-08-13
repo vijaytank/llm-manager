@@ -31,11 +31,20 @@ pub struct GpuInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub struct RamInfo {
+    #[serde(alias = "TotalGB", alias = "total_gb")]
+    pub total_gb: f64,
+    #[serde(alias = "SafeBudgetMB", alias = "safe_budget_mb")]
+    pub safe_budget_mb: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct SystemHardwareProfile {
     #[serde(alias = "CPU")]
     pub cpu: CpuInfo,
     #[serde(alias = "RAM")]
-    pub ram: serde_json::Value,
+    pub ram: RamInfo,
     #[serde(alias = "GPU")]
     pub gpu: GpuInfo,
 }

@@ -1,53 +1,18 @@
 {
   "nodes": [
     {
-      "id": "ui/src/pages/__tests__/OverviewFlow.test.ts",
-      "label": "OverviewFlow.test.ts",
+      "id": "ui/src/pages/Logs.tsx",
+      "label": "Logs.tsx",
       "type": "file"
     },
     {
-      "id": "llo-core/context_manager/proxy.py",
-      "label": "proxy.py",
+      "id": "ui/src/components/InfoTooltip.tsx",
+      "label": "InfoTooltip.tsx",
       "type": "file"
     },
     {
-      "id": "llo-core/context_manager/tests/test_token_counting.py",
-      "label": "test_token_counting.py",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
-      "label": "PerformanceAndSettings.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/lib/__tests__/validation.test.ts",
-      "label": "validation.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "llo-core/context_manager/tokenizer_cache.py",
-      "label": "tokenizer_cache.py",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/configStore.ts",
-      "label": "configStore.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Settings.tsx",
-      "label": "Settings.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Performance.tsx",
-      "label": "Performance.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/__tests__/serverStore.test.ts",
-      "label": "serverStore.test.ts",
+      "id": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
+      "label": "AllScreensAndActions.test.ts",
       "type": "file"
     },
     {
@@ -61,143 +26,8 @@
       "type": "file"
     },
     {
-      "id": "llo-core/context_manager/config.py",
-      "label": "config.py",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/components/layout/__tests__/TopBar.test.ts",
-      "label": "TopBar.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/__tests__/modelsStore.test.ts",
-      "label": "modelsStore.test.ts",
-      "type": "file"
-    },
-    {
       "id": "ui/src/components/__tests__/InfoTooltip.test.ts",
       "label": "InfoTooltip.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Models.tsx",
-      "label": "Models.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Logs.tsx",
-      "label": "Logs.tsx",
-      "type": "file"
-    },
-    {
-      "id": "llo-core/context_manager/tests/test_compress.py",
-      "label": "test_compress.py",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
-      "label": "ParameterCLIForwarding.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/hardwareStore.ts",
-      "label": "hardwareStore.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/main.tsx",
-      "label": "main.tsx",
-      "type": "file"
-    },
-    {
-      "id": "llo-core/context_manager/context_engine.py",
-      "label": "context_engine.py",
-      "type": "file"
-    },
-    {
-      "id": "llo-core/context_manager/tests/test_needs_compression.py",
-      "label": "test_needs_compression.py",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Diagnostics.tsx",
-      "label": "Diagnostics.tsx",
-      "type": "file"
-    },
-    {
-      "id": "llo-core/context_manager/tests/test_session_id.py",
-      "label": "test_session_id.py",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/components/layout/PageShell.tsx",
-      "label": "PageShell.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/__tests__/SetupFlow.test.ts",
-      "label": "SetupFlow.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/components/InfoTooltip.tsx",
-      "label": "InfoTooltip.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/modelsStore.ts",
-      "label": "modelsStore.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/components/ImpactBanner.tsx",
-      "label": "ImpactBanner.tsx",
-      "type": "file"
-    },
-    {
-      "id": "llo-core/context_manager/tests/test_anthropic_conversion.py",
-      "label": "test_anthropic_conversion.py",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Setup.tsx",
-      "label": "Setup.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/components/layout/Sidebar.tsx",
-      "label": "Sidebar.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/serverStore.ts",
-      "label": "serverStore.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/__tests__/hardwareStore.test.ts",
-      "label": "hardwareStore.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Overview.tsx",
-      "label": "Overview.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/App.tsx",
-      "label": "App.tsx",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/store/__tests__/configStore.test.ts",
-      "label": "configStore.test.ts",
-      "type": "file"
-    },
-    {
-      "id": "ui/src/pages/Integrations.tsx",
-      "label": "Integrations.tsx",
       "type": "file"
     },
     {
@@ -206,13 +36,33 @@
       "type": "file"
     },
     {
-      "id": "llo-core/context_manager/preset_reader.py",
-      "label": "preset_reader.py",
+      "id": "llo-core/context_manager/proxy.py",
+      "label": "proxy.py",
       "type": "file"
     },
     {
-      "id": "ui/src/lib/validation.ts",
-      "label": "validation.ts",
+      "id": "ui/src/pages/Models.tsx",
+      "label": "Models.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/components/layout/Sidebar.tsx",
+      "label": "Sidebar.tsx",
+      "type": "file"
+    },
+    {
+      "id": "llo-core/context_manager/config.py",
+      "label": "config.py",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/Performance.tsx",
+      "label": "Performance.tsx",
+      "type": "file"
+    },
+    {
+      "id": "llo-core/context_manager/tests/test_token_counting.py",
+      "label": "test_token_counting.py",
       "type": "file"
     },
     {
@@ -221,8 +71,158 @@
       "type": "file"
     },
     {
-      "id": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
-      "label": "AllScreensAndActions.test.ts",
+      "id": "ui/src/main.tsx",
+      "label": "main.tsx",
+      "type": "file"
+    },
+    {
+      "id": "llo-core/context_manager/preset_reader.py",
+      "label": "preset_reader.py",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/__tests__/serverStore.test.ts",
+      "label": "serverStore.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/components/layout/__tests__/TopBar.test.ts",
+      "label": "TopBar.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/components/ImpactBanner.tsx",
+      "label": "ImpactBanner.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/Overview.tsx",
+      "label": "Overview.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/Diagnostics.tsx",
+      "label": "Diagnostics.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "label": "SetupFlow.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "llo-core/context_manager/tests/test_needs_compression.py",
+      "label": "test_needs_compression.py",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/__tests__/modelsStore.test.ts",
+      "label": "modelsStore.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/serverStore.ts",
+      "label": "serverStore.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/lib/validation.ts",
+      "label": "validation.ts",
+      "type": "file"
+    },
+    {
+      "id": "llo-core/context_manager/tests/test_session_id.py",
+      "label": "test_session_id.py",
+      "type": "file"
+    },
+    {
+      "id": "llo-core/context_manager/tests/test_anthropic_conversion.py",
+      "label": "test_anthropic_conversion.py",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/configStore.ts",
+      "label": "configStore.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/Integrations.tsx",
+      "label": "Integrations.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/App.tsx",
+      "label": "App.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/lib/__tests__/validation.test.ts",
+      "label": "validation.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/components/layout/PageShell.tsx",
+      "label": "PageShell.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
+      "label": "ParameterCLIForwarding.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
+      "label": "PerformanceAndSettings.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "llo-core/context_manager/tests/test_compress.py",
+      "label": "test_compress.py",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/Setup.tsx",
+      "label": "Setup.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "label": "OverviewFlow.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "llo-core/context_manager/tokenizer_cache.py",
+      "label": "tokenizer_cache.py",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/modelsStore.ts",
+      "label": "modelsStore.ts",
+      "type": "file"
+    },
+    {
+      "id": "llo-core/context_manager/context_engine.py",
+      "label": "context_engine.py",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/__tests__/hardwareStore.test.ts",
+      "label": "hardwareStore.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/__tests__/configStore.test.ts",
+      "label": "configStore.test.ts",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/pages/Settings.tsx",
+      "label": "Settings.tsx",
+      "type": "file"
+    },
+    {
+      "id": "ui/src/store/hardwareStore.ts",
+      "label": "hardwareStore.ts",
       "type": "file"
     },
     {
@@ -336,8 +336,18 @@
       "type": "stub"
     },
     {
+      "id": "asyncio",
+      "label": "asyncio",
+      "type": "stub"
+    },
+    {
       "id": "configparser",
       "label": "configparser",
+      "type": "stub"
+    },
+    {
+      "id": "contextlib",
+      "label": "contextlib",
       "type": "stub"
     },
     {
@@ -426,6 +436,11 @@
       "type": "stub"
     },
     {
+      "id": "time",
+      "label": "time",
+      "type": "stub"
+    },
+    {
       "id": "tokenizers",
       "label": "tokenizers",
       "type": "stub"
@@ -438,6 +453,11 @@
     {
       "id": "unittest.mock",
       "label": "unittest.mock",
+      "type": "stub"
+    },
+    {
+      "id": "uuid",
+      "label": "uuid",
       "type": "stub"
     },
     {
@@ -454,21 +474,6 @@
       "id": "zustand",
       "label": "zustand",
       "type": "stub"
-    },
-    {
-      "id": "llo-core/context_manager/config.py::ContextManagerConfig",
-      "label": "config.py::ContextManagerConfig",
-      "type": "symbol"
-    },
-    {
-      "id": "llo-core/context_manager/config.py::load_config",
-      "label": "config.py::load_config",
-      "type": "symbol"
-    },
-    {
-      "id": "llo-core/context_manager/preset_reader.py::read_preset_ctx_limit",
-      "label": "preset_reader.py::read_preset_ctx_limit",
-      "type": "symbol"
     },
     {
       "id": "llo-core/context_manager/context_engine.py::SessionState",
@@ -493,6 +498,11 @@
     {
       "id": "llo-core/context_manager/context_engine.py::_load_checkpoint_from_disk",
       "label": "context_engine.py::_load_checkpoint_from_disk",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/context_engine.py::_evict_stale_sessions",
+      "label": "context_engine.py::_evict_stale_sessions",
       "type": "symbol"
     },
     {
@@ -521,16 +531,6 @@
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/context_engine.py::compress",
-      "label": "context_engine.py::compress",
-      "type": "symbol"
-    },
-    {
-      "id": "llo-core/context_manager/context_engine.py::_clamp_message_tokens",
-      "label": "context_engine.py::_clamp_message_tokens",
-      "type": "symbol"
-    },
-    {
       "id": "llo-core/context_manager/context_engine.py::_save_checkpoint_to_disk",
       "label": "context_engine.py::_save_checkpoint_to_disk",
       "type": "symbol"
@@ -541,48 +541,38 @@
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_from_header",
-      "label": "test_session_id.py::test_extract_session_id_from_header",
+      "id": "llo-core/context_manager/context_engine.py::compress",
+      "label": "context_engine.py::compress",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_from_body",
-      "label": "test_session_id.py::test_extract_session_id_from_body",
+      "id": "llo-core/context_manager/context_engine.py::_clamp_message_tokens",
+      "label": "context_engine.py::_clamp_message_tokens",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_fallback",
-      "label": "test_session_id.py::test_extract_session_id_fallback",
+      "id": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_str_system",
+      "label": "test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_str_system",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tests/test_needs_compression.py::test_needs_compression_false_when_small",
-      "label": "test_needs_compression.py::test_needs_compression_false_when_small",
+      "id": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_list_blocks",
+      "label": "test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_list_blocks",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tests/test_needs_compression.py::test_needs_compression_true_when_large",
-      "label": "test_needs_compression.py::test_needs_compression_true_when_large",
+      "id": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_tools_and_tool_results",
+      "label": "test_anthropic_conversion.py::test_convert_anthropic_tools_and_tool_results",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tests/test_token_counting.py::test_character_fallback_count",
-      "label": "test_token_counting.py::test_character_fallback_count",
+      "id": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_openai_to_anthropic_response",
+      "label": "test_anthropic_conversion.py::test_convert_openai_to_anthropic_response",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tests/test_token_counting.py::test_count_messages",
-      "label": "test_token_counting.py::test_count_messages",
-      "type": "symbol"
-    },
-    {
-      "id": "llo-core/context_manager/tests/test_preset_reader.py::test_preset_reader_with_existing_preset",
-      "label": "test_preset_reader.py::test_preset_reader_with_existing_preset",
-      "type": "symbol"
-    },
-    {
-      "id": "llo-core/context_manager/tests/test_preset_reader.py::test_preset_reader_missing_file",
-      "label": "test_preset_reader.py::test_preset_reader_missing_file",
+      "id": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_openai_tool_calls_to_anthropic_response",
+      "label": "test_anthropic_conversion.py::test_convert_openai_tool_calls_to_anthropic_response",
       "type": "symbol"
     },
     {
@@ -606,38 +596,58 @@
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tokenizer_cache.py::TokenizerCache",
-      "label": "tokenizer_cache.py::TokenizerCache",
+      "id": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_from_header",
+      "label": "test_session_id.py::test_extract_session_id_from_header",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tokenizer_cache.py::__init__",
-      "label": "tokenizer_cache.py::__init__",
+      "id": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_from_body",
+      "label": "test_session_id.py::test_extract_session_id_from_body",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tokenizer_cache.py::get_repo_for_alias",
-      "label": "tokenizer_cache.py::get_repo_for_alias",
+      "id": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_fallback",
+      "label": "test_session_id.py::test_extract_session_id_fallback",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tokenizer_cache.py::get_tokenizer",
-      "label": "tokenizer_cache.py::get_tokenizer",
+      "id": "llo-core/context_manager/config.py::ContextManagerConfig",
+      "label": "config.py::ContextManagerConfig",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tokenizer_cache.py::count_tokens",
-      "label": "tokenizer_cache.py::count_tokens",
+      "id": "llo-core/context_manager/config.py::load_config",
+      "label": "config.py::load_config",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tests/test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
-      "label": "test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
+      "id": "llo-core/context_manager/tests/test_preset_reader.py::test_preset_reader_with_existing_preset",
+      "label": "test_preset_reader.py::test_preset_reader_with_existing_preset",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tests/test_compress.py::test_idempotency_does_not_retrigger_summary",
-      "label": "test_compress.py::test_idempotency_does_not_retrigger_summary",
+      "id": "llo-core/context_manager/tests/test_preset_reader.py::test_preset_reader_missing_file",
+      "label": "test_preset_reader.py::test_preset_reader_missing_file",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/proxy.py::lifespan",
+      "label": "proxy.py::lifespan",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/proxy.py::get_config",
+      "label": "proxy.py::get_config",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/proxy.py::get_engine",
+      "label": "proxy.py::get_engine",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/proxy.py::get_http_client",
+      "label": "proxy.py::get_http_client",
       "type": "symbol"
     },
     {
@@ -648,6 +658,21 @@
     {
       "id": "llo-core/context_manager/proxy.py::health_check",
       "label": "proxy.py::health_check",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/proxy.py::convert_anthropic_tools_to_openai",
+      "label": "proxy.py::convert_anthropic_tools_to_openai",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/proxy.py::convert_anthropic_tool_choice_to_openai",
+      "label": "proxy.py::convert_anthropic_tool_choice_to_openai",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/proxy.py::normalize_system_messages",
+      "label": "proxy.py::normalize_system_messages",
       "type": "symbol"
     },
     {
@@ -676,402 +701,147 @@
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_str_system",
-      "label": "test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_str_system",
+      "id": "llo-core/context_manager/tests/test_needs_compression.py::test_needs_compression_false_when_small",
+      "label": "test_needs_compression.py::test_needs_compression_false_when_small",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_list_blocks",
-      "label": "test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_list_blocks",
+      "id": "llo-core/context_manager/tests/test_needs_compression.py::test_needs_compression_true_when_large",
+      "label": "test_needs_compression.py::test_needs_compression_true_when_large",
       "type": "symbol"
     },
     {
-      "id": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_openai_to_anthropic_response",
-      "label": "test_anthropic_conversion.py::test_convert_openai_to_anthropic_response",
+      "id": "llo-core/context_manager/tests/test_token_counting.py::test_character_fallback_count",
+      "label": "test_token_counting.py::test_character_fallback_count",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/tests/test_token_counting.py::test_count_messages",
+      "label": "test_token_counting.py::test_count_messages",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/tests/test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
+      "label": "test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/tests/test_compress.py::test_incremental_delta_slicing",
+      "label": "test_compress.py::test_incremental_delta_slicing",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/tokenizer_cache.py::TokenizerCache",
+      "label": "tokenizer_cache.py::TokenizerCache",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/tokenizer_cache.py::__init__",
+      "label": "tokenizer_cache.py::__init__",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/tokenizer_cache.py::get_repo_for_alias",
+      "label": "tokenizer_cache.py::get_repo_for_alias",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/tokenizer_cache.py::get_tokenizer",
+      "label": "tokenizer_cache.py::get_tokenizer",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/tokenizer_cache.py::count_tokens",
+      "label": "tokenizer_cache.py::count_tokens",
+      "type": "symbol"
+    },
+    {
+      "id": "llo-core/context_manager/preset_reader.py::read_preset_ctx_limit",
+      "label": "preset_reader.py::read_preset_ctx_limit",
       "type": "symbol"
     }
   ],
   "edges": [
     {
-      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
-      "target": "ui/src/lib/validation.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
-      "target": "ui/src/store/modelsStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": ".config",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": ".context_engine",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": ".preset_reader",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "fastapi",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "fastapi.responses",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "hashlib",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "httpx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "json",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "os",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "typing",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "llo-core/context_manager/proxy.py::extract_session_id",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "llo-core/context_manager/proxy.py::health_check",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "llo-core/context_manager/proxy.py::convert_anthropic_to_openai_messages",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "llo-core/context_manager/proxy.py::convert_openai_to_anthropic_response",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "llo-core/context_manager/proxy.py::forward_stream_anthropic",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "llo-core/context_manager/proxy.py::forward_stream_openai",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py",
-      "target": "llo-core/context_manager/proxy.py::proxy_all",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_token_counting.py",
-      "target": "llo-core/context_manager/context_engine.py",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_token_counting.py",
-      "target": "llo-core/context_manager/tokenizer_cache.py",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_token_counting.py",
-      "target": "pathlib",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_token_counting.py",
-      "target": "sys",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_token_counting.py",
-      "target": "llo-core/context_manager/tests/test_token_counting.py::test_character_fallback_count",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_token_counting.py",
-      "target": "llo-core/context_manager/tests/test_token_counting.py::test_count_messages",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
-      "target": "ui/src/store/serverStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/__tests__/validation.test.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/__tests__/validation.test.ts",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/__tests__/validation.test.ts",
-      "target": "ui/src/store/modelsStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/__tests__/validation.test.ts",
-      "target": "ui/src/lib/validation.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/__tests__/validation.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tokenizer_cache.py",
-      "target": "os",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tokenizer_cache.py",
-      "target": "pathlib",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tokenizer_cache.py",
-      "target": "re",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tokenizer_cache.py",
-      "target": "tokenizers",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tokenizer_cache.py",
-      "target": "typing",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tokenizer_cache.py",
-      "target": "llo-core/context_manager/tokenizer_cache.py::TokenizerCache",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/tokenizer_cache.py",
-      "target": "llo-core/context_manager/tokenizer_cache.py::__init__",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/tokenizer_cache.py",
-      "target": "llo-core/context_manager/tokenizer_cache.py::get_repo_for_alias",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/tokenizer_cache.py",
-      "target": "llo-core/context_manager/tokenizer_cache.py::get_tokenizer",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/tokenizer_cache.py",
-      "target": "llo-core/context_manager/tokenizer_cache.py::count_tokens",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/store/configStore.ts",
-      "target": "@tauri-apps/api/core",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/configStore.ts",
-      "target": "zustand",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Settings.tsx",
+      "source": "ui/src/pages/Logs.tsx",
       "target": "ui/src/components/InfoTooltip.tsx",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Settings.tsx",
+      "source": "ui/src/pages/Logs.tsx",
       "target": "ui/src/components/layout/PageShell.tsx",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Settings.tsx",
-      "target": "ui/src/store/configStore.ts",
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "ui/src/store/serverStore.ts",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Settings.tsx",
-      "target": "./Settings.css",
+      "source": "ui/src/pages/Logs.tsx",
+      "target": "./Logs.css",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Settings.tsx",
+      "source": "ui/src/pages/Logs.tsx",
       "target": "@tauri-apps/plugin-dialog",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Settings.tsx",
+      "source": "ui/src/pages/Logs.tsx",
       "target": "lucide-react",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Settings.tsx",
+      "source": "ui/src/pages/Logs.tsx",
       "target": "react",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Performance.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
+      "source": "ui/src/components/InfoTooltip.tsx",
+      "target": "./InfoTooltip.css",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Performance.tsx",
-      "target": "ui/src/components/layout/PageShell.tsx",
+      "source": "ui/src/components/InfoTooltip.tsx",
+      "target": "lucide-react",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Performance.tsx",
+      "source": "ui/src/components/InfoTooltip.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/InfoTooltip.tsx",
+      "target": "react-dom",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
       "target": "ui/src/store/configStore.ts",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Performance.tsx",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Performance.tsx",
-      "target": "./Performance.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Performance.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Performance.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/__tests__/serverStore.test.ts",
+      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
       "target": "ui/src/store/serverStore.ts",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/store/__tests__/serverStore.test.ts",
+      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
       "target": "vitest",
       "type": "import",
       "weight": 0.8
@@ -1125,72 +895,6 @@
       "weight": 1.0
     },
     {
-      "source": "llo-core/context_manager/config.py",
-      "target": "json",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/config.py",
-      "target": "os",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/config.py",
-      "target": "pathlib",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/config.py",
-      "target": "pydantic",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/config.py",
-      "target": "typing",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/config.py",
-      "target": "llo-core/context_manager/config.py::ContextManagerConfig",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/config.py",
-      "target": "llo-core/context_manager/config.py::load_config",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/components/layout/__tests__/TopBar.test.ts",
-      "target": "ui/src/components/layout/TopBar.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/__tests__/TopBar.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/__tests__/modelsStore.test.ts",
-      "target": "ui/src/store/modelsStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/__tests__/modelsStore.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
       "source": "ui/src/components/__tests__/InfoTooltip.test.ts",
       "target": "ui/src/store/hardwareStore.ts",
       "type": "import",
@@ -1201,6 +905,186 @@
       "target": "vitest",
       "type": "import",
       "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/validationStore.ts",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/validationStore.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/validationStore.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/validationStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": ".config",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": ".context_engine",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": ".preset_reader",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "contextlib",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "fastapi",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "fastapi.responses",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "hashlib",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "httpx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "json",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "os",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "typing",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "uuid",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::lifespan",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::get_config",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::get_engine",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::get_http_client",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::extract_session_id",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::health_check",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::convert_anthropic_tools_to_openai",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::convert_anthropic_tool_choice_to_openai",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::normalize_system_messages",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::convert_anthropic_to_openai_messages",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::convert_openai_to_anthropic_response",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::forward_stream_anthropic",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::forward_stream_openai",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py",
+      "target": "llo-core/context_manager/proxy.py::proxy_all",
+      "type": "contains",
+      "weight": 1.0
     },
     {
       "source": "ui/src/pages/Models.tsx",
@@ -1269,98 +1153,176 @@
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Logs.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
+      "source": "ui/src/components/layout/Sidebar.tsx",
+      "target": "./Sidebar.css",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Logs.tsx",
-      "target": "ui/src/components/layout/PageShell.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Logs.tsx",
-      "target": "ui/src/store/serverStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Logs.tsx",
-      "target": "./Logs.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Logs.tsx",
-      "target": "@tauri-apps/plugin-dialog",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Logs.tsx",
+      "source": "ui/src/components/layout/Sidebar.tsx",
       "target": "lucide-react",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/Logs.tsx",
+      "source": "ui/src/components/layout/Sidebar.tsx",
       "target": "react",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "llo-core/context_manager/tests/test_compress.py",
-      "target": "llo-core/context_manager/context_engine.py",
+      "source": "llo-core/context_manager/config.py",
+      "target": "json",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "llo-core/context_manager/tests/test_compress.py",
-      "target": "pytest",
+      "source": "llo-core/context_manager/config.py",
+      "target": "os",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "llo-core/context_manager/tests/test_compress.py",
-      "target": "unittest.mock",
+      "source": "llo-core/context_manager/config.py",
+      "target": "pathlib",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "llo-core/context_manager/tests/test_compress.py",
-      "target": "llo-core/context_manager/tests/test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
+      "source": "llo-core/context_manager/config.py",
+      "target": "pydantic",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/config.py",
+      "target": "typing",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/config.py",
+      "target": "llo-core/context_manager/config.py::ContextManagerConfig",
       "type": "contains",
       "weight": 1.0
     },
     {
-      "source": "llo-core/context_manager/tests/test_compress.py",
-      "target": "llo-core/context_manager/tests/test_compress.py::test_idempotency_does_not_retrigger_summary",
+      "source": "llo-core/context_manager/config.py",
+      "target": "llo-core/context_manager/config.py::load_config",
       "type": "contains",
       "weight": 1.0
     },
     {
-      "source": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
       "target": "ui/src/store/configStore.ts",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
-      "target": "vitest",
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "ui/src/store/hardwareStore.ts",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/store/hardwareStore.ts",
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "./Performance.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Performance.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_token_counting.py",
+      "target": "llo-core/context_manager/context_engine.py",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_token_counting.py",
+      "target": "llo-core/context_manager/tokenizer_cache.py",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_token_counting.py",
+      "target": "pathlib",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_token_counting.py",
+      "target": "sys",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_token_counting.py",
+      "target": "llo-core/context_manager/tests/test_token_counting.py::test_character_fallback_count",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_token_counting.py",
+      "target": "llo-core/context_manager/tests/test_token_counting.py::test_count_messages",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "./TopBar.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/TopBar.tsx",
       "target": "@tauri-apps/api/core",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/store/hardwareStore.ts",
-      "target": "zustand",
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/TopBar.tsx",
+      "target": "react",
       "type": "import",
       "weight": 0.8
     },
@@ -1383,308 +1345,56 @@
       "weight": 0.8
     },
     {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": ".tokenizer_cache",
+      "source": "llo-core/context_manager/preset_reader.py",
+      "target": "configparser",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "dataclasses",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "hashlib",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "httpx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "json",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
+      "source": "llo-core/context_manager/preset_reader.py",
       "target": "os",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "llo-core/context_manager/context_engine.py",
+      "source": "llo-core/context_manager/preset_reader.py",
+      "target": "pathlib",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/preset_reader.py",
       "target": "typing",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::SessionState",
+      "source": "llo-core/context_manager/preset_reader.py",
+      "target": "llo-core/context_manager/preset_reader.py::read_preset_ctx_limit",
       "type": "contains",
       "weight": 1.0
     },
     {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::ContextEngine",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::__init__",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::_get_checkpoint_path",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::_load_checkpoint_from_disk",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::get_or_create_session",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::count_tokens_messages",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::needs_compression",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::_compute_hash",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::_request_summary",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::compress",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::_clamp_message_tokens",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::_save_checkpoint_to_disk",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py",
-      "target": "llo-core/context_manager/context_engine.py::maybe_compress",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_needs_compression.py",
-      "target": "llo-core/context_manager/context_engine.py",
+      "source": "ui/src/store/__tests__/serverStore.test.ts",
+      "target": "ui/src/store/serverStore.ts",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "llo-core/context_manager/tests/test_needs_compression.py",
-      "target": "pathlib",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_needs_compression.py",
-      "target": "sys",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_needs_compression.py",
-      "target": "llo-core/context_manager/tests/test_needs_compression.py::test_needs_compression_false_when_small",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_needs_compression.py",
-      "target": "llo-core/context_manager/tests/test_needs_compression.py::test_needs_compression_true_when_large",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/pages/Diagnostics.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Diagnostics.tsx",
-      "target": "ui/src/components/layout/PageShell.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Diagnostics.tsx",
-      "target": "./Diagnostics.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Diagnostics.tsx",
-      "target": "@tauri-apps/api/core",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Diagnostics.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Diagnostics.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_session_id.py",
-      "target": "llo-core/context_manager/proxy.py",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_session_id.py",
-      "target": "pathlib",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_session_id.py",
-      "target": "sys",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_session_id.py",
-      "target": "unittest.mock",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_session_id.py",
-      "target": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_from_header",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_session_id.py",
-      "target": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_from_body",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_session_id.py",
-      "target": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_fallback",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/components/layout/PageShell.tsx",
-      "target": "./PageShell.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/PageShell.tsx",
-      "target": "ui/src/components/layout/TopBar.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/PageShell.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "source": "ui/src/store/__tests__/serverStore.test.ts",
       "target": "vitest",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/components/InfoTooltip.tsx",
-      "target": "./InfoTooltip.css",
+      "source": "ui/src/components/layout/__tests__/TopBar.test.ts",
+      "target": "ui/src/components/layout/TopBar.tsx",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/components/InfoTooltip.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/InfoTooltip.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/InfoTooltip.tsx",
-      "target": "react-dom",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/modelsStore.ts",
-      "target": "@tauri-apps/api/core",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/modelsStore.ts",
-      "target": "zustand",
+      "source": "ui/src/components/layout/__tests__/TopBar.test.ts",
+      "target": "vitest",
       "type": "import",
       "weight": 0.8
     },
@@ -1715,138 +1425,6 @@
     {
       "source": "ui/src/components/ImpactBanner.tsx",
       "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py",
-      "target": "llo-core/context_manager/proxy.py",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py",
-      "target": "pytest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py",
-      "target": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_str_system",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py",
-      "target": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_list_blocks",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py",
-      "target": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_openai_to_anthropic_response",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/components/ImpactBanner.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/components/layout/PageShell.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/store/modelsStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "ui/src/store/validationStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "./Setup.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "@tauri-apps/plugin-dialog",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Setup.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/Sidebar.tsx",
-      "target": "./Sidebar.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/Sidebar.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/Sidebar.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/serverStore.ts",
-      "target": "zustand",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/__tests__/hardwareStore.test.ts",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/__tests__/hardwareStore.test.ts",
-      "target": "vitest",
       "type": "import",
       "weight": 0.8
     },
@@ -1929,6 +1507,288 @@
       "weight": 0.8
     },
     {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "./Diagnostics.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/SetupFlow.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_needs_compression.py",
+      "target": "llo-core/context_manager/context_engine.py",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_needs_compression.py",
+      "target": "pathlib",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_needs_compression.py",
+      "target": "sys",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_needs_compression.py",
+      "target": "llo-core/context_manager/tests/test_needs_compression.py::test_needs_compression_false_when_small",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_needs_compression.py",
+      "target": "llo-core/context_manager/tests/test_needs_compression.py::test_needs_compression_true_when_large",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/store/__tests__/modelsStore.test.ts",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/__tests__/modelsStore.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/serverStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/lib/validation.ts::estimateBlockCount",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/lib/validation.ts::calculateKvCacheGb",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/lib/validation.ts::validateConfiguration",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/lib/validation.ts",
+      "target": "ui/src/lib/validation.ts::validateModelLaunch",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_session_id.py",
+      "target": "llo-core/context_manager/proxy.py",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_session_id.py",
+      "target": "unittest.mock",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_session_id.py",
+      "target": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_from_header",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_session_id.py",
+      "target": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_from_body",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_session_id.py",
+      "target": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_fallback",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py",
+      "target": "llo-core/context_manager/proxy.py",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py",
+      "target": "pytest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py",
+      "target": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_str_system",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py",
+      "target": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_list_blocks",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py",
+      "target": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_tools_and_tool_results",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py",
+      "target": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_openai_to_anthropic_response",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py",
+      "target": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_openai_tool_calls_to_anthropic_response",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/store/configStore.ts",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/configStore.ts",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/configStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "./Integrations.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Integrations.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
       "source": "ui/src/App.tsx",
       "target": "ui/src/components/layout/Sidebar.tsx",
       "type": "import",
@@ -1996,6 +1856,12 @@
     },
     {
       "source": "ui/src/App.tsx",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/App.tsx",
       "target": "ui/src/store/serverStore.ts",
       "type": "import",
       "weight": 0.8
@@ -2025,220 +1891,502 @@
       "weight": 0.8
     },
     {
-      "source": "ui/src/store/__tests__/configStore.test.ts",
+      "source": "ui/src/lib/__tests__/validation.test.ts",
       "target": "ui/src/store/configStore.ts",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/store/__tests__/configStore.test.ts",
-      "target": "vitest",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "ui/src/components/layout/PageShell.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "ui/src/store/serverStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "./Integrations.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "@tauri-apps/api/core",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Integrations.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/validationStore.ts",
-      "target": "ui/src/lib/validation.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/validationStore.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/store/validationStore.ts",
+      "source": "ui/src/lib/__tests__/validation.test.ts",
       "target": "ui/src/store/hardwareStore.ts",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/store/validationStore.ts",
-      "target": "zustand",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/preset_reader.py",
-      "target": "configparser",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/preset_reader.py",
-      "target": "os",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/preset_reader.py",
-      "target": "pathlib",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/preset_reader.py",
-      "target": "typing",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "llo-core/context_manager/preset_reader.py",
-      "target": "llo-core/context_manager/preset_reader.py::read_preset_ctx_limit",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/lib/validation.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/validation.ts",
-      "target": "ui/src/store/hardwareStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/lib/validation.ts",
+      "source": "ui/src/lib/__tests__/validation.test.ts",
       "target": "ui/src/store/modelsStore.ts",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/lib/validation.ts",
-      "target": "ui/src/lib/validation.ts::estimateBlockCount",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/lib/validation.ts",
-      "target": "ui/src/lib/validation.ts::calculateKvCacheGb",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/lib/validation.ts",
-      "target": "ui/src/lib/validation.ts::validateConfiguration",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/lib/validation.ts",
-      "target": "ui/src/lib/validation.ts::validateModelLaunch",
-      "type": "contains",
-      "weight": 1.0
-    },
-    {
-      "source": "ui/src/components/layout/TopBar.tsx",
-      "target": "ui/src/store/configStore.ts",
+      "source": "ui/src/lib/__tests__/validation.test.ts",
+      "target": "ui/src/lib/validation.ts",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "ui/src/components/layout/TopBar.tsx",
-      "target": "ui/src/store/serverStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/TopBar.tsx",
-      "target": "./TopBar.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/TopBar.tsx",
-      "target": "@tauri-apps/api/core",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/TopBar.tsx",
-      "target": "lucide-react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/components/layout/TopBar.tsx",
-      "target": "react",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
-      "target": "ui/src/store/configStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
-      "target": "ui/src/store/serverStore.ts",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/__tests__/AllScreensAndActions.test.ts",
+      "source": "ui/src/lib/__tests__/validation.test.ts",
       "target": "vitest",
       "type": "import",
       "weight": 0.8
     },
     {
-      "source": "llo-core/context_manager/config.py::load_config",
-      "target": "llo-core/context_manager/config.py::ContextManagerConfig",
-      "type": "calls",
-      "weight": 0.5
+      "source": "ui/src/components/layout/PageShell.tsx",
+      "target": "./PageShell.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/PageShell.tsx",
+      "target": "ui/src/components/layout/TopBar.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/components/layout/PageShell.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/ParameterCLIForwarding.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
+      "target": "ui/src/store/serverStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/PerformanceAndSettings.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_compress.py",
+      "target": "llo-core/context_manager/context_engine.py",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_compress.py",
+      "target": "pytest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_compress.py",
+      "target": "unittest.mock",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_compress.py",
+      "target": "llo-core/context_manager/tests/test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_compress.py",
+      "target": "llo-core/context_manager/tests/test_compress.py::test_incremental_delta_slicing",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/components/ImpactBanner.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "ui/src/store/validationStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "./Setup.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "@tauri-apps/plugin-dialog",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Setup.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "ui/src/lib/validation.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "ui/src/store/modelsStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/__tests__/OverviewFlow.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tokenizer_cache.py",
+      "target": "os",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tokenizer_cache.py",
+      "target": "pathlib",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tokenizer_cache.py",
+      "target": "re",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tokenizer_cache.py",
+      "target": "tokenizers",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tokenizer_cache.py",
+      "target": "typing",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/tokenizer_cache.py",
+      "target": "llo-core/context_manager/tokenizer_cache.py::TokenizerCache",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tokenizer_cache.py",
+      "target": "llo-core/context_manager/tokenizer_cache.py::__init__",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tokenizer_cache.py",
+      "target": "llo-core/context_manager/tokenizer_cache.py::get_repo_for_alias",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tokenizer_cache.py",
+      "target": "llo-core/context_manager/tokenizer_cache.py::get_tokenizer",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/tokenizer_cache.py",
+      "target": "llo-core/context_manager/tokenizer_cache.py::count_tokens",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/store/modelsStore.ts",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/modelsStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": ".tokenizer_cache",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "asyncio",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "dataclasses",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "hashlib",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "httpx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "json",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "os",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "time",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "typing",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::SessionState",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::ContextEngine",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::__init__",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::_get_checkpoint_path",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::_load_checkpoint_from_disk",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::_evict_stale_sessions",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::get_or_create_session",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::count_tokens_messages",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::needs_compression",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::_compute_hash",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::_request_summary",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::_save_checkpoint_to_disk",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::maybe_compress",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::compress",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py",
+      "target": "llo-core/context_manager/context_engine.py::_clamp_message_tokens",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/store/__tests__/hardwareStore.test.ts",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/__tests__/hardwareStore.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/__tests__/configStore.test.ts",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/__tests__/configStore.test.ts",
+      "target": "vitest",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "ui/src/components/InfoTooltip.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "ui/src/components/layout/PageShell.tsx",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "./Settings.css",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "@tauri-apps/plugin-dialog",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "lucide-react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Settings.tsx",
+      "target": "react",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/hardwareStore.ts",
+      "target": "@tauri-apps/api/core",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/store/hardwareStore.ts",
+      "target": "zustand",
+      "type": "import",
+      "weight": 0.8
     },
     {
       "source": "llo-core/context_manager/context_engine.py::ContextEngine",
@@ -2261,6 +2409,12 @@
     {
       "source": "llo-core/context_manager/context_engine.py::ContextEngine",
       "target": "llo-core/context_manager/context_engine.py::_load_checkpoint_from_disk",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py::ContextEngine",
+      "target": "llo-core/context_manager/context_engine.py::_evict_stale_sessions",
       "type": "calls",
       "weight": 0.5
     },
@@ -2296,18 +2450,6 @@
     },
     {
       "source": "llo-core/context_manager/context_engine.py::ContextEngine",
-      "target": "llo-core/context_manager/context_engine.py::compress",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py::ContextEngine",
-      "target": "llo-core/context_manager/context_engine.py::_clamp_message_tokens",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py::ContextEngine",
       "target": "llo-core/context_manager/context_engine.py::_save_checkpoint_to_disk",
       "type": "calls",
       "weight": 0.5
@@ -2315,6 +2457,18 @@
     {
       "source": "llo-core/context_manager/context_engine.py::ContextEngine",
       "target": "llo-core/context_manager/context_engine.py::maybe_compress",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py::ContextEngine",
+      "target": "llo-core/context_manager/context_engine.py::compress",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py::ContextEngine",
+      "target": "llo-core/context_manager/context_engine.py::_clamp_message_tokens",
       "type": "calls",
       "weight": 0.5
     },
@@ -2349,6 +2503,12 @@
       "weight": 0.5
     },
     {
+      "source": "llo-core/context_manager/context_engine.py::get_or_create_session",
+      "target": "llo-core/context_manager/context_engine.py::_evict_stale_sessions",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
       "source": "llo-core/context_manager/context_engine.py::needs_compression",
       "target": "llo-core/context_manager/context_engine.py::count_tokens_messages",
       "type": "calls",
@@ -2357,42 +2517,6 @@
     {
       "source": "llo-core/context_manager/context_engine.py::_request_summary",
       "target": "llo-core/context_manager/context_engine.py::ContextEngine",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py::compress",
-      "target": "llo-core/context_manager/context_engine.py::SessionState",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py::compress",
-      "target": "llo-core/context_manager/context_engine.py::_compute_hash",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py::compress",
-      "target": "llo-core/context_manager/context_engine.py::_request_summary",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py::compress",
-      "target": "llo-core/context_manager/context_engine.py::_clamp_message_tokens",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py::compress",
-      "target": "llo-core/context_manager/context_engine.py::_save_checkpoint_to_disk",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/context_engine.py::_clamp_message_tokens",
-      "target": "llo-core/context_manager/context_engine.py::count_tokens_messages",
       "type": "calls",
       "weight": 0.5
     },
@@ -2451,6 +2575,102 @@
       "weight": 0.5
     },
     {
+      "source": "llo-core/context_manager/context_engine.py::compress",
+      "target": "llo-core/context_manager/context_engine.py::SessionState",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py::compress",
+      "target": "llo-core/context_manager/context_engine.py::_compute_hash",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py::compress",
+      "target": "llo-core/context_manager/context_engine.py::_request_summary",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py::compress",
+      "target": "llo-core/context_manager/context_engine.py::_save_checkpoint_to_disk",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py::compress",
+      "target": "llo-core/context_manager/context_engine.py::_clamp_message_tokens",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/context_engine.py::_clamp_message_tokens",
+      "target": "llo-core/context_manager/context_engine.py::count_tokens_messages",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_str_system",
+      "target": "llo-core/context_manager/proxy.py::convert_anthropic_to_openai_messages",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_list_blocks",
+      "target": "llo-core/context_manager/proxy.py::convert_anthropic_to_openai_messages",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_tools_and_tool_results",
+      "target": "llo-core/context_manager/proxy.py::convert_anthropic_tools_to_openai",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_tools_and_tool_results",
+      "target": "llo-core/context_manager/proxy.py::convert_anthropic_to_openai_messages",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_openai_to_anthropic_response",
+      "target": "llo-core/context_manager/proxy.py::convert_openai_to_anthropic_response",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_openai_tool_calls_to_anthropic_response",
+      "target": "llo-core/context_manager/proxy.py::convert_openai_to_anthropic_response",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "ui/src/lib/validation.ts::validateConfiguration",
+      "target": "ui/src/lib/validation.ts::estimateBlockCount",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "ui/src/lib/validation.ts::validateConfiguration",
+      "target": "ui/src/lib/validation.ts::calculateKvCacheGb",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "ui/src/lib/validation.ts::validateModelLaunch",
+      "target": "ui/src/lib/validation.ts::estimateBlockCount",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "ui/src/lib/validation.ts::validateModelLaunch",
+      "target": "ui/src/lib/validation.ts::calculateKvCacheGb",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
       "source": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_from_header",
       "target": "llo-core/context_manager/proxy.py::extract_session_id",
       "type": "calls",
@@ -2465,6 +2685,96 @@
     {
       "source": "llo-core/context_manager/tests/test_session_id.py::test_extract_session_id_fallback",
       "target": "llo-core/context_manager/proxy.py::extract_session_id",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/config.py::load_config",
+      "target": "llo-core/context_manager/config.py::ContextManagerConfig",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_preset_reader.py::test_preset_reader_with_existing_preset",
+      "target": "llo-core/context_manager/preset_reader.py::read_preset_ctx_limit",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_preset_reader.py::test_preset_reader_missing_file",
+      "target": "llo-core/context_manager/preset_reader.py::read_preset_ctx_limit",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py::health_check",
+      "target": "llo-core/context_manager/proxy.py::get_config",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py::proxy_all",
+      "target": "llo-core/context_manager/proxy.py::get_config",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py::proxy_all",
+      "target": "llo-core/context_manager/proxy.py::get_engine",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py::proxy_all",
+      "target": "llo-core/context_manager/proxy.py::get_http_client",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py::proxy_all",
+      "target": "llo-core/context_manager/proxy.py::extract_session_id",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py::proxy_all",
+      "target": "llo-core/context_manager/proxy.py::convert_anthropic_tools_to_openai",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py::proxy_all",
+      "target": "llo-core/context_manager/proxy.py::convert_anthropic_tool_choice_to_openai",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py::proxy_all",
+      "target": "llo-core/context_manager/proxy.py::normalize_system_messages",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py::proxy_all",
+      "target": "llo-core/context_manager/proxy.py::convert_anthropic_to_openai_messages",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py::proxy_all",
+      "target": "llo-core/context_manager/proxy.py::convert_openai_to_anthropic_response",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py::proxy_all",
+      "target": "llo-core/context_manager/proxy.py::forward_stream_anthropic",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/proxy.py::proxy_all",
+      "target": "llo-core/context_manager/proxy.py::forward_stream_openai",
       "type": "calls",
       "weight": 0.5
     },
@@ -2517,38 +2827,50 @@
       "weight": 0.5
     },
     {
-      "source": "llo-core/context_manager/tests/test_preset_reader.py::test_preset_reader_with_existing_preset",
-      "target": "llo-core/context_manager/preset_reader.py::read_preset_ctx_limit",
+      "source": "llo-core/context_manager/tests/test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
+      "target": "llo-core/context_manager/context_engine.py::SessionState",
       "type": "calls",
       "weight": 0.5
     },
     {
-      "source": "llo-core/context_manager/tests/test_preset_reader.py::test_preset_reader_missing_file",
-      "target": "llo-core/context_manager/preset_reader.py::read_preset_ctx_limit",
+      "source": "llo-core/context_manager/tests/test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
+      "target": "llo-core/context_manager/context_engine.py::ContextEngine",
       "type": "calls",
       "weight": 0.5
     },
     {
-      "source": "ui/src/lib/validation.ts::validateConfiguration",
-      "target": "ui/src/lib/validation.ts::estimateBlockCount",
+      "source": "llo-core/context_manager/tests/test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
+      "target": "llo-core/context_manager/context_engine.py::_request_summary",
       "type": "calls",
       "weight": 0.5
     },
     {
-      "source": "ui/src/lib/validation.ts::validateConfiguration",
-      "target": "ui/src/lib/validation.ts::calculateKvCacheGb",
+      "source": "llo-core/context_manager/tests/test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
+      "target": "llo-core/context_manager/context_engine.py::compress",
       "type": "calls",
       "weight": 0.5
     },
     {
-      "source": "ui/src/lib/validation.ts::validateModelLaunch",
-      "target": "ui/src/lib/validation.ts::estimateBlockCount",
+      "source": "llo-core/context_manager/tests/test_compress.py::test_incremental_delta_slicing",
+      "target": "llo-core/context_manager/context_engine.py::SessionState",
       "type": "calls",
       "weight": 0.5
     },
     {
-      "source": "ui/src/lib/validation.ts::validateModelLaunch",
-      "target": "ui/src/lib/validation.ts::calculateKvCacheGb",
+      "source": "llo-core/context_manager/tests/test_compress.py::test_incremental_delta_slicing",
+      "target": "llo-core/context_manager/context_engine.py::ContextEngine",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_compress.py::test_incremental_delta_slicing",
+      "target": "llo-core/context_manager/context_engine.py::_request_summary",
+      "type": "calls",
+      "weight": 0.5
+    },
+    {
+      "source": "llo-core/context_manager/tests/test_compress.py::test_incremental_delta_slicing",
+      "target": "llo-core/context_manager/context_engine.py::compress",
       "type": "calls",
       "weight": 0.5
     },
@@ -2597,102 +2919,6 @@
     {
       "source": "llo-core/context_manager/tokenizer_cache.py::count_tokens",
       "target": "llo-core/context_manager/tokenizer_cache.py::get_tokenizer",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
-      "target": "llo-core/context_manager/context_engine.py::SessionState",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
-      "target": "llo-core/context_manager/context_engine.py::ContextEngine",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
-      "target": "llo-core/context_manager/context_engine.py::_request_summary",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_compress.py::test_compress_preserves_system_prompt_and_keep_turns",
-      "target": "llo-core/context_manager/context_engine.py::compress",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_compress.py::test_idempotency_does_not_retrigger_summary",
-      "target": "llo-core/context_manager/context_engine.py::SessionState",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_compress.py::test_idempotency_does_not_retrigger_summary",
-      "target": "llo-core/context_manager/context_engine.py::ContextEngine",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_compress.py::test_idempotency_does_not_retrigger_summary",
-      "target": "llo-core/context_manager/context_engine.py::_request_summary",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_compress.py::test_idempotency_does_not_retrigger_summary",
-      "target": "llo-core/context_manager/context_engine.py::compress",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py::proxy_all",
-      "target": "llo-core/context_manager/proxy.py::extract_session_id",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py::proxy_all",
-      "target": "llo-core/context_manager/proxy.py::convert_anthropic_to_openai_messages",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py::proxy_all",
-      "target": "llo-core/context_manager/proxy.py::convert_openai_to_anthropic_response",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py::proxy_all",
-      "target": "llo-core/context_manager/proxy.py::forward_stream_anthropic",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/proxy.py::proxy_all",
-      "target": "llo-core/context_manager/proxy.py::forward_stream_openai",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_str_system",
-      "target": "llo-core/context_manager/proxy.py::convert_anthropic_to_openai_messages",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_anthropic_to_openai_messages_list_blocks",
-      "target": "llo-core/context_manager/proxy.py::convert_anthropic_to_openai_messages",
-      "type": "calls",
-      "weight": 0.5
-    },
-    {
-      "source": "llo-core/context_manager/tests/test_anthropic_conversion.py::test_convert_openai_to_anthropic_response",
-      "target": "llo-core/context_manager/proxy.py::convert_openai_to_anthropic_response",
       "type": "calls",
       "weight": 0.5
     }

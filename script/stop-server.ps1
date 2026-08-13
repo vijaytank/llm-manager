@@ -133,8 +133,27 @@ if ($env:OS -match "Windows" -or $IsWindows) {
         Write-Host "No active llama-server found listening on port $Port." -ForegroundColor Green
     }
 
-    try {
-        $cmProcs = @(Get-Process | Where-Object { $_.CommandLine -match 'context_manager' } -ErrorAction SilentlyContinue)
-        $cmProcs | Stop-Process -Force -ErrorAction SilentlyContinue
-    } catch {}
+    # Stop Context Manager Proxy process safely
+    $pidFile = Join-Path $ManagerDir "context-manager.pid"
+    if (Test-Path $pidFile) {
+        try {
+            $cmPid = [int](Get-Content $pidFile -Raw)
+            Stop-Process -Id $cmPid -Force -ErrorAction SilentlyContinue
+            Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+        } catch {}
+    } else {
+        # Fallback port check (8090)
+        try {
+            $cmPort = 8090
+            $cmPids = @()
+            if ($IsMacOS) {
+                $cmPids = @(& lsof -ti ":$cmPort" 2>$null) | Where-Object { $_ -match '^\d+$' }
+            } elseif ($IsLinux) {
+                $cmPids = @(& fuser "${cmPort}/tcp" 2>$null -split '\s+') | Where-Object { $_ -match '^\d+$' }
+            }
+            foreach ($cp in $cmPids) {
+                Stop-Process -Id ([int]$cp) -Force -ErrorAction SilentlyContinue
+            }
+        } catch {}
+    }
 }

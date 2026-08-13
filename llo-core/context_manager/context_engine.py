@@ -1,6 +1,8 @@
 import os
 import hashlib
 import json
+import time
+import asyncio
 import httpx
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
@@ -68,13 +70,8 @@ LENGTH CONSTRAINT (critical):
   5) Secondary discussion and exploration
 - When approaching the limit, compress low-priority detail (merge related
   bullets, shorten rationale, truncate code) rather than dropping any
-  decision, constraint, or requirement.
-
-OUTPUT FORMAT:
-- Plain text.
-- Top-level topics as headings in ALL CAPS.
-- Under each topic, a flat list of bullet points ("- " prefix), with the
-  single exception of indented multi-line code under a bullet.
+- Chronological ordering within topics. Newer statements supersede older ones.
+- Target under {max_tokens} tokens.
 """
 
 @dataclass
@@ -84,6 +81,8 @@ class SessionState:
     summary_block: Optional[str] = None
     summary_up_to_turn: int = 0
     last_compress_hash: str = ""
+    last_accessed: float = field(default_factory=time.time)
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 class ContextEngine:
     def __init__(
@@ -126,15 +125,28 @@ class ContextEngine:
             s.summary_up_to_turn = data.get("summary_up_to_turn", 0)
             s.last_compress_hash = data.get("last_compress_hash", "")
             s.messages = data.get("messages", [])
+            s.last_accessed = time.time()
             return s
         except Exception:
             return None
 
+    def _evict_stale_sessions(self, max_age_seconds: float = 86400.0):
+        now = time.time()
+        stale_keys = [
+            sid for sid, sess in self.sessions.items()
+            if (now - sess.last_accessed) > max_age_seconds
+        ]
+        for sid in stale_keys:
+            self.sessions.pop(sid, None)
+
     def get_or_create_session(self, session_id: str) -> SessionState:
+        self._evict_stale_sessions()
         if session_id not in self.sessions:
             loaded = self._load_checkpoint_from_disk(session_id)
             self.sessions[session_id] = loaded if loaded else SessionState(session_id=session_id)
-        return self.sessions[session_id]
+        session = self.sessions[session_id]
+        session.last_accessed = time.time()
+        return session
 
     def count_tokens_messages(self, messages: List[Dict[str, Any]], model_alias: str = "") -> int:
         total = 0
@@ -146,6 +158,14 @@ class ContextEngine:
                 for item in content:
                     if isinstance(item, dict) and "text" in item:
                         total += self.tokenizer_cache.count_tokens(item["text"], model_alias)
+            tool_calls = msg.get("tool_calls")
+            if isinstance(tool_calls, list):
+                for tc in tool_calls:
+                    if isinstance(tc, dict):
+                        fn = tc.get("function", {})
+                        args = fn.get("arguments", "")
+                        if isinstance(args, str):
+                            total += self.tokenizer_cache.count_tokens(args, model_alias)
         total += len(messages) * 4
         return total
 
@@ -182,7 +202,7 @@ class ContextEngine:
         user_parts.append(f"CONVERSATION:\n{conversation_text}")
         user_content = "\n\n".join(user_parts)
 
-        payload = {
+        payload: Dict[str, Any] = {
             "messages": [
                 {"role": "system", "content": prompt_system},
                 {"role": "user", "content": user_content}
@@ -192,15 +212,15 @@ class ContextEngine:
             "stream": False
         }
         
-        effective_model = model_alias
+        # Don't pass external cloud model aliases to local llama-server
         if self.summarize_with_model and self.summarize_with_model != "same":
-            effective_model = self.summarize_with_model
-        if effective_model:
-            payload["model"] = effective_model
+            payload["model"] = self.summarize_with_model
+        elif model_alias and not (model_alias.startswith("claude-") or model_alias.startswith("gpt-")):
+            payload["model"] = model_alias
 
         url = f"{self.llama_server_url}/v1/chat/completions"
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=120.0) as client:
                 resp = await client.post(url, json=payload)
                 if resp.status_code == 200:
                     res_json = resp.json()
@@ -212,6 +232,37 @@ class ContextEngine:
             print(f"[ContextEngine] Summarizer request failed: {e}")
 
         return f"[Summary of previous conversation up to turn: {len(conversation_text.splitlines())} lines]"
+
+    def _save_checkpoint_to_disk(self, session: SessionState):
+        try:
+            filepath = self._get_checkpoint_path(session.session_id)
+            data = {
+                "session_id": session.session_id,
+                "summary_block": session.summary_block,
+                "summary_up_to_turn": session.summary_up_to_turn,
+                "last_compress_hash": session.last_compress_hash,
+                "messages": session.messages,
+            }
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+        except Exception as e:
+            print(f"[ContextEngine] Checkpoint write error: {e}")
+
+    async def maybe_compress(
+        self,
+        session_id: str,
+        messages: List[Dict[str, Any]],
+        max_tokens_requested: int,
+        ctx_limit: int,
+        model_alias: str = ""
+    ) -> List[Dict[str, Any]]:
+        session = self.get_or_create_session(session_id)
+        async with session.lock:
+            if not self.needs_compression(messages, max_tokens_requested, ctx_limit, model_alias):
+                return messages
+
+            print(f"[ContextEngine] Context limit threshold reached ({self.count_tokens_messages(messages, model_alias)} tokens). Triggering compression for session '{session_id}'...")
+            return await self.compress(session, messages, model_alias=model_alias, ctx_limit=ctx_limit)
 
     async def compress(
         self,
@@ -245,17 +296,22 @@ class ContextEngine:
             return self._clamp_message_tokens(messages, max_allowed, model_alias)
 
         split_idx = len(conversation_turns) - effective_keep
-        to_summarize = conversation_turns[:split_idx]
+        start_idx = min(session.summary_up_to_turn, split_idx)
+        delta_turns = conversation_turns[start_idx:split_idx]
         recent_window = conversation_turns[split_idx:]
 
-        # Idempotency check
-        current_hash = self._compute_hash(session.session_id, to_summarize)
+        if not delta_turns and session.messages:
+            max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
+            return self._clamp_message_tokens(session.messages, max_allowed, model_alias)
+
+        # Idempotency check on delta turns
+        current_hash = self._compute_hash(session.session_id, delta_turns)
         if current_hash == session.last_compress_hash and session.messages:
             max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
             return self._clamp_message_tokens(session.messages, max_allowed, model_alias)
 
         conversation_lines = []
-        for turn in to_summarize:
+        for turn in delta_turns:
             r = turn.get("role", "user")
             c = turn.get("content", "")
             if isinstance(c, list):
@@ -271,19 +327,24 @@ class ContextEngine:
         )
 
         session.summary_block = new_summary
-        session.summary_up_to_turn += len(to_summarize)
+        session.summary_up_to_turn = split_idx
         session.last_compress_hash = current_hash
 
-        summary_msg = {
-            "role": "system",
-            "name": "compressed_history",
-            "content": f"[Compressed History Summary]:\n{new_summary}"
-        }
+        if system_prompts:
+            sys_contents = [str(m.get("content", "")) for m in system_prompts if m.get("content")]
+            sys_contents.append(f"[Compressed History Summary]:\n{new_summary}")
+            combined_system = {"role": "system", "content": "\n\n".join(sys_contents)}
+            rebuilt = [combined_system] + recent_window
+        else:
+            summary_msg = {
+                "role": "system",
+                "content": f"[Compressed History Summary]:\n{new_summary}"
+            }
+            rebuilt = [summary_msg] + recent_window
 
-        rebuilt = system_prompts + [summary_msg] + recent_window
         session.messages = rebuilt
 
-        self._save_checkpoint_to_disk(session)
+        await asyncio.to_thread(self._save_checkpoint_to_disk, session)
 
         max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
         return self._clamp_message_tokens(rebuilt, max_allowed, model_alias)
@@ -308,6 +369,21 @@ class ContextEngine:
                         c_msg["content"] = content[:new_len] + "\n\n[... Truncated by Context Manager to fit context limit ...]"
                         excess_tokens -= max(0, current_tokens - max(1, new_len // 4))
             clamped.append(c_msg)
+
+        # Safety verification check: if still exceeding limit after proportional pass, cut largest message
+        total_after = self.count_tokens_messages(clamped, model_alias)
+        if total_after > max_allowed_tokens:
+            largest = max(
+                (m for m in clamped if m.get("role") != "system"),
+                key=lambda m: len(str(m.get("content", ""))),
+                default=None
+            )
+            if largest and isinstance(largest.get("content"), str):
+                excess_chars = (total_after - max_allowed_tokens) * 4
+                curr_content = largest["content"]
+                if len(curr_content) > 300:
+                    new_len = max(200, len(curr_content) - excess_chars)
+                    largest["content"] = curr_content[:new_len] + "\n\n[... Truncated by Context Manager ...]"
 
         return clamped
 

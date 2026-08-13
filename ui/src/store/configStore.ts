@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
+import { useServerStore } from './serverStore';
 
 export interface ContextManagerSettings {
   enabled: boolean;
@@ -95,6 +96,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
     try {
       await invoke('save_config', { config: current });
       set({ loading: false });
+      if (useServerStore.getState().status === 'running') {
+        useServerStore.getState().setPendingRestart(true);
+      }
     } catch (err: any) {
       set({ error: err.toString(), loading: false });
     }

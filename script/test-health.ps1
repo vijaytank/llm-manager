@@ -2,7 +2,8 @@
 # Verifies the health and integrity of all llm-manager scripts, configs, and hardware profile APIs.
 
 param(
-    [string]$ConfigFile = ""
+    [string]$ConfigFile = "",
+    [switch]$Json
 )
 
 $ErrorActionPreference = "Stop"

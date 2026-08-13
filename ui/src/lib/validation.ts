@@ -139,7 +139,8 @@ export function validateConfiguration(
   }
 
   // Rule 5: KV Quantization Precision Mismatch
-  if ((config.cache_type_k === 'q8_0' || config.cache_type_v === 'q8_0') && config.flash_attn === 'off') {
+  const flashIsEffectivelyOff = config.flash_attn === 'off' || (isCpuOnly && config.flash_attn !== 'on');
+  if ((config.cache_type_k === 'q8_0' || config.cache_type_v === 'q8_0') && flashIsEffectivelyOff) {
     assessments.push({
       param: 'cache_type_k',
       severity: 'warn',

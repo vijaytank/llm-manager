@@ -23,10 +23,21 @@ pub struct HealthReport {
 pub fn run_health_check() -> Result<HealthReport, String> {
     let config_file = crate::scripts::get_user_data_dir().join("llo-config.json");
     let config_file_str = config_file.to_string_lossy().to_string();
-    let script_output = match run_powershell_script("script/test-health.ps1", &["-ConfigFile", &config_file_str]) {
+    let script_output = match run_powershell_script("script/test-health.ps1", &["-ConfigFile", &config_file_str, "-Json"]) {
         Ok(out) => out,
         Err(e) => e,
     };
+
+    if let Ok(json_items) = serde_json::from_str::<Vec<HealthItem>>(&script_output) {
+        let passed_count = json_items.iter().filter(|i| i.status == "passed").count() as u32;
+        let total_count = json_items.len() as u32;
+        return Ok(HealthReport {
+            timestamp: chrono::Local::now().format("%H:%M:%S").to_string(),
+            passed_count,
+            total_count,
+            items: json_items,
+        });
+    }
 
     let mut items = vec![
         HealthItem {

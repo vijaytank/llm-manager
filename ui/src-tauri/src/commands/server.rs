@@ -9,6 +9,15 @@ use crate::scripts::run_powershell_script;
 
 static IS_RUNNING: AtomicBool = AtomicBool::new(false);
 static IS_STARTING: AtomicBool = AtomicBool::new(false);
+static LOG_TAIL_TASKS: std::sync::Mutex<Vec<tokio::task::JoinHandle<()>>> = std::sync::Mutex::new(Vec::new());
+
+fn abort_log_tailers() {
+    if let Ok(mut tasks) = LOG_TAIL_TASKS.lock() {
+        for h in tasks.drain(..) {
+            h.abort();
+        }
+    }
+}
 
 fn get_log_path() -> PathBuf {
     crate::scripts::get_user_log_dir().join("llama-server.log")
@@ -141,12 +150,12 @@ async fn emit_log_file_lines(app: AppHandle, path: PathBuf, default_level: &'sta
 
 #[tauri::command]
 pub async fn start_server(app: AppHandle, port: Option<u16>) -> Result<String, String> {
-    if IS_RUNNING.load(Ordering::SeqCst) || IS_STARTING.load(Ordering::SeqCst) {
+    if IS_RUNNING.load(Ordering::SeqCst) || IS_STARTING.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
         return Err("Server process is already running or starting".to_string());
     }
 
     let p = port.unwrap_or(8080);
-    IS_STARTING.store(true, Ordering::SeqCst);
+    abort_log_tailers();
 
     let _ = app.emit("server-status-changed", "starting");
     let _ = app.emit("server-log", serde_json::json!({
@@ -182,15 +191,11 @@ pub async fn start_server(app: AppHandle, port: Option<u16>) -> Result<String, S
         );
         match result {
             Ok(_) => {
-                // Only transition to "running" if stop_server was NOT called while
-                // the start script was executing. stop_server sets IS_STARTING=false,
-                // so if IS_STARTING is still true here, startup completed without interruption.
                 if IS_STARTING.load(Ordering::SeqCst) {
                     IS_RUNNING.store(true, Ordering::SeqCst);
                     IS_STARTING.store(false, Ordering::SeqCst);
                     let _ = app_err.emit("server-status-changed", "running");
                 } else {
-                    // stop_server was called during startup — stay in stopped state.
                     IS_RUNNING.store(false, Ordering::SeqCst);
                     let _ = app_err.emit("server-log", serde_json::json!({
                         "timestamp": chrono::Local::now().format("%H:%M:%S").to_string(),
@@ -216,13 +221,18 @@ pub async fn start_server(app: AppHandle, port: Option<u16>) -> Result<String, S
     let stdout_path = get_log_path();
     let stderr_path = get_err_log_path();
 
-    tokio::spawn(async move {
+    let t1 = tokio::spawn(async move {
         emit_log_file_lines(app_clone.clone(), stdout_path, "INFO").await;
     });
 
-    tokio::spawn(async move {
+    let t2 = tokio::spawn(async move {
         emit_log_file_lines(app.clone(), stderr_path, "ERROR").await;
     });
+
+    if let Ok(mut tasks) = LOG_TAIL_TASKS.lock() {
+        tasks.push(t1);
+        tasks.push(t2);
+    }
 
     Ok(format!("Server launch initiated on port {}", p))
 }
@@ -234,10 +244,9 @@ pub async fn stop_server(app: AppHandle) -> Result<String, String> {
         return Ok("Server already stopped".to_string());
     }
 
-    // Clear the running/starting flags immediately so the spawn_blocking
-    // startup closure (if still running) will not re-emit "running".
     IS_RUNNING.store(false, Ordering::SeqCst);
     IS_STARTING.store(false, Ordering::SeqCst);
+    abort_log_tailers();
 
     let _ = app.emit("server-status-changed", "stopping");
     let _ = app.emit("server-log", serde_json::json!({
