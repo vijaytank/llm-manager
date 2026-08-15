@@ -1,0 +1,45 @@
+nakshastra-out/graph.json
+  s_fce39aa4f94d6a::t_b4cea91a30beba 154-155
+  s_fce39aa4f94d6a::t_fd948275c3b066 151-153
+ui/src-tauri/src/commands/server.rs
+  s_fce39aa4f94d6a::t_3a75f933701d00 59-60,75-86,102-111,115-118,136
+  s_fce39aa4f94d6a::t_1efdb95d27c4af 2-4,6-7,12-21,41,97,113,138-142,160-171,202-214,250
+  s_fce39aa4f94d6a::t_919b9142b719e5 38-40,47-54,63-68,87-92,129-134
+  s_fce39aa4f94d6a::t_50658199b0edc4 22-37,121,243-249
+  s_fce39aa4f94d6a::t_aa90796efd983d 95-96,98-101,112,114,119-120,122-128,135,137
+  s_fce39aa4f94d6a::t_1dc8ce38653fc9 42-46,55-58,61-62,69-74,93-94
+  s_fce39aa4f94d6a::t_2d28908f22d1dd 215
+ui/src-tauri/src/main.rs
+  s_fce39aa4f94d6a::t_619592684cae7b 10,39
+ui/src/components/layout/TopBar.tsx
+  s_fce39aa4f94d6a::t_f213ee61199cec 11-38,60-66,68-72
+  s_fce39aa4f94d6a::t_570a675751c296 3,73
+ui/src/vite-env.d.ts
+  s_fce39aa4f94d6a::t_442549200d5b31 1-6
+ui/src/components/layout/__tests__/TopBar.test.ts
+  s_fce39aa4f94d6a::t_275b4903a2face 1-22
+ui/src/pages/Integrations.tsx
+  s_fce39aa4f94d6a::t_f213ee61199cec 4-5,11,23-24
+nakshastra-out/NAKSHASTRA_REPORT.md
+  s_fce39aa4f94d6a::t_b4cea91a30beba 3,8-17,22-24
+ui/src/pages/Overview.tsx
+  s_fce39aa4f94d6a::t_4700406c5bed0d 39
+  s_fce39aa4f94d6a::t_619592684cae7b 20,26-33,97-102
+  s_fce39aa4f94d6a::t_72d6593abd7216 90-96,103-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "bef40c13389ba8cf446eede72c4137ad3e4e1dd6",
+  "prompts": {},
+  "sessions": {
+    "s_fce39aa4f94d6a": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "2c6b29dc-8851-40e6-9ab7-5bc12c342a1c",
+        "model": "gpt-4.1"
+      },
+      "human_author": "Vijay Tank <vijaytank130@gmamil.com>"
+    }
+  }
+}
