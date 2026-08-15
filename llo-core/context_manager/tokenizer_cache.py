@@ -18,9 +18,9 @@ ALIAS_TO_HF_REPO: Dict[str, str] = {
     "ministral": "mistralai/Mistral-7B-v0.1",
     "phi": "microsoft/phi-2",
     "deepseek": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
-    "claude": "Qwen/Qwen2.5-1.5B-Instruct",
-    "gpt": "Qwen/Qwen2.5-1.5B-Instruct",
-    "openai": "Qwen/Qwen2.5-1.5B-Instruct",
+    # NOTE: Cloud model aliases (claude, gpt, openai) are intentionally excluded.
+    # These models have proprietary tokenizers; the Qwen tokenizer would give ~10-15%
+    # incorrect counts. The character heuristic (len // 4) is more honest.
 }
 
 class TokenizerCache:

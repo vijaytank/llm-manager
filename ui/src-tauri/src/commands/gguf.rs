@@ -67,7 +67,7 @@ fn skip_gguf_value<R: Read>(r: &mut R, val_type: u32) -> Result<(), String> {
     match val_type {
         0 | 1 | 7 => { let mut b = [0u8; 1]; r.read_exact(&mut b).map_err(|e| e.to_string())?; }
         2 | 3 => { let mut b = [0u8; 2]; r.read_exact(&mut b).map_err(|e| e.to_string())?; }
-        4 | 5 | 6 => { let mut b = [0u8; 4]; r.read_exact(&mut b).map_err(|e| e.to_string())?; }
+        4..=6 => { let mut b = [0u8; 4]; r.read_exact(&mut b).map_err(|e| e.to_string())?; }
         8 => { let _ = read_string(r)?; }
         9 => {
             let elem_type = read_u32(r)?;
@@ -76,7 +76,7 @@ fn skip_gguf_value<R: Read>(r: &mut R, val_type: u32) -> Result<(), String> {
                 skip_gguf_value(r, elem_type)?;
             }
         }
-        10 | 11 | 12 => { let mut b = [0u8; 8]; r.read_exact(&mut b).map_err(|e| e.to_string())?; }
+        10..=12 => { let mut b = [0u8; 8]; r.read_exact(&mut b).map_err(|e| e.to_string())?; }
         _ => return Err(format!("Unknown GGUF value type: {}", val_type)),
     }
     Ok(())
@@ -105,6 +105,8 @@ pub fn parse_gguf_file<P: AsRef<Path>>(path: P) -> Result<GgufMetadata, String> 
     let mut architecture = "llama".to_string();
     let mut context_length: u32 = 0;
     let mut block_count: u32 = 0;
+    let mut kv_head_count: u32 = 0;
+    let mut rope_head_size: u32 = 0; // per-head rope dimension (= head_size for standard attention)
     let mut file_type: Option<u32> = None;
 
     // Parse binary KV entries up to kv_count
@@ -134,6 +136,20 @@ pub fn parse_gguf_file<P: AsRef<Path>>(path: P) -> Result<GgufMetadata, String> 
             } else if val_type == 10 {
                 if let Ok(val) = read_u64(&mut file) { block_count = val as u32; }
             }
+        } else if (key == "llm.attention.head_count_kv" || key.ends_with(".attention.head_count_kv")) && (val_type == 4 || val_type == 5 || val_type == 10) {
+            if val_type == 4 || val_type == 5 {
+                if let Ok(val) = read_u32(&mut file) { kv_head_count = val; }
+            } else if val_type == 10 {
+                if let Ok(val) = read_u64(&mut file) { kv_head_count = val as u32; }
+            }
+        } else if (key == "llm.rope.dimension_count" || key.ends_with(".rope.dimension_count")) && (val_type == 4 || val_type == 5 || val_type == 10) {
+            // rope.dimension_count equals the per-head dimension for standard RoPE attention.
+            // e.g. Llama-3/Qwen: 128, Phi-3: 96
+            if val_type == 4 || val_type == 5 {
+                if let Ok(val) = read_u32(&mut file) { rope_head_size = val; }
+            } else if val_type == 10 {
+                if let Ok(val) = read_u64(&mut file) { rope_head_size = val as u32; }
+            }
         } else if key == "general.file_type" && (val_type == 4 || val_type == 5) {
             if let Ok(val) = read_u32(&mut file) { file_type = Some(val); }
         } else {
@@ -162,12 +178,28 @@ pub fn parse_gguf_file<P: AsRef<Path>>(path: P) -> Result<GgufMetadata, String> 
         }
     };
 
-    let kv_dim = if block_count > 40 { 2048.0 } else { 1024.0 };
+    // Derive per-head dimension:
+    //   1. rope.dimension_count from GGUF metadata (most accurate)
+    //   2. Fallback: 128 (correct for Llama-3, Qwen-2/3; safe default)
+    let head_size = if rope_head_size > 0 { rope_head_size } else { 128u32 };
+    let kv_dim = if kv_head_count > 0 {
+        (kv_head_count * head_size) as f64
+    } else {
+        1024.0
+    };
+
+    let bytes_per_kv_elem = match quant.as_str() {
+        "Q8_0" => 1.0625,
+        "Q4_0" | "Q4_K_M" | "Q4_K_S" => 0.5625,
+        "Q5_K_M" | "Q5_K_S" => 0.6875,
+        _ => 2.0,
+    };
+
     let bytes_per_gb = 1024.0 * 1024.0 * 1024.0;
 
-    let kv_8k = ((8192.0 * block_count as f64 * kv_dim * 4.0 / bytes_per_gb) * 10.0).round() / 10.0;
-    let kv_32k = ((32768.0 * block_count as f64 * kv_dim * 4.0 / bytes_per_gb) * 10.0).round() / 10.0;
-    let kv_64k = ((65536.0 * block_count as f64 * kv_dim * 4.0 / bytes_per_gb) * 10.0).round() / 10.0;
+    let kv_8k  = ((8192.0  * block_count as f64 * kv_dim * bytes_per_kv_elem * 2.0 / bytes_per_gb) * 10.0).round() / 10.0;
+    let kv_32k = ((32768.0 * block_count as f64 * kv_dim * bytes_per_kv_elem * 2.0 / bytes_per_gb) * 10.0).round() / 10.0;
+    let kv_64k = ((65536.0 * block_count as f64 * kv_dim * bytes_per_kv_elem * 2.0 / bytes_per_gb) * 10.0).round() / 10.0;
 
     Ok(GgufMetadata {
         name: filename,
@@ -193,6 +225,13 @@ mod tests {
     use super::*;
     use std::io::Write;
 
+    fn write_kv_u32(f: &mut File, key: &str, val: u32) {
+        f.write_all(&(key.len() as u64).to_le_bytes()).unwrap();
+        f.write_all(key.as_bytes()).unwrap();
+        f.write_all(&4u32.to_le_bytes()).unwrap(); // val_type 4 = UINT32
+        f.write_all(&val.to_le_bytes()).unwrap();
+    }
+
     #[test]
     fn test_gguf_header_parser() {
         let temp_dir = std::env::temp_dir();
@@ -207,8 +246,61 @@ mod tests {
         let meta = parse_gguf_file(&test_file).expect("Should parse GGUF header");
         assert_eq!(meta.name, "test_model_q4_k_m");
         assert_eq!(meta.quantization, "Q4_K_M");
-        assert_eq!(meta.kv_cache_gb_at_32k, 4.0);
+        assert_eq!(meta.kv_cache_gb_at_32k, 1.1);
+
+        let _ = std::fs::remove_file(test_file);
+    }
+
+    #[test]
+    fn test_gguf_gqa_70b_model() {
+        let temp_dir = std::env::temp_dir();
+        let test_file = temp_dir.join("llama-3-70b-instruct-q8_0.gguf");
+        {
+            let mut f = File::create(&test_file).unwrap();
+            f.write_all(b"GGUF").unwrap();
+            f.write_all(&3u32.to_le_bytes()).unwrap();      // version
+            f.write_all(&0u64.to_le_bytes()).unwrap();      // tensor_count
+            f.write_all(&4u64.to_le_bytes()).unwrap();      // kv_count = 4
+
+            write_kv_u32(&mut f, "llm.block_count", 80);
+            write_kv_u32(&mut f, "llm.attention.head_count_kv", 8);
+            write_kv_u32(&mut f, "llm.rope.dimension_count", 128);
+            write_kv_u32(&mut f, "general.file_type", 7);  // Q8_0
+        }
+
+        let meta = parse_gguf_file(&test_file).expect("Should parse GGUF header");
+        assert_eq!(meta.block_count, 80);
+        assert_eq!(meta.quantization, "Q8_0");
+        assert_eq!(meta.kv_cache_gb_at_8k, 1.3);
+        assert_eq!(meta.kv_cache_gb_at_32k, 5.3);
+        assert_eq!(meta.kv_cache_gb_at_64k, 10.6);
+
+        let _ = std::fs::remove_file(test_file);
+    }
+
+    #[test]
+    fn test_gguf_phi_model_with_custom_rope_dimension() {
+        let temp_dir = std::env::temp_dir();
+        let test_file = temp_dir.join("phi-3-mini-4k-instruct-q4_k_m.gguf");
+        {
+            let mut f = File::create(&test_file).unwrap();
+            f.write_all(b"GGUF").unwrap();
+            f.write_all(&3u32.to_le_bytes()).unwrap();      // version
+            f.write_all(&0u64.to_le_bytes()).unwrap();      // tensor_count
+            f.write_all(&4u64.to_le_bytes()).unwrap();      // kv_count = 4
+
+            write_kv_u32(&mut f, "llm.block_count", 32);
+            write_kv_u32(&mut f, "llm.attention.head_count_kv", 32);
+            write_kv_u32(&mut f, "llm.rope.dimension_count", 96); // Phi-3 uses 96 instead of 128
+            write_kv_u32(&mut f, "general.file_type", 2);         // Q4_K_M
+        }
+
+        let meta = parse_gguf_file(&test_file).expect("Should parse GGUF header");
+        assert_eq!(meta.block_count, 32);
+        assert_eq!(meta.quantization, "Q4_K_M");
+        assert_eq!(meta.kv_cache_gb_at_32k, 3.4);
 
         let _ = std::fs::remove_file(test_file);
     }
 }
+

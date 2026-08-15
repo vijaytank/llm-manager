@@ -1,8 +1,3 @@
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-
 from context_manager.preset_reader import read_preset_ctx_limit
 
 def test_preset_reader_with_existing_preset():

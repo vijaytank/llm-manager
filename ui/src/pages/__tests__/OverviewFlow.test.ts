@@ -89,7 +89,7 @@ describe('Overview Dashboard & Pre-Flight Model Launch Engine', () => {
 
     // Test Launch Auto-Tuned helper
     const autoTuned = verdict.autoTuneConfig!(baseConfig);
-    expect(autoTuned.default_context_size).toBe(16384);
+    expect(autoTuned.overrides?.ctx_size).toBe(16384);
     expect(autoTuned.flash_attn).toBe('on');
   });
 

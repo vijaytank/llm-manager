@@ -15,6 +15,7 @@ export interface SystemHardware {
 interface HardwareState {
   profile: SystemHardware | null;
   loading: boolean;
+  error: string | null;
   fetchHardware: () => Promise<void>;
   setProfile: (profile: SystemHardware) => void;
 }
@@ -22,9 +23,10 @@ interface HardwareState {
 export const useHardwareStore = create<HardwareState>((set) => ({
   profile: null,
   loading: false,
+  error: null,
 
   fetchHardware: async () => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const raw = await invoke<any>('detect_hardware');
       
@@ -41,13 +43,13 @@ export const useHardwareStore = create<HardwareState>((set) => ({
         logicalCores: raw.cpu?.logicalCores || raw.cpu?.logical_cores || raw.cpu?.LogicalCores || 4,
         totalRamGb: raw.ram?.TotalGB || raw.ram?.totalGb || raw.ram?.total_gb || 8,
         gpuName: raw.gpu?.name || raw.gpu?.Name || (adapterClass === 'none' ? 'No Compatible GPU' : 'Graphics Adapter'),
-        vramGb: Math.round(vramMb / 1024),
+        vramGb: Math.round((vramMb / 1024) * 10) / 10,
         adapterClass,
         performanceTier,
       };
       set({ profile, loading: false });
-    } catch {
-      set({ loading: false });
+    } catch (err: any) {
+      set({ loading: false, error: err?.toString() || 'Failed to detect hardware' });
     }
   },
 

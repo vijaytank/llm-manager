@@ -10,21 +10,19 @@ param(
 $ErrorActionPreference = "Stop"
 
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+$lloCoreDir = Join-Path $ManagerDir "llo-core"
+if (Test-Path (Join-Path $lloCoreDir "Paths.ps1")) {
+    . (Join-Path $lloCoreDir "Paths.ps1")
+}
+
 $CacheFile = Join-Path $ManagerDir ".cached_flags.json"
 $DocsDir = Join-Path $ManagerDir "docs"
 $SystemCommandsDoc = Join-Path $DocsDir "SYSTEM_COMMANDS.md"
 if ([string]::IsNullOrWhiteSpace($ConfigFile)) {
-    $appDataConfig = if ($env:APPDATA) {
-        Join-Path $env:APPDATA "LLM Manager\llo-config.json"
-    } elseif ($env:USERPROFILE) {
-        Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
-    } elseif ($env:HOME) {
-        Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
-    } else { $null }
-
-    if ($appDataConfig -and (Test-Path $appDataConfig)) {
-        $ConfigFile = $appDataConfig
-    } else {
+    if (Get-Command "Get-LLMManagerConfigPath" -ErrorAction SilentlyContinue) {
+        $ConfigFile = Get-LLMManagerConfigPath -ManagerDir $ManagerDir
+    }
+    if (-not $ConfigFile) {
         $ConfigFile = Join-Path $ManagerDir "llo-config.json"
     }
 }

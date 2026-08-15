@@ -22,14 +22,15 @@ export interface AppConfig {
   grammars_dir: string;
   active_model: string;
   use_default_template: boolean;
-  cache_type_k: string;
-  cache_type_v: string;
-  flash_attn: string;
-  context_shift: boolean;
-  default_context_size: number;
   fit_ctx_min: number;
-  ubatch_size: number;
-  parallel_slots: number;
+  // Legacy / optional flat keys (moved to overrides)
+  cache_type_k?: string;
+  cache_type_v?: string;
+  flash_attn?: string;
+  context_shift?: boolean;
+  default_context_size?: number;
+  ubatch_size?: number;
+  parallel_slots?: number;
 
   // Context Manager Proxy
   context_manager?: ContextManagerSettings;

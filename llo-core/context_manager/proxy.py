@@ -12,14 +12,6 @@ from .config import load_config, ContextManagerConfig
 from .preset_reader import read_preset_ctx_limit
 from .context_engine import ContextEngine
 
-config = load_config()
-engine = ContextEngine(
-    warn_threshold=config.warn_threshold,
-    keep_turns=config.keep_turns,
-    llama_server_url=config.llama_server_url,
-    summary_max_tokens=config.summary_max_tokens,
-    summarize_with_model=config.summarize_with_model,
-)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,17 +38,17 @@ app = FastAPI(title="LLO Context Manager Proxy", version="0.2.0", lifespan=lifes
 def get_config(request: Optional[Request] = None) -> ContextManagerConfig:
     if request and hasattr(request.app.state, "config"):
         return request.app.state.config
-    return config
+    raise RuntimeError("Config not initialized — proxy called outside request context")
 
 def get_engine(request: Optional[Request] = None) -> ContextEngine:
     if request and hasattr(request.app.state, "engine"):
         return request.app.state.engine
-    return engine
+    raise RuntimeError("Engine not initialized — proxy called outside request context")
 
 def get_http_client(request: Optional[Request] = None) -> httpx.AsyncClient:
     if request and hasattr(request.app.state, "http_client"):
         return request.app.state.http_client
-    return httpx.AsyncClient(timeout=600.0)
+    raise RuntimeError("HTTP client not initialized — ensure lifespan is running")
 
 def extract_session_id(request: Request, body: Dict[str, Any]) -> str:
     # 1. Header x-llm-session-id or x-session-id
@@ -294,11 +286,24 @@ def convert_openai_to_anthropic_response(
     input_tokens = usage.get("prompt_tokens", 0)
     output_tokens = usage.get("completion_tokens", 0)
 
-    eng = engine_instance or engine
-    if input_tokens == 0 and messages:
-        input_tokens = eng.count_tokens_messages(messages, model)
-    if output_tokens == 0:
-        output_tokens = eng.tokenizer_cache.count_tokens(text_content, model)
+    # Use the provided engine instance for token counting, or fall back to
+    # a lightweight TokenizerCache heuristic (avoids constructing a bare ContextEngine
+    # with no config when called outside a request context).
+    if engine_instance is not None:
+        eng = engine_instance
+        if input_tokens == 0 and messages:
+            input_tokens = eng.count_tokens_messages(messages, model)
+        if output_tokens == 0:
+            output_tokens = eng.tokenizer_cache.count_tokens(text_content, model)
+    else:
+        from .tokenizer_cache import TokenizerCache
+        _tc = TokenizerCache()
+        if input_tokens == 0 and messages:
+            # Character heuristic: ~4 chars per token across all messages
+            raw_text = " ".join(str(m.get("content", "")) for m in messages)
+            input_tokens = max(1, len(raw_text) // 4)
+        if output_tokens == 0:
+            output_tokens = _tc.count_tokens(text_content, model)
 
     raw_id = str(openai_resp.get("id", ""))
     msg_id = raw_id if raw_id.startswith("msg_") else (f"msg_{raw_id}" if raw_id else f"msg_{uuid.uuid4().hex[:16]}")
@@ -327,7 +332,13 @@ async def forward_stream_anthropic(
 ):
     msg_id = f"msg_{uuid.uuid4().hex[:16]}"
     output_token_count = 0
-    eng = engine_instance or engine
+    # Use the provided engine instance for token counting, or fall back to
+    # a lightweight TokenizerCache heuristic (avoids constructing a bare ContextEngine
+    # with no config when called outside a request context).
+    if engine_instance is not None:
+        eng: Optional[ContextEngine] = engine_instance
+    else:
+        eng = None
 
     current_block_type = None
     current_block_index = -1
@@ -364,7 +375,7 @@ async def forward_stream_anthropic(
                         # 1. Text content delta
                         content_piece = delta.get("content")
                         if content_piece:
-                            output_token_count += eng.tokenizer_cache.count_tokens(content_piece, model)
+                            output_token_count += eng.tokenizer_cache.count_tokens(content_piece, model) if eng is not None else max(1, len(content_piece) // 4)
                             if current_block_type != "text":
                                 if current_block_type is not None:
                                     yield f"event: content_block_stop\ndata: {json.dumps({'type': 'content_block_stop', 'index': current_block_index})}\n\n".encode("utf-8")
@@ -417,7 +428,8 @@ async def forward_stream_anthropic(
 
                                 info = active_tool_calls[tc_idx]
                                 if fn_args:
-                                    output_token_count += eng.tokenizer_cache.count_tokens(fn_args, model)
+                                    tok_count = eng.tokenizer_cache.count_tokens(fn_args, model) if eng is not None else max(1, len(fn_args) // 4)
+                                    output_token_count += tok_count
                                     delta_evt = {
                                         "type": "content_block_delta",
                                         "index": info["anthropic_index"],
@@ -458,8 +470,12 @@ async def proxy_all(request: Request, path: str):
     eng = get_engine(request)
 
     clean_path = path.lstrip("/")
-    is_anthropic_messages = clean_path.startswith("v1/messages") or clean_path.endswith("messages")
-    is_openai_chat = clean_path.endswith("chat/completions") or clean_path.endswith("completions")
+    is_anthropic_messages = (
+        clean_path == "v1/messages" or
+        clean_path.startswith("v1/messages?") or
+        clean_path.startswith("v1/messages/")
+    )
+    is_openai_chat = clean_path.endswith("chat/completions")
 
     # Handle Anthropic count_tokens endpoint
     if clean_path.endswith("count_tokens"):
@@ -537,7 +553,8 @@ async def proxy_all(request: Request, path: str):
             messages=messages,
             max_tokens_requested=max_tokens if isinstance(max_tokens, int) else 512,
             ctx_limit=ctx_limit,
-            model_alias=model_alias
+            model_alias=model_alias,
+            http_client=client
         )
     else:
         rebuilt_messages = messages

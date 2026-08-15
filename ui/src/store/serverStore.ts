@@ -30,7 +30,7 @@ export const useServerStore = create<ServerState>((set) => ({
   pendingRestart: false,
   setStatus: (status) => set((state) => ({
     status,
-    pendingRestart: (status === 'stopped' || status === 'starting') ? false : state.pendingRestart,
+    pendingRestart: status === 'running' ? false : state.pendingRestart,
   })),
   setPort: (port) => set({ port }),
   addLog: (log) => set((state) => ({ logs: [...state.logs.slice(-499), log] })),

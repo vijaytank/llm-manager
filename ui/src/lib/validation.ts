@@ -113,13 +113,13 @@ export function validateConfiguration(
   }
 
   // Rule 4: Context Size vs. VRAM Memory Overflow
-  const ctx = config.default_context_size || 32768;
+  const ctx = config.overrides?.ctx_size || config.default_context_size || 32768;
   const estimatedKvGb = calculateKvCacheGb(
     ctx,
     estimateBlockCount(activeModelSizeGb),
-    config.cache_type_k,
-    config.cache_type_v,
-    config.parallel_slots || 1
+    config.overrides?.cache_type_k || config.cache_type_k,
+    config.overrides?.cache_type_v || config.cache_type_v,
+    config.overrides?.parallel || config.parallel_slots || 1
   );
   const totalMem = activeModelSizeGb + estimatedKvGb;
 
@@ -133,7 +133,10 @@ export function validateConfiguration(
       recommendation: `Reduce context window to ${safeCtx.toLocaleString()} tokens to keep KV cache fully inside GPU VRAM.`,
       autoFix: {
         label: `Fix Automatically: Set Context to ${safeCtx.toLocaleString()}`,
-        applyFix: (cfg) => ({ ...cfg, default_context_size: safeCtx }),
+        applyFix: (cfg) => ({
+          ...cfg,
+          overrides: { ...cfg.overrides, ctx_size: safeCtx },
+        }),
       },
     });
   }
@@ -249,7 +252,10 @@ export function validateModelLaunch(
         return {
           ...cfg,
           active_model: model.name,
-          default_context_size: safeCtx,
+          overrides: {
+            ...cfg.overrides,
+            ctx_size: safeCtx,
+          },
           flash_attn: 'on',
         };
       },

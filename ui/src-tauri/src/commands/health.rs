@@ -94,7 +94,7 @@ pub fn run_health_check() -> Result<HealthReport, String> {
         },
     ];
 
-    if script_output.contains("WARNING") {
+    if script_output.contains("[WARN] Template Matching") || script_output.contains("fallback template") {
         items.push(HealthItem {
             title: "Template Matching Coverage".to_string(),
             description: "One or more models using default fallback template".to_string(),

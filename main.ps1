@@ -63,19 +63,22 @@ function Get-UserChoice {
 }
 
 # 2. Setup Config object
-$appDataConfig = if ($env:APPDATA) {
-    Join-Path $env:APPDATA "LLM Manager\llo-config.json"
-} elseif ($env:USERPROFILE) {
-    Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
-} elseif ($env:HOME) {
-    Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
-} else { $null }
+$lloCoreDir = Join-Path $ManagerDir "llo-core"
+if (Test-Path (Join-Path $lloCoreDir "Paths.ps1")) {
+    . (Join-Path $lloCoreDir "Paths.ps1")
+}
 
-$ConfigFile = if ($appDataConfig -and (Test-Path $appDataConfig)) {
-    $appDataConfig
+$ConfigFile = if (Get-Command "Get-LLMManagerConfigPath" -ErrorAction SilentlyContinue) {
+    Get-LLMManagerConfigPath -ManagerDir $ManagerDir
 } else {
     Join-Path $ManagerDir "llo-config.json"
 }
+
+$appDataConfig = if (Get-Command "Get-LLMManagerUserDataDir" -ErrorAction SilentlyContinue) {
+    $uDir = Get-LLMManagerUserDataDir
+    if ($uDir) { Join-Path $uDir "llo-config.json" } else { $null }
+} else { $null }
+
 $config = @{
     installation_type = "none"
     llama_server_path = ""
@@ -84,15 +87,9 @@ $config = @{
     templates_dir = ""                 # resolved dynamically during setup
     grammars_dir = ""                  # resolved dynamically during setup
     use_default_template = $false
-    cache_type_k = "f16"
-    cache_type_v = "f16"
-    flash_attn = "auto"
-    context_shift = $true
     # Optimization parameters (auto-tuned by wizard; overridable in llo-config.json)
     fit_ctx_min = 8192          # minimum context --fit is allowed to reduce to
     cache_reuse_chunk = 256     # min prefix chunk size for KV cache reuse (0=off)
-    ubatch_size = 512           # physical GPU batch size per kernel call
-    parallel_slots = -1          # max concurrent request slots (-1 = auto)
     threads = 0                  # CPU thread count (0 = auto)
     numa = ""
     cache_ram = 0
@@ -107,14 +104,13 @@ $config = @{
     custom_args = ""
     integrations = @()
     idle_timeout_sec = 60
-    vram_margin_mb = 1024
     fallback_provider = "none"
-    default_context_size = 131072
     fallback_model = ""
     fallback_api_key = ""
     enable_tools = $true
     fallback_endpoint = ""
     claude_disable_telemetry = $true
+    overrides = @{}
 }
 
 # Load existing configuration if available

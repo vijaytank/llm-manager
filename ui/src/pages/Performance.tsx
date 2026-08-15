@@ -67,10 +67,10 @@ export const PerformancePage: React.FC = () => {
               <select
                 className="form-input font-mono"
                 style={{ width: '220px', padding: '4px 8px', fontSize: '0.85rem' }}
-                value={config?.cache_type_k || 'f16'}
+                value={config?.overrides?.cache_type_k || config?.cache_type_k || 'f16'}
                 onChange={async (e) => {
                   const val = e.target.value;
-                  updateConfig({ cache_type_k: val, cache_type_v: val });
+                  updateConfig({ overrides: { ...(config?.overrides || {}), cache_type_k: val, cache_type_v: val } });
                   await saveConfig();
                 }}
               >
@@ -92,9 +92,9 @@ export const PerformancePage: React.FC = () => {
               <select
                 className="form-input font-mono"
                 style={{ width: '150px', padding: '4px 8px', fontSize: '0.85rem' }}
-                value={config?.flash_attn || 'on'}
+                value={config?.overrides?.flash_attn || config?.flash_attn || 'on'}
                 onChange={async (e) => {
-                  updateConfig({ flash_attn: e.target.value });
+                  updateConfig({ overrides: { ...(config?.overrides || {}), flash_attn: e.target.value } });
                   await saveConfig();
                 }}
               >
@@ -116,9 +116,9 @@ export const PerformancePage: React.FC = () => {
               <select
                 className="form-input font-mono"
                 style={{ width: '150px', padding: '4px 8px', fontSize: '0.85rem' }}
-                value={config?.default_context_size || 32768}
+                value={config?.overrides?.ctx_size || config?.default_context_size || 32768}
                 onChange={async (e) => {
-                  updateConfig({ default_context_size: Number(e.target.value) });
+                  updateConfig({ overrides: { ...(config?.overrides || {}), ctx_size: Number(e.target.value) } });
                   await saveConfig();
                 }}
               >
@@ -195,15 +195,15 @@ export const PerformancePage: React.FC = () => {
                   />
                 </div>
                 <div className="param-value font-mono">
-                  {config?.parallel_slots === 1 ? '1 Slot (Single User - Max Speed ⭐)' : `${config?.parallel_slots || 1} Slots`}
+                  {(config?.overrides?.parallel || config?.parallel_slots || 1) === 1 ? '1 Slot (Single User - Max Speed ⭐)' : `${config?.overrides?.parallel || config?.parallel_slots || 1} Slots`}
                 </div>
               </div>
               <select
                 className="form-input font-mono"
                 style={{ width: '150px' }}
-                value={config?.parallel_slots || 1}
+                value={config?.overrides?.parallel || config?.parallel_slots || 1}
                 onChange={async (e) => {
-                  updateConfig({ parallel_slots: Number(e.target.value) });
+                  updateConfig({ overrides: { ...(config?.overrides || {}), parallel: Number(e.target.value) } });
                   await saveConfig();
                 }}
               >
@@ -225,15 +225,15 @@ export const PerformancePage: React.FC = () => {
                   />
                 </div>
                 <div className="param-value font-mono">
-                  {config?.ubatch_size || 512} tokens
+                  {config?.overrides?.ubatch_size || config?.ubatch_size || 512} tokens
                 </div>
               </div>
               <select
                 className="form-input font-mono"
                 style={{ width: '130px' }}
-                value={config?.ubatch_size || 512}
+                value={config?.overrides?.ubatch_size || config?.ubatch_size || 512}
                 onChange={async (e) => {
-                  updateConfig({ ubatch_size: Number(e.target.value) });
+                  updateConfig({ overrides: { ...(config?.overrides || {}), ubatch_size: Number(e.target.value) } });
                   await saveConfig();
                 }}
               >

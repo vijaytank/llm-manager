@@ -602,11 +602,12 @@ if ([Environment]::UserInteractive) {
                 
                 # Prepare the startup command for the new window (pointing to $clientBase)
                 $startupCmds = @(
+                    "`$m = '$($selectedModel -replace "'","''")'",
                     "`$env:ANTHROPIC_BASE_URL = '$clientBase'",
                     "`$env:ANTHROPIC_AUTH_TOKEN = 'local'",
                     "`$env:CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '$disableTeleVal'",
                     "`$env:CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY = '1'",
-                    "claude --model $selectedModel"
+                    "claude --model `$m"
                 ) -join "; "
                 
                 if ($IsWindows) {

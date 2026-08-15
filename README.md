@@ -67,6 +67,49 @@ LLM Manager automatically configures environment parameters and settings files t
 
 ---
 
+## 🧪 Automated Testing & Verification
+
+LLM Manager contains automated test suites and validation scripts covering its CLI scripts, Python context proxy, Rust Tauri backend, and React frontend.
+
+### 1. PowerShell Script & System Health Audits
+Run script syntax checks, compatibility audits, and full system health checks from the repository root:
+```powershell
+# Windows
+.\script\verify-scripts.ps1
+.\script\test-health.ps1
+
+# macOS / Linux
+./script/verify-scripts.sh
+./script/test-health.sh
+```
+
+### 2. Python Context Manager Tests
+Run the pytest test suite covering message compression, token counting, and Anthropic $\leftrightarrow$ OpenAI protocol conversion:
+```powershell
+# Using global pytest or active environment
+pytest llo-core/context_manager/tests
+
+# Or using the auto-created user venv
+& "$env:APPDATA\LLM Manager\context_manager_venv\Scripts\python.exe" -m pytest llo-core/context_manager/tests
+```
+
+### 3. Tauri Desktop GUI (Rust Backend & React Frontend)
+Navigate to the GUI directory to run type checking, unit tests, lints, and production installer packaging:
+```powershell
+# --- Frontend Testing & TypeScript Validation (ui/) ---
+cd ui
+npm run test           # 44 Vitest tests across stores, components, & flows
+npm run build          # TypeScript type checking (tsc) + Vite production build
+
+# --- Rust Backend Testing & Packaging (ui/src-tauri/) ---
+cd src-tauri
+cargo clippy           # Static analysis and lint checks
+cargo test             # 12 Rust unit tests (GGUF parser, models, server)
+npm run tauri build --release  # Packages full desktop installer (NSIS .exe / .dmg / .AppImage)
+```
+
+---
+
 ## 📐 System Architecture & Decision Engine
 For the full decision tree, GPU classification logic, context-size formula, and parameter policy tables, read **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 

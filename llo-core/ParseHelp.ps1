@@ -13,20 +13,17 @@ if ([string]::IsNullOrWhiteSpace($CacheFile)) {
     $CacheFile = Join-Path $ManagerDir ".cached_flags.json"
 }
 if ([string]::IsNullOrWhiteSpace($LlamaServerPath)) {
-    $appDataConfig = if ($env:APPDATA) {
-        Join-Path $env:APPDATA "LLM Manager\llo-config.json"
-    } elseif ($env:USERPROFILE) {
-        Join-Path $env:USERPROFILE ".config\LLM Manager\llo-config.json"
-    } elseif ($env:HOME) {
-        Join-Path $env:HOME ".config/LLM Manager/llo-config.json"
-    } else { $null }
+    $lloCoreDir = $PSScriptRoot
+    if (Test-Path (Join-Path $lloCoreDir "Paths.ps1")) {
+        . (Join-Path $lloCoreDir "Paths.ps1")
+    }
 
-    $configFile = if ($appDataConfig -and (Test-Path $appDataConfig)) {
-        $appDataConfig
+    $configFile = if (Get-Command "Get-LLMManagerConfigPath" -ErrorAction SilentlyContinue) {
+        Get-LLMManagerConfigPath -ManagerDir $ManagerDir
     } else {
         Join-Path $ManagerDir "llo-config.json"
     }
-    if (Test-Path $configFile) {
+    if ($configFile -and (Test-Path $configFile)) {
         try {
             $config = Get-Content $configFile -Raw | ConvertFrom-Json
             if ($config.llama_server_path) {

@@ -263,15 +263,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
                       impact="q8_0 saves 50% VRAM; q4_0 saves 75% VRAM."
                     />
                   </div>
-                  <div className="param-value font-mono">{config?.cache_type_k || 'f16'} (VRAM Tradeoff)</div>
+                  <div className="param-value font-mono">{config?.overrides?.cache_type_k || config?.cache_type_k || 'f16'} (VRAM Tradeoff)</div>
                 </div>
                 <select
                   className="form-input font-mono"
                   style={{ width: '160px', padding: '4px 8px' }}
-                  value={config?.cache_type_k || 'f16'}
+                  value={config?.overrides?.cache_type_k || config?.cache_type_k || 'f16'}
                   onChange={(e) => {
                     const val = e.target.value;
-                    updateConfig({ cache_type_k: val, cache_type_v: val });
+                    updateConfig({ overrides: { ...(config?.overrides || {}), cache_type_k: val, cache_type_v: val } });
                   }}
                 >
                   <option value="f16">f16 (Full Precision)</option>

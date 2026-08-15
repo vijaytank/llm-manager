@@ -30,7 +30,9 @@ def read_preset_ctx_limit(preset_path: Optional[str] = None, model_alias: Option
         alias_lower = model_alias.lower()
         if "claude" in alias_lower:
             return 200000
-        if "gpt-4" in alias_lower or "gpt4" in alias_lower or "o1" in alias_lower or "o3" in alias_lower:
+        if "o3" in alias_lower or "o4" in alias_lower:
+            return 200000
+        if "gpt-4" in alias_lower or "gpt4" in alias_lower or "o1" in alias_lower:
             return 128000
 
     if not preset_path or not Path(preset_path).is_file():

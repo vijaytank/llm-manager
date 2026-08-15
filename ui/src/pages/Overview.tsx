@@ -372,17 +372,17 @@ export const OverviewPage: React.FC = () => {
             </div>
             <div className="info-row">
               <span className="info-label">Flash Attention</span>
-              <span className={`badge ${config?.flash_attn === 'on' ? 'badge-success' : 'badge-warning'}`}>
-                {config?.flash_attn || 'off'}
+              <span className={`badge ${(config?.overrides?.flash_attn || config?.flash_attn) === 'on' ? 'badge-success' : 'badge-warning'}`}>
+                {config?.overrides?.flash_attn || config?.flash_attn || 'off'}
               </span>
             </div>
             <div className="info-row">
               <span className="info-label">KV Cache Precision</span>
-              <span className="info-value font-mono">{config?.cache_type_k || 'f16'}</span>
+              <span className="info-value font-mono">{config?.overrides?.cache_type_k || config?.cache_type_k || 'f16'}</span>
             </div>
             <div className="info-row">
               <span className="info-label">UBatch Size</span>
-              <span className="info-value font-mono">{config?.ubatch_size || 512}</span>
+              <span className="info-value font-mono">{config?.overrides?.ubatch_size || config?.ubatch_size || 512}</span>
             </div>
           </div>
         </div>

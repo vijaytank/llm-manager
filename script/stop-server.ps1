@@ -8,17 +8,27 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$ScriptDir = $PSScriptRoot
+$ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $ScriptDir ".."))
+$lloCoreDir = Join-Path $ManagerDir "llo-core"
+if (Test-Path (Join-Path $lloCoreDir "Paths.ps1")) {
+    . (Join-Path $lloCoreDir "Paths.ps1")
+}
 
 Write-Host "Searching for active llama-server processes..." -ForegroundColor Cyan
 
 # Stop Context Manager Proxy process if PID file exists
-$userAppDir = if ($env:APPDATA) {
-    Join-Path $env:APPDATA "LLM Manager"
-} elseif ($env:USERPROFILE) {
-    Join-Path $env:USERPROFILE ".config\LLM Manager"
-} elseif ($env:HOME) {
-    Join-Path $env:HOME ".config/LLM Manager"
-} else { $null }
+$userAppDir = if (Get-Command "Get-LLMManagerUserDataDir" -ErrorAction SilentlyContinue) {
+    Get-LLMManagerUserDataDir
+} else {
+    if ($env:APPDATA) {
+        Join-Path $env:APPDATA "LLM Manager"
+    } elseif ($env:USERPROFILE) {
+        Join-Path $env:USERPROFILE ".config\LLM Manager"
+    } elseif ($env:HOME) {
+        Join-Path $env:HOME ".config/LLM Manager"
+    } else { $null }
+}
 
 if ($userAppDir) {
     $pidFile = Join-Path $userAppDir "context-manager.pid"
@@ -133,27 +143,17 @@ if ($env:OS -match "Windows" -or $IsWindows) {
         Write-Host "No active llama-server found listening on port $Port." -ForegroundColor Green
     }
 
-    # Stop Context Manager Proxy process safely
-    $pidFile = Join-Path $ManagerDir "context-manager.pid"
-    if (Test-Path $pidFile) {
-        try {
-            $cmPid = [int](Get-Content $pidFile -Raw)
-            Stop-Process -Id $cmPid -Force -ErrorAction SilentlyContinue
-            Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
-        } catch {}
-    } else {
-        # Fallback port check (8090)
-        try {
-            $cmPort = 8090
-            $cmPids = @()
-            if ($IsMacOS) {
-                $cmPids = @(& lsof -ti ":$cmPort" 2>$null) | Where-Object { $_ -match '^\d+$' }
-            } elseif ($IsLinux) {
-                $cmPids = @(& fuser "${cmPort}/tcp" 2>$null -split '\s+') | Where-Object { $_ -match '^\d+$' }
-            }
-            foreach ($cp in $cmPids) {
-                Stop-Process -Id ([int]$cp) -Force -ErrorAction SilentlyContinue
-            }
-        } catch {}
-    }
+    # Fallback port check for Context Manager Proxy (8090)
+    try {
+        $cmPort = 8090
+        $cmPids = @()
+        if ($IsMacOS) {
+            $cmPids = @(& lsof -ti ":$cmPort" 2>$null) | Where-Object { $_ -match '^\d+$' }
+        } elseif ($IsLinux) {
+            $cmPids = @(& fuser "${cmPort}/tcp" 2>$null -split '\s+') | Where-Object { $_ -match '^\d+$' }
+        }
+        foreach ($cp in $cmPids) {
+            Stop-Process -Id ([int]$cp) -Force -ErrorAction SilentlyContinue
+        }
+    } catch {}
 }

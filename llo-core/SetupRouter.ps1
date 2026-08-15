@@ -296,7 +296,10 @@ function Get-InferenceParams {
         }
     }
 
-    # Support legacy and top-level config key mappings for user settings
+    # Support legacy top-level config key for parallel slots.
+    # parallel_slots = -1 means "auto" — the hardware-derived value above stands (filtered by -gt 0, correct).
+    # parallel_slots > 0 is an explicit user setting and takes effect here, overriding the tier default.
+    # Users who want hardware-adaptive parallel should set parallel_slots = -1 or remove the key entirely.
     if (-not $Overrides.ContainsKey("parallel") -and $config.ContainsKey("parallel_slots") -and [int]$config.parallel_slots -gt 0) {
         $params.parallel = [int]$config.parallel_slots
         Write-Host "  [config] parallel = $($params.parallel)  (from config.parallel_slots)" -ForegroundColor DarkYellow
@@ -421,7 +424,8 @@ function Get-SafeContextSize {
         if ($hasClaude) { 65536 } else { 8192 }
     }
 
-    return [int][math]::Max([int]$chosen, [int]$minFloor)
+    $effectiveFloor = [math]::Min($minFloor, $tierMaxCtx)
+    return [int][math]::Max([int]$chosen, [int]$effectiveFloor)
 }
 
 function Get-ValidatedSpecType {
@@ -505,7 +509,7 @@ Write-Host ""
 $ggufs        = Get-ChildItem -Path $ModelsDir -Recurse -File -Filter *.gguf | Sort-Object FullName
 $modelEntries = New-Object System.Collections.Generic.List[object]
 
-function Normalize-ModelAlias {
+function ConvertTo-ModelAlias {
     param([string]$Filename)
     $a = $Filename.ToLowerInvariant()
     $a = $a -replace '\.gguf$', ''
@@ -563,7 +567,7 @@ $usedAliases = @{}
 
 foreach ($gguf in $ggufs) {
     $baseName = $gguf.BaseName
-    $rawAlias = Normalize-ModelAlias -Filename $baseName
+    $rawAlias = ConvertTo-ModelAlias -Filename $baseName
 
     # Resolve alias collisions
     $alias = $rawAlias
@@ -584,17 +588,13 @@ foreach ($gguf in $ggufs) {
         -CacheTypeK   $inferParams.cache_type_k `
         -Integrations $config.integrations
 
-    # User context size configuration or override takes priority
-    if ($config.ContainsKey("default_context_size") -and $config.default_context_size -and [int]$config.default_context_size -gt 0) {
-        $ctxSize = [int]$config.default_context_size
-        if ($config.integrations -contains "claude-code" -and $ctxSize -lt 32768) {
-            $ctxSize = 32768
-            Write-Host "    [Claude Code] Enforced minimum ctx-size = 32768 for agent prompts" -ForegroundColor Cyan
-        }
-        Write-Host "    [config] ctx-size = $ctxSize  (from config.default_context_size)" -ForegroundColor Green
-    } elseif ($config.overrides.ContainsKey("ctx_size")) {
+    # User context size override takes priority
+    if ($config.overrides -and $config.overrides.ContainsKey("ctx_size") -and [int]$config.overrides["ctx_size"] -gt 0) {
         $ctxSize = [int]$config.overrides["ctx_size"]
-        Write-Host "    [override] ctx-size = $ctxSize  (from config.overrides)" -ForegroundColor DarkYellow
+        Write-Host "    [override] ctx-size = $ctxSize  (from config.overrides.ctx_size)" -ForegroundColor DarkYellow
+    } elseif ($config.overrides -and $config.overrides.ContainsKey("default_context_size") -and [int]$config.overrides["default_context_size"] -gt 0) {
+        $ctxSize = [int]$config.overrides["default_context_size"]
+        Write-Host "    [override] ctx-size = $ctxSize  (from config.overrides.default_context_size)" -ForegroundColor DarkYellow
     }
 
     # Warn if model exceeds VRAM budget (GPU tiers only; CPU tier uses RAM spill via mmap)
@@ -620,7 +620,7 @@ $presetLines = New-Object System.Collections.Generic.List[string]
 
 # ── [*] Global defaults (apply to all models unless overridden per-model) ──────
 $presetLines.Add("[*]")
-if ($config.ContainsKey('mmap') -and $config.mmap -ne $null -and $config.mmap -ne "") {
+if ($config.ContainsKey('mmap') -and $null -ne $config.mmap -and $config.mmap -ne "") {
     if ($config.mmap -eq 0 -or $config.mmap -eq '0') {
         $presetLines.Add("no-mmap = 1")
     } else {
@@ -630,7 +630,7 @@ if ($config.ContainsKey('mmap') -and $config.mmap -ne $null -and $config.mmap -n
     $presetLines.Add("mmap = $($inferParams.mmap)")
 }
 
-if ($config.ContainsKey('threads') -and $config.threads -ne $null -and $config.threads -ne 0 -and $config.threads -ne "") {
+if ($config.ContainsKey('threads') -and $null -ne $config.threads -and $config.threads -ne 0 -and $config.threads -ne "") {
     $presetLines.Add("threads = $($config.threads)")
 } else {
     $presetLines.Add("threads = $($hardware.CPU.OptimalThreads)")
@@ -682,7 +682,7 @@ $presetLines.Add("parallel = $($inferParams.parallel)")
 if ($config.ContainsKey('numa') -and $config.numa -and -not [string]::IsNullOrWhiteSpace($config.numa)) {
     $presetLines.Add("numa = $($config.numa)")
 }
-if ($config.ContainsKey('cache_ram') -and $config.cache_ram -ne $null -and $config.cache_ram -ne 0) {
+if ($config.ContainsKey('cache_ram') -and $null -ne $config.cache_ram -and $config.cache_ram -ne 0) {
     $presetLines.Add("cache-ram = $($config.cache_ram)")
 }
 if ($config.ContainsKey('temperature') -and $config.temperature -and -not [string]::IsNullOrWhiteSpace($config.temperature)) {

@@ -49,7 +49,7 @@ export const App: React.FC = () => {
     return () => {
       cleanupFns.forEach((fn) => fn());
     };
-  }, [fetchConfig, fetchHardware, setStatus, addLog]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Real-time config & hardware safety validation
   useEffect(() => {

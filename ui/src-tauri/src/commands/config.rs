@@ -29,29 +29,8 @@ pub struct AppConfig {
     #[serde(default)]
     pub use_default_template: bool,
 
-    #[serde(default = "default_cache_type")]
-    pub cache_type_k: String,
-
-    #[serde(default = "default_cache_type")]
-    pub cache_type_v: String,
-
-    #[serde(default = "default_flash_attn")]
-    pub flash_attn: String,
-
-    #[serde(default = "default_true")]
-    pub context_shift: bool,
-
-    #[serde(default = "default_context_size")]
-    pub default_context_size: u32,
-
     #[serde(default = "default_fit_ctx_min")]
     pub fit_ctx_min: u32,
-
-    #[serde(default = "default_ubatch_size")]
-    pub ubatch_size: u32,
-
-    #[serde(default = "default_parallel_slots")]
-    pub parallel_slots: i32,
 
     // Advanced SYSTEM_COMMANDS.md Tuning Parameters
     #[serde(default)]
@@ -158,14 +137,9 @@ fn default_summary_max_tokens() -> u32 { 768 }
 fn default_same() -> String { "same".to_string() }
 
 fn default_installation_type() -> String { "none".to_string() }
-fn default_cache_type() -> String { "f16".to_string() }
-fn default_flash_attn() -> String { "auto".to_string() }
 fn default_true() -> bool { true }
 fn default_false() -> bool { false }
-fn default_context_size() -> u32 { 32768 }
 fn default_fit_ctx_min() -> u32 { 8192 }
-fn default_ubatch_size() -> u32 { 512 }
-fn default_parallel_slots() -> i32 { -1 }
 fn default_integrations() -> Vec<String> { vec!["server-only".to_string()] }
 fn default_idle_timeout() -> u32 { 60 }
 fn default_idle_timeout_i32() -> i32 { 60 }
@@ -187,14 +161,7 @@ impl Default for AppConfig {
             grammars_dir: String::new(),
             active_model: String::new(),
             use_default_template: false,
-            cache_type_k: default_cache_type(),
-            cache_type_v: default_cache_type(),
-            flash_attn: default_flash_attn(),
-            context_shift: default_true(),
-            default_context_size: default_context_size(),
             fit_ctx_min: default_fit_ctx_min(),
-            ubatch_size: default_ubatch_size(),
-            parallel_slots: default_parallel_slots(),
             threads: 0,
             prio: 0,
             mlock: false,
@@ -344,17 +311,31 @@ mod tests {
         let config = AppConfig::default();
         let json = serde_json::to_string(&config).expect("Must serialize default config");
         assert!(json.contains("\"installation_type\":\"none\""));
-        assert!(json.contains("\"default_context_size\":32768"));
+        assert!(!json.contains("\"default_context_size\""));
+        assert!(!json.contains("\"cache_type_k\""));
+        assert!(!json.contains("\"ubatch_size\""));
+        assert!(!json.contains("\"parallel_slots\""));
         assert!(json.contains("\"spec_type\":\"none\""));
     }
 
     #[test]
     fn test_deserialize_partial_json() {
-        let raw = r#"{"installation_type": "winget", "default_context_size": 65536}"#;
+        let raw = r#"{"installation_type": "winget", "fit_ctx_min": 8192}"#;
         let config: AppConfig = serde_json::from_str(raw).expect("Must deserialize partial JSON");
         assert_eq!(config.installation_type, "winget");
-        assert_eq!(config.default_context_size, 65536);
         assert_eq!(config.fit_ctx_min, 8192);
         assert_eq!(config.spec_type, "none");
     }
+
+    #[test]
+    fn test_deserialize_legacy_json_ignores_flat_inference_keys() {
+        let raw = r#"{"installation_type": "winget", "cache_type_k": "q8_0", "ubatch_size": 1024, "default_context_size": 65536}"#;
+        let config: AppConfig = serde_json::from_str(raw).expect("Must deserialize legacy JSON cleanly");
+        assert_eq!(config.installation_type, "winget");
+        let serialized = serde_json::to_string(&config).expect("Must serialize");
+        assert!(!serialized.contains("\"cache_type_k\""));
+        assert!(!serialized.contains("\"ubatch_size\""));
+        assert!(!serialized.contains("\"default_context_size\""));
+    }
 }
+

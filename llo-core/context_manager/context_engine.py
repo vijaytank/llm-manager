@@ -192,7 +192,8 @@ class ContextEngine:
         self,
         conversation_text: str,
         model_alias: str,
-        prior_summary: Optional[str] = None
+        prior_summary: Optional[str] = None,
+        http_client: Optional[httpx.AsyncClient] = None
     ) -> str:
         prompt_system = SUMMARIZER_SYSTEM_PROMPT.format(max_tokens=self.summary_max_tokens)
 
@@ -219,34 +220,25 @@ class ContextEngine:
             payload["model"] = model_alias
 
         url = f"{self.llama_server_url}/v1/chat/completions"
+        
+        client = http_client or httpx.AsyncClient(timeout=120.0)
+        own_client = http_client is None
         try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                resp = await client.post(url, json=payload)
-                if resp.status_code == 200:
-                    res_json = resp.json()
-                    choices = res_json.get("choices", [])
-                    if choices and "message" in choices[0]:
-                        return choices[0]["message"].get("content", "").strip()
-                print(f"[ContextEngine] Summarizer call returned status {resp.status_code}: {resp.text}")
+            resp = await client.post(url, json=payload)
+            if resp.status_code == 200:
+                res_json = resp.json()
+                choices = res_json.get("choices", [])
+                if choices and "message" in choices[0]:
+                    return choices[0]["message"].get("content", "").strip()
+            print(f"[ContextEngine] Summarizer call returned status {resp.status_code}: {resp.text}")
         except Exception as e:
             print(f"[ContextEngine] Summarizer request failed: {e}")
+        finally:
+            if own_client:
+                await client.aclose()
 
         return f"[Summary of previous conversation up to turn: {len(conversation_text.splitlines())} lines]"
 
-    def _save_checkpoint_to_disk(self, session: SessionState):
-        try:
-            filepath = self._get_checkpoint_path(session.session_id)
-            data = {
-                "session_id": session.session_id,
-                "summary_block": session.summary_block,
-                "summary_up_to_turn": session.summary_up_to_turn,
-                "last_compress_hash": session.last_compress_hash,
-                "messages": session.messages,
-            }
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
-        except Exception as e:
-            print(f"[ContextEngine] Checkpoint write error: {e}")
 
     async def maybe_compress(
         self,
@@ -254,7 +246,8 @@ class ContextEngine:
         messages: List[Dict[str, Any]],
         max_tokens_requested: int,
         ctx_limit: int,
-        model_alias: str = ""
+        model_alias: str = "",
+        http_client: Optional[httpx.AsyncClient] = None
     ) -> List[Dict[str, Any]]:
         session = self.get_or_create_session(session_id)
         async with session.lock:
@@ -262,14 +255,15 @@ class ContextEngine:
                 return messages
 
             print(f"[ContextEngine] Context limit threshold reached ({self.count_tokens_messages(messages, model_alias)} tokens). Triggering compression for session '{session_id}'...")
-            return await self.compress(session, messages, model_alias=model_alias, ctx_limit=ctx_limit)
+            return await self.compress(session, messages, model_alias=model_alias, ctx_limit=ctx_limit, http_client=http_client)
 
     async def compress(
         self,
         session: SessionState,
         messages: List[Dict[str, Any]],
         model_alias: str = "",
-        ctx_limit: int = 32768
+        ctx_limit: int = 32768,
+        http_client: Optional[httpx.AsyncClient] = None
     ) -> List[Dict[str, Any]]:
         if not messages:
             return messages
@@ -287,15 +281,11 @@ class ContextEngine:
             else:
                 conversation_turns.append(msg)
 
-        effective_keep = self.keep_turns
-        if len(conversation_turns) > 2 and len(conversation_turns) <= effective_keep:
-            effective_keep = max(1, len(conversation_turns) - 1)
-
-        if len(conversation_turns) <= effective_keep:
+        if len(conversation_turns) <= self.keep_turns:
             max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
             return self._clamp_message_tokens(messages, max_allowed, model_alias)
 
-        split_idx = len(conversation_turns) - effective_keep
+        split_idx = len(conversation_turns) - self.keep_turns
         start_idx = min(session.summary_up_to_turn, split_idx)
         delta_turns = conversation_turns[start_idx:split_idx]
         recent_window = conversation_turns[split_idx:]
@@ -315,7 +305,18 @@ class ContextEngine:
             r = turn.get("role", "user")
             c = turn.get("content", "")
             if isinstance(c, list):
-                c = " ".join([item.get("text", "") for item in c if isinstance(item, dict)])
+                parts = []
+                for item in c:
+                    if not isinstance(item, dict):
+                        continue
+                    item_type = item.get("type")
+                    if item_type == "text":
+                        parts.append(item.get("text", ""))
+                    elif item_type == "tool_result":
+                        parts.append(f"[Tool Result: {str(item.get('content', ''))}]")
+                    elif item_type == "tool_use":
+                        parts.append(f"[Tool Call: {item.get('name','')} {json.dumps(item.get('input',{}))}]")
+                c = " ".join(parts)
             conversation_lines.append(f"{r.capitalize()}: {c}")
 
         conversation_text = "\n\n".join(conversation_lines)
@@ -323,7 +324,8 @@ class ContextEngine:
         new_summary = await self._request_summary(
             conversation_text,
             model_alias,
-            prior_summary=session.summary_block
+            prior_summary=session.summary_block,
+            http_client=http_client
         )
 
         session.summary_block = new_summary
@@ -403,17 +405,3 @@ class ContextEngine:
         except Exception as e:
             print(f"[ContextEngine] Failed to save checkpoint to disk: {e}")
 
-    async def maybe_compress(
-        self,
-        session_id: str,
-        messages: List[Dict[str, Any]],
-        max_tokens_requested: int,
-        ctx_limit: int,
-        model_alias: str = ""
-    ) -> List[Dict[str, Any]]:
-        session = self.get_or_create_session(session_id)
-        if self.needs_compression(messages, max_tokens_requested, ctx_limit, model_alias):
-            print(f"[ContextEngine] Context limit threshold reached ({self.count_tokens_messages(messages, model_alias)} tokens). Triggering compression for session '{session_id}'...")
-            return await self.compress(session, messages, model_alias, ctx_limit=ctx_limit)
-        max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
-        return self._clamp_message_tokens(messages, max_allowed, model_alias)
