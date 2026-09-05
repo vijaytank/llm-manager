@@ -86,7 +86,8 @@ export function validateConfiguration(
   }
 
   // Rule 2: Flash Attention Without GPU
-  if (isCpuOnly && config.flash_attn !== 'off') {
+  const flashAttnVal = config.overrides?.flash_attn ?? config.flash_attn;
+  if (isCpuOnly && flashAttnVal !== 'off') {
     assessments.push({
       param: 'flash_attn',
       severity: 'warn',
@@ -95,7 +96,11 @@ export function validateConfiguration(
       recommendation: 'Disable Flash Attention for CPU-only inference.',
       autoFix: {
         label: 'Fix Automatically: Disable Flash Attention',
-        applyFix: (cfg) => ({ ...cfg, flash_attn: 'off' }),
+        applyFix: (cfg) => ({
+          ...cfg,
+          flash_attn: 'off',
+          overrides: { ...cfg.overrides, flash_attn: 'off' },
+        }),
       },
     });
   }
@@ -113,13 +118,13 @@ export function validateConfiguration(
   }
 
   // Rule 4: Context Size vs. VRAM Memory Overflow
-  const ctx = config.overrides?.ctx_size || config.default_context_size || 32768;
+  const ctx = config.overrides?.ctx_size ?? config.default_context_size ?? 32768;
   const estimatedKvGb = calculateKvCacheGb(
     ctx,
     estimateBlockCount(activeModelSizeGb),
-    config.overrides?.cache_type_k || config.cache_type_k,
-    config.overrides?.cache_type_v || config.cache_type_v,
-    config.overrides?.parallel || config.parallel_slots || 1
+    config.overrides?.cache_type_k ?? config.cache_type_k,
+    config.overrides?.cache_type_v ?? config.cache_type_v,
+    config.overrides?.parallel ?? config.parallel_slots ?? 1
   );
   const totalMem = activeModelSizeGb + estimatedKvGb;
 
@@ -142,8 +147,10 @@ export function validateConfiguration(
   }
 
   // Rule 5: KV Quantization Precision Mismatch
-  const flashIsEffectivelyOff = config.flash_attn === 'off' || (isCpuOnly && config.flash_attn !== 'on');
-  if ((config.cache_type_k === 'q8_0' || config.cache_type_v === 'q8_0') && flashIsEffectivelyOff) {
+  const flashIsEffectivelyOff = flashAttnVal === 'off' || (isCpuOnly && flashAttnVal !== 'on');
+  const cacheK = config.overrides?.cache_type_k ?? config.cache_type_k;
+  const cacheV = config.overrides?.cache_type_v ?? config.cache_type_v;
+  if ((cacheK === 'q8_0' || cacheV === 'q8_0') && flashIsEffectivelyOff) {
     assessments.push({
       param: 'cache_type_k',
       severity: 'warn',
@@ -152,7 +159,11 @@ export function validateConfiguration(
       recommendation: 'Enable Flash Attention or switch KV cache precision to f16.',
       autoFix: {
         label: 'Fix Automatically: Enable Flash Attention',
-        applyFix: (cfg) => ({ ...cfg, flash_attn: 'on' }),
+        applyFix: (cfg) => ({
+          ...cfg,
+          flash_attn: 'on',
+          overrides: { ...cfg.overrides, flash_attn: 'on' },
+        }),
       },
     });
   }
@@ -200,13 +211,13 @@ export function validateModelLaunch(
   const vramGb = hardware.vramGb || 0;
   const ramGb = hardware.totalRamGb || 16;
 
-  const ctx = config.default_context_size || 32768;
+  const ctx = config.overrides?.ctx_size ?? config.default_context_size ?? 32768;
   const estimatedKvGb = calculateKvCacheGb(
     ctx,
     estimateBlockCount(model.fileSizeGb),
-    config.cache_type_k,
-    config.cache_type_v,
-    config.parallel_slots || 1
+    config.overrides?.cache_type_k ?? config.cache_type_k,
+    config.overrides?.cache_type_v ?? config.cache_type_v,
+    config.overrides?.parallel ?? config.parallel_slots ?? 1
   );
   const totalModelMem = model.fileSizeGb + estimatedKvGb + 0.5;
 
@@ -234,7 +245,7 @@ export function validateModelLaunch(
         ...cfg,
         active_model: model.name,
         flash_attn: 'off',
-        overrides: { ...cfg.overrides, n_gpu_layers: 0 },
+        overrides: { ...cfg.overrides, n_gpu_layers: 0, flash_attn: 'off' },
       }),
     };
   }
@@ -252,11 +263,12 @@ export function validateModelLaunch(
         return {
           ...cfg,
           active_model: model.name,
+          flash_attn: 'on',
           overrides: {
             ...cfg.overrides,
             ctx_size: safeCtx,
+            flash_attn: 'on',
           },
-          flash_attn: 'on',
         };
       },
     };
@@ -273,7 +285,7 @@ export function validateModelLaunch(
       ...cfg,
       active_model: model.name,
       flash_attn: 'on',
-      overrides: { ...cfg.overrides, n_gpu_layers: -1 },
+      overrides: { ...cfg.overrides, n_gpu_layers: -1, flash_attn: 'on' },
     }),
   };
 }

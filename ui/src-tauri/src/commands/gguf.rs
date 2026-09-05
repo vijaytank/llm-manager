@@ -108,6 +108,7 @@ pub fn parse_gguf_file<P: AsRef<Path>>(path: P) -> Result<GgufMetadata, String> 
     let mut kv_head_count: u32 = 0;
     let mut rope_head_size: u32 = 0; // per-head rope dimension (= head_size for standard attention)
     let mut file_type: Option<u32> = None;
+    let mut has_arch = false;
 
     // Parse binary KV entries up to kv_count
     for _ in 0..kv_count.min(500) {
@@ -123,6 +124,7 @@ pub fn parse_gguf_file<P: AsRef<Path>>(path: P) -> Result<GgufMetadata, String> 
         if key == "general.architecture" && val_type == 8 {
             if let Ok(arch) = read_string(&mut file) {
                 architecture = arch;
+                has_arch = true;
             }
         } else if (key == "llm.context_length" || key.ends_with(".context_length")) && (val_type == 4 || val_type == 5 || val_type == 10) {
             if val_type == 4 || val_type == 5 {
@@ -156,6 +158,10 @@ pub fn parse_gguf_file<P: AsRef<Path>>(path: P) -> Result<GgufMetadata, String> 
             if skip_gguf_value(&mut file, val_type).is_err() {
                 break;
             }
+        }
+
+        if has_arch && context_length > 0 && block_count > 0 && kv_head_count > 0 && rope_head_size > 0 && file_type.is_some() {
+            break;
         }
     }
 

@@ -325,7 +325,7 @@ if ($models.Count -gt 0) {
     $serverArgs += @("-m", $selectedEntry.Path)
     Write-Host "Selected Active Model for Inference: $($selectedEntry.Alias) ($($selectedEntry.Path))" -ForegroundColor Green
 
-    # ── Context Size (-c) Resolution Hierarchy: CLI > SetupRouter Per-Model > UI Config Fallback ──
+    # ── Context Size (-c) Resolution Hierarchy: CLI > SetupRouter Per-Model ──
     $finalCtxSize = 0
     if ($PSBoundParameters.ContainsKey("CtxSize") -and $CtxSize -gt 0) {
         $finalCtxSize = $CtxSize
@@ -333,9 +333,6 @@ if ($models.Count -gt 0) {
     } elseif ($selectedEntry.CtxSize -and [int]$selectedEntry.CtxSize -gt 0) {
         $finalCtxSize = [int]$selectedEntry.CtxSize
         Write-Host "Context Size: $finalCtxSize tokens (from per-model hardware auto-tune)" -ForegroundColor Green
-    } elseif ($config.ContainsKey("default_context_size") -and [int]$config.default_context_size -gt 0) {
-        $finalCtxSize = [int]$config.default_context_size
-        Write-Host "Context Size: $finalCtxSize tokens (from UI config fallback)" -ForegroundColor DarkGray
     }
     if ($finalCtxSize -gt 0) {
         $serverArgs += @("-c", "$finalCtxSize")

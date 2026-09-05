@@ -93,14 +93,43 @@ class ContextEngine:
         summary_max_tokens: int = 768,
         summarize_with_model: str = "same",
         tokenizer_cache: Optional[TokenizerCache] = None,
+        tokenizer_repo_override: str = "",
     ):
         self.warn_threshold = warn_threshold
         self.keep_turns = keep_turns
         self.llama_server_url = llama_server_url.rstrip('/')
         self.summary_max_tokens = summary_max_tokens
         self.summarize_with_model = summarize_with_model
+        self.tokenizer_repo_override = tokenizer_repo_override
         self.tokenizer_cache = tokenizer_cache or TokenizerCache()
         self.sessions: Dict[str, SessionState] = {}
+        self._eviction_task: Optional[asyncio.Task] = None
+        self._running: bool = False
+
+    def start_background_tasks(self):
+        if self._eviction_task is None or self._eviction_task.done():
+            self._running = True
+            self._eviction_task = asyncio.create_task(self._eviction_loop())
+
+    async def stop_background_tasks(self):
+        self._running = False
+        if self._eviction_task and not self._eviction_task.done():
+            self._eviction_task.cancel()
+            try:
+                await self._eviction_task
+            except asyncio.CancelledError:
+                pass
+            self._eviction_task = None
+
+    async def _eviction_loop(self, interval_seconds: float = 60.0, max_age_seconds: float = 86400.0):
+        while self._running:
+            try:
+                await asyncio.sleep(interval_seconds)
+                self._evict_stale_sessions(max_age_seconds)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[ContextEngine] Error in eviction loop: {e}")
 
     def _get_checkpoint_path(self, session_id: str) -> str:
         appdata = (
@@ -140,7 +169,6 @@ class ContextEngine:
             self.sessions.pop(sid, None)
 
     def get_or_create_session(self, session_id: str) -> SessionState:
-        self._evict_stale_sessions()
         if session_id not in self.sessions:
             loaded = self._load_checkpoint_from_disk(session_id)
             self.sessions[session_id] = loaded if loaded else SessionState(session_id=session_id)
@@ -149,15 +177,16 @@ class ContextEngine:
         return session
 
     def count_tokens_messages(self, messages: List[Dict[str, Any]], model_alias: str = "") -> int:
+        override = self.tokenizer_repo_override or None
         total = 0
         for msg in messages:
             content = msg.get("content")
             if isinstance(content, str):
-                total += self.tokenizer_cache.count_tokens(content, model_alias)
+                total += self.tokenizer_cache.count_tokens(content, model_alias, override_repo=override)
             elif isinstance(content, list):
                 for item in content:
                     if isinstance(item, dict) and "text" in item:
-                        total += self.tokenizer_cache.count_tokens(item["text"], model_alias)
+                        total += self.tokenizer_cache.count_tokens(item["text"], model_alias, override_repo=override)
             tool_calls = msg.get("tool_calls")
             if isinstance(tool_calls, list):
                 for tc in tool_calls:
@@ -165,7 +194,7 @@ class ContextEngine:
                         fn = tc.get("function", {})
                         args = fn.get("arguments", "")
                         if isinstance(args, str):
-                            total += self.tokenizer_cache.count_tokens(args, model_alias)
+                            total += self.tokenizer_cache.count_tokens(args, model_alias, override_repo=override)
         total += len(messages) * 4
         return total
 
@@ -230,14 +259,17 @@ class ContextEngine:
                 choices = res_json.get("choices", [])
                 if choices and "message" in choices[0]:
                     return choices[0]["message"].get("content", "").strip()
-            print(f"[ContextEngine] Summarizer call returned status {resp.status_code}: {resp.text}")
+            err_msg = f"Summarizer call returned status {resp.status_code}: {resp.text}"
+            print(f"[ContextEngine] {err_msg}")
+            raise RuntimeError(err_msg)
         except Exception as e:
-            print(f"[ContextEngine] Summarizer request failed: {e}")
+            if not isinstance(e, RuntimeError):
+                print(f"[ContextEngine] Summarizer request failed: {e}")
+                raise RuntimeError(f"Summarizer request failed: {e}") from e
+            raise
         finally:
             if own_client:
                 await client.aclose()
-
-        return f"[Summary of previous conversation up to turn: {len(conversation_text.splitlines())} lines]"
 
 
     async def maybe_compress(
@@ -321,12 +353,30 @@ class ContextEngine:
 
         conversation_text = "\n\n".join(conversation_lines)
 
-        new_summary = await self._request_summary(
+        # Warning when conversation history tokens vastly exceed summary max
+        conv_tokens = self.tokenizer_cache.count_tokens(
             conversation_text,
             model_alias,
-            prior_summary=session.summary_block,
-            http_client=http_client
+            override_repo=self.tokenizer_repo_override or None
         )
+        if conv_tokens > self.summary_max_tokens * 4:
+            print(
+                f"[ContextEngine] WARNING: Conversation history to summarize is large "
+                f"({conv_tokens} tokens vs summary_max_tokens={self.summary_max_tokens}). "
+                f"Aggressive compression may cause information loss."
+            )
+
+        try:
+            new_summary = await self._request_summary(
+                conversation_text,
+                model_alias,
+                prior_summary=session.summary_block,
+                http_client=http_client
+            )
+        except RuntimeError as e:
+            print(f"[ContextEngine] Summarization failed, falling back to message clamping without session corruption: {e}")
+            max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
+            return self._clamp_message_tokens(messages, max_allowed, model_alias)
 
         session.summary_block = new_summary
         session.summary_up_to_turn = split_idx

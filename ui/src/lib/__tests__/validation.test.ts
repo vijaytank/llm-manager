@@ -156,4 +156,31 @@ describe('validation engine & kv cache math', () => {
     expect(verdict.canLaunch).toBe(false);
     expect(verdict.severity).toBe('danger');
   });
+
+  it('prioritizes overrides for flash_attn and sets overrides in autoFix on CPU-only', () => {
+    const configWithOverride = {
+      ...mockBaseConfig,
+      flash_attn: 'off',
+      overrides: { flash_attn: 'on' },
+    };
+    const res = validateConfiguration(configWithOverride, mockCpuHardware);
+    expect(res.assessments.some((a) => a.param === 'flash_attn')).toBe(true);
+    const faAssessment = res.assessments.find((a) => a.param === 'flash_attn');
+    const fixed = faAssessment!.autoFix!.applyFix(configWithOverride);
+    expect(fixed.overrides.flash_attn).toBe('off');
+  });
+
+  it('prioritizes overrides for ctx_size and cache precision in pre-flight calculation', () => {
+    const configWithOverrides = {
+      ...mockBaseConfig,
+      default_context_size: 8192,
+      overrides: { ctx_size: 65536, cache_type_k: 'q8_0', cache_type_v: 'q8_0' },
+    };
+    // 65536 ctx with q8_0 KV on medium model
+    const verdict = validateModelLaunch(mockMediumModel, configWithOverrides, mockGpuHardware);
+    expect(verdict.autoTuneConfig).toBeDefined();
+    const tuned = verdict.autoTuneConfig!(configWithOverrides);
+    expect(tuned.overrides.flash_attn).toBe('on');
+  });
 });
+

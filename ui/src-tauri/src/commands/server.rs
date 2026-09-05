@@ -53,7 +53,7 @@ async fn emit_log_file_lines(app: AppHandle, path: PathBuf, default_level: &'sta
 
         if !path.exists() {
             missing_count += 1;
-            if missing_count == 5 {
+            if missing_count == 20 {
                 let _ = app.emit("server-log", serde_json::json!({
                     "timestamp": chrono::Local::now().format("%H:%M:%S").to_string(),
                     "level": "WARN",

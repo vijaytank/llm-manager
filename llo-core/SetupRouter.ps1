@@ -69,7 +69,7 @@ $config = @{
     templates_dir        = ""
     use_default_template = $false
     cache_idle_slots     = $true
-    parallel_slots       = -1
+    parallel_slots       = -1   # -1 = auto (hardware-derived), >0 = explicit override
     threads             = 0
     numa                = ""
     cache_ram           = 0

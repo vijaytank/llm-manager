@@ -13,7 +13,7 @@ import { InfoTooltip } from '../components/InfoTooltip';
 import './Overview.css';
 
 export const OverviewPage: React.FC = () => {
-  const { profile, fetchHardware, loading: hardwareLoading } = useHardwareStore();
+  const { profile, fetchHardware, loading: hardwareLoading, error: hardwareError } = useHardwareStore();
   const { config, updateConfig, saveConfig } = useConfigStore();
   const { status, port, logs, clearLogs, pendingRestart } = useServerStore();
   const { models, fetchModels } = useModelsStore();
@@ -346,6 +346,11 @@ export const OverviewPage: React.FC = () => {
               <span className="info-label">Performance Tier</span>
               <span className="badge badge-success">{profile?.performanceTier || 'cpu'}</span>
             </div>
+            {hardwareError && (
+              <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: '0.375rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', fontSize: '0.85rem' }}>
+                Hardware probe warning: {hardwareError}
+              </div>
+            )}
           </div>
         </div>
 

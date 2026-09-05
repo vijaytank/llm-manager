@@ -192,10 +192,8 @@ if ($uvExe) {
 }
 
 # 4. Prepare logs directory
-$logDir = if ($env:APPDATA) {
-    Join-Path $env:APPDATA "LLM Manager\logs"
-} elseif ($env:USERPROFILE) {
-    Join-Path $env:USERPROFILE ".config/LLM Manager/logs"
+$logDir = if ($userAppDir) {
+    Join-Path $userAppDir "logs"
 } else { Join-Path $ManagerDir "logs" }
 
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }

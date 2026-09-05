@@ -437,15 +437,7 @@ if ($hw) {
         $cacheType = "f16"
     }
 
-    # 3. Heuristically select context size to balance VRAM and capacity
-    $defaultCtxSize = 65536
-    if ($vramGB -gt 0) {
-        if ($vramGB -le 8.0) {
-            $defaultCtxSize = 32768    # 32k limits VRAM footprint for <= 8GB cards
-        } elseif ($vramGB -ge 16.0) {
-            $defaultCtxSize = 131072   # 128k for high-end GPUs
-        }
-    }
+    # 3. Context size is dynamically determined per-model via --fit or model metadata.
 
     # 4. Safe minimum context floor for --fit (prevents silent truncation)
     if ($vramGB -le 8.0) {
@@ -478,7 +470,7 @@ $config.cache_idle_slots = $true   # always safe to enable
 
 Write-Host "  -> Flash Attention    : $flashAttn" -ForegroundColor Green
 Write-Host "  -> KV Cache Type      : $cacheType" -ForegroundColor Green
-Write-Host "  -> Context Size       : $defaultCtxSize tokens" -ForegroundColor Green
+Write-Host "  -> Context Size       : Auto (model/hardware-derived via --fit)" -ForegroundColor Green
 Write-Host "  -> Context Shift      : Enabled" -ForegroundColor Green
 Write-Host "  -> Fit Ctx Floor      : $fitCtxMin tokens (fit will not go below this)" -ForegroundColor Green
 Write-Host "  -> UBatch Size        : $ubatchSize tokens/kernel" -ForegroundColor Green
@@ -618,12 +610,17 @@ $specDisp = if ($config.spec_type -ne 'none') { $config.spec_type } else { 'Disa
 
 Write-Host "    * Default Template: $tmplDisp" -ForegroundColor White
 Write-Host "`n  [Optimizations & Performance]" -ForegroundColor Cyan
-Write-Host "    * Flash Attention : $($config.flash_attn)" -ForegroundColor White
-Write-Host "    * KV Cache Type   : $($config.cache_type_k)" -ForegroundColor White
-Write-Host "    * Context Size    : $($config.default_context_size) tokens" -ForegroundColor White
+$flashAttnSummary = if ($config.overrides -and $config.overrides.ContainsKey("flash_attn")) { $config.overrides["flash_attn"] } elseif ($config.flash_attn) { $config.flash_attn } else { 'auto (hardware-derived)' }
+$cacheKSummary = if ($config.overrides -and $config.overrides.ContainsKey("cache_type_k")) { $config.overrides["cache_type_k"] } elseif ($config.cache_type_k) { $config.cache_type_k } else { 'auto (hardware-derived)' }
+$ctxSizeSummary = if ($config.overrides -and $config.overrides.ContainsKey("ctx_size")) { "$($config.overrides['ctx_size']) tokens" } elseif ($config.default_context_size) { "$($config.default_context_size) tokens" } else { 'auto (model/hardware-derived)' }
+$ubatchSummary = if ($config.overrides -and $config.overrides.ContainsKey("ubatch_size")) { "$($config.overrides['ubatch_size']) tokens" } elseif ($config.ubatch_size) { "$($config.ubatch_size) tokens" } else { 'auto (hardware-derived)' }
+
+Write-Host "    * Flash Attention : $flashAttnSummary" -ForegroundColor White
+Write-Host "    * KV Cache Type   : $cacheKSummary" -ForegroundColor White
+Write-Host "    * Context Size    : $ctxSizeSummary" -ForegroundColor White
 Write-Host "    * Context Shift   : $ctxShiftDisp" -ForegroundColor White
 Write-Host "    * Fit Ctx Floor   : $($config.fit_ctx_min) tokens" -ForegroundColor White
-Write-Host "    * UBatch Size     : $($config.ubatch_size) tokens" -ForegroundColor White
+Write-Host "    * UBatch Size     : $ubatchSummary" -ForegroundColor White
 Write-Host "    * Parallel Slots  : $parallelDisp" -ForegroundColor White
 Write-Host "    * Threads         : $threadsDisp" -ForegroundColor White
 Write-Host "    * KV Cache Reuse  : $reuseDisp" -ForegroundColor White
@@ -805,10 +802,10 @@ if ($apply.ToUpper() -eq "Y") {
         if (Test-Path $startServerScript) {
             # Start-Process in new window so it runs persistently without blocking the setup console
             if ($IsWindows) {
-                Start-Process powershell -ArgumentList "-NoExit", "-File", "`"$startServerScript`""
+                Start-Process powershell -ArgumentList @("-NoExit", "-File", $startServerScript)
             } else {
                 # macOS/Linux: PowerShell 7 binary is 'pwsh'
-                Start-Process pwsh -ArgumentList "-NoExit", "-File", "`"$startServerScript`""
+                Start-Process pwsh -ArgumentList @("-NoExit", "-File", $startServerScript)
             }
             Write-Host "[OK] llama-server has been launched in a new window." -ForegroundColor Green
         } else {

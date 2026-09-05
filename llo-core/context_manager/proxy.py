@@ -22,7 +22,9 @@ async def lifespan(app: FastAPI):
         llama_server_url=cfg.llama_server_url,
         summary_max_tokens=cfg.summary_max_tokens,
         summarize_with_model=cfg.summarize_with_model,
+        tokenizer_repo_override=cfg.tokenizer_repo,
     )
+    eng.start_background_tasks()
     limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
     http_client = httpx.AsyncClient(limits=limits, timeout=600.0)
     app.state.config = cfg
@@ -31,6 +33,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        await eng.stop_background_tasks()
         await http_client.aclose()
 
 app = FastAPI(title="LLO Context Manager Proxy", version="0.2.0", lifespan=lifespan)
@@ -69,11 +72,8 @@ def extract_session_id(request: Request, body: Dict[str, Any]) -> str:
     if req_id and req_id.strip():
         return f"session_{req_id.strip()}"
 
-    # 4. Fallback: Hash of client_ip + user-agent + path
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "unknown")
-    raw = f"{client_ip}:{user_agent}:{request.url.path}"
-    return "session_" + hashlib.md5(raw.encode("utf-8")).hexdigest()[:12]
+    # 4. Fallback: Generate a unique random session ID to prevent collisions under NAT
+    return f"session_{uuid.uuid4().hex[:16]}"
 
 @app.get("/health")
 async def health_check(request: Request):
@@ -327,8 +327,7 @@ async def forward_stream_anthropic(
     client: httpx.AsyncClient,
     model: str,
     input_tokens: int = 0,
-    engine_instance: Optional[ContextEngine] = None,
-    is_owned_client: bool = False
+    engine_instance: Optional[ContextEngine] = None
 ):
     msg_id = f"msg_{uuid.uuid4().hex[:16]}"
     output_token_count = 0
@@ -452,17 +451,13 @@ async def forward_stream_anthropic(
         yield f"event: message_stop\ndata: {json.dumps({'type': 'message_stop'})}\n\n".encode("utf-8")
     finally:
         await response.aclose()
-        if is_owned_client:
-            await client.aclose()
 
-async def forward_stream_openai(response: httpx.Response, client: httpx.AsyncClient, is_owned_client: bool = False):
+async def forward_stream_openai(response: httpx.Response, client: httpx.AsyncClient):
     try:
         async for chunk in response.aiter_bytes():
             yield chunk
     finally:
         await response.aclose()
-        if is_owned_client:
-            await client.aclose()
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
 async def proxy_all(request: Request, path: str):
@@ -482,14 +477,16 @@ async def proxy_all(request: Request, path: str):
         try:
             body = await request.json()
         except Exception:
-            body = {}
+            return JSONResponse(
+                {"error": {"message": "Invalid JSON in request body", "type": "invalid_request_error"}},
+                status_code=400
+            )
         messages = convert_anthropic_to_openai_messages(body)
         model_alias = body.get("model", "")
         token_count = eng.count_tokens_messages(messages, model_alias=model_alias)
         return JSONResponse({"input_tokens": token_count})
 
     client = get_http_client(request)
-    is_owned_client = not hasattr(request.app.state, "http_client")
 
     # Non-chat routes or when context manager is disabled: direct passthrough
     if not (is_anthropic_messages or is_openai_chat) or not cfg.enabled:
@@ -504,28 +501,27 @@ async def proxy_all(request: Request, path: str):
             )
             resp = await client.send(req, stream=True)
         except Exception:
-            if is_owned_client:
-                await client.aclose()
             raise
 
         if resp.headers.get("content-type", "").startswith("text/event-stream"):
             return StreamingResponse(
-                forward_stream_openai(resp, client, is_owned_client=is_owned_client),
+                forward_stream_openai(resp, client),
                 status_code=resp.status_code,
                 media_type=resp.headers.get("content-type", "text/event-stream")
             )
         else:
             content_bytes = await resp.aread()
             await resp.aclose()
-            if is_owned_client:
-                await client.aclose()
             return Response(content=content_bytes, status_code=resp.status_code, headers=dict(resp.headers))
 
     # Inspect request body
     try:
         body = await request.json()
     except Exception:
-        body = {}
+        return JSONResponse(
+            {"error": {"message": "Invalid JSON in request body", "type": "invalid_request_error"}},
+            status_code=400
+        )
 
     model_alias = body.get("model", "")
     max_tokens = body.get("max_tokens", 512)
@@ -609,8 +605,6 @@ async def proxy_all(request: Request, path: str):
     if resp.status_code != 200:
         content_bytes = await resp.aread()
         await resp.aclose()
-        if is_owned_client:
-            await client.aclose()
 
         err_text = content_bytes.decode("utf-8", errors="replace")
         if is_anthropic_messages:
@@ -634,21 +628,19 @@ async def proxy_all(request: Request, path: str):
     if is_stream:
         if is_anthropic_messages:
             return StreamingResponse(
-                forward_stream_anthropic(resp, client, model_alias, input_tokens, eng, is_owned_client=is_owned_client),
+                forward_stream_anthropic(resp, client, model_alias, input_tokens, eng),
                 status_code=200,
                 media_type="text/event-stream"
             )
         else:
             return StreamingResponse(
-                forward_stream_openai(resp, client, is_owned_client=is_owned_client),
+                forward_stream_openai(resp, client),
                 status_code=200,
                 media_type=resp.headers.get("content-type", "text/event-stream")
             )
     else:
         content_bytes = await resp.aread()
         await resp.aclose()
-        if is_owned_client:
-            await client.aclose()
         
         if is_anthropic_messages:
             try:

@@ -9,14 +9,22 @@ param(
 $ErrorActionPreference = "Stop"
 
 $ManagerDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+$lloCoreDir = $PSScriptRoot
+if (Test-Path (Join-Path $lloCoreDir "Paths.ps1")) {
+    . (Join-Path $lloCoreDir "Paths.ps1")
+}
+
 if ([string]::IsNullOrWhiteSpace($CacheFile)) {
-    $CacheFile = Join-Path $ManagerDir ".cached_flags.json"
+    $userDir = if (Get-Command "Get-LLMManagerUserDataDir" -ErrorAction SilentlyContinue) {
+        Get-LLMManagerUserDataDir
+    } else { $null }
+    if ($userDir -and (Test-Path $userDir)) {
+        $CacheFile = Join-Path $userDir ".cached_flags.json"
+    } else {
+        $CacheFile = Join-Path $ManagerDir ".cached_flags.json"
+    }
 }
 if ([string]::IsNullOrWhiteSpace($LlamaServerPath)) {
-    $lloCoreDir = $PSScriptRoot
-    if (Test-Path (Join-Path $lloCoreDir "Paths.ps1")) {
-        . (Join-Path $lloCoreDir "Paths.ps1")
-    }
 
     $configFile = if (Get-Command "Get-LLMManagerConfigPath" -ErrorAction SilentlyContinue) {
         Get-LLMManagerConfigPath -ManagerDir $ManagerDir
