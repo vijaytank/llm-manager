@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 import { Sidebar, PageId } from './components/layout/Sidebar';
 import { OverviewPage } from './pages/Overview';
 import { SetupPage } from './pages/Setup';
@@ -21,7 +22,7 @@ export const App: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { config, fetchConfig } = useConfigStore();
   const { profile, fetchHardware } = useHardwareStore();
-  const { setStatus, addLog } = useServerStore();
+  const { status, setStatus, addLog } = useServerStore();
   const { validate } = useValidationStore();
   const { models } = useModelsStore();
 
@@ -30,6 +31,15 @@ export const App: React.FC = () => {
   useEffect(() => {
     fetchConfig();
     fetchHardware();
+
+    // Synchronize initial server status with backend
+    invoke<string>('get_server_status')
+      .then((st) => {
+        if (st && (st === 'running' || st === 'starting' || st === 'stopped')) {
+          setStatus(st);
+        }
+      })
+      .catch(() => {});
 
     let cleanupFns: Array<() => void> = [];
     Promise.all([
@@ -50,6 +60,23 @@ export const App: React.FC = () => {
       cleanupFns.forEach((fn) => fn());
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Server status synchronization: probes backend socket and transitions immediately without CORS limits
+  useEffect(() => {
+    const syncStatus = () => {
+      invoke<string>('get_server_status')
+        .then((st) => {
+          if (st && (st === 'running' || st === 'starting' || st === 'stopped')) {
+            setStatus(st);
+          }
+        })
+        .catch(() => {});
+    };
+
+    const intervalTime = status === 'starting' ? 1000 : 3000;
+    const interval = setInterval(syncStatus, intervalTime);
+    return () => clearInterval(interval);
+  }, [status, setStatus]);
 
   // Real-time config & hardware safety validation
   useEffect(() => {

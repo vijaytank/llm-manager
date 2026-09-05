@@ -64,4 +64,33 @@ describe('Performance Parameters & Live Logs Management', () => {
     useServerStore.getState().clearLogs();
     expect(useServerStore.getState().logs.length).toBe(0);
   });
+
+  it('keeps Context Window in sync between Performance and Settings', () => {
+    useConfigStore.setState({
+      config: {
+        overrides: { ctx_size: 65536 },
+        default_context_size: 65536,
+      } as any,
+    });
+
+    const cfg1 = useConfigStore.getState().config;
+    // Settings visual read pattern
+    const settingsVal = cfg1?.overrides?.ctx_size ?? cfg1?.default_context_size ?? 32768;
+    // Performance visual read pattern
+    const perfVal = cfg1?.overrides?.ctx_size || cfg1?.default_context_size || 32768;
+    expect(settingsVal).toBe(65536);
+    expect(perfVal).toBe(65536);
+    expect(settingsVal).toBe(perfVal);
+
+    // Simulate updating from Settings
+    const newCtx = 131072;
+    useConfigStore.getState().updateConfig({
+      default_context_size: newCtx,
+      overrides: { ...(cfg1?.overrides || {}), ctx_size: newCtx },
+    });
+
+    const cfg2 = useConfigStore.getState().config;
+    expect(cfg2?.overrides?.ctx_size).toBe(131072);
+    expect(cfg2?.default_context_size).toBe(131072);
+  });
 });

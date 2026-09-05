@@ -363,7 +363,7 @@ export const OverviewPage: React.FC = () => {
           <div className="card-body">
             <div className="info-row">
               <span className="info-label">Context Window</span>
-              <span className="info-value font-mono">{config?.default_context_size || 32768} tokens</span>
+              <span className="info-value font-mono">{config?.overrides?.ctx_size ?? config?.default_context_size ?? 32768} tokens</span>
             </div>
             <div className="info-row">
               <span className="info-label">GPU Offload Layers</span>

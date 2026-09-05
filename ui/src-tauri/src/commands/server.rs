@@ -9,6 +9,7 @@ use crate::scripts::run_powershell_script;
 
 static IS_RUNNING: AtomicBool = AtomicBool::new(false);
 static IS_STARTING: AtomicBool = AtomicBool::new(false);
+static ACTIVE_PORT: std::sync::atomic::AtomicU16 = std::sync::atomic::AtomicU16::new(8080);
 static LOG_TAIL_TASKS: std::sync::Mutex<Vec<tokio::task::JoinHandle<()>>> = std::sync::Mutex::new(Vec::new());
 
 fn abort_log_tailers() {
@@ -155,6 +156,7 @@ pub async fn start_server(app: AppHandle, port: Option<u16>) -> Result<String, S
     }
 
     let p = port.unwrap_or(8080);
+    ACTIVE_PORT.store(p, Ordering::SeqCst);
     abort_log_tailers();
 
     let _ = app.emit("server-status-changed", "starting");
@@ -271,15 +273,40 @@ pub async fn stop_server(app: AppHandle) -> Result<String, String> {
     Ok("Stop request sent".to_string())
 }
 
+pub fn check_server_status_internal() -> String {
+    if IS_STARTING.load(Ordering::SeqCst) {
+        let p = ACTIVE_PORT.load(Ordering::SeqCst);
+        let port = if p > 0 { p } else { 8080 };
+        if std::net::TcpStream::connect_timeout(
+            &std::net::SocketAddr::from(([127, 0, 0, 1], port)),
+            Duration::from_millis(150),
+        ).is_ok() {
+            IS_RUNNING.store(true, Ordering::SeqCst);
+            IS_STARTING.store(false, Ordering::SeqCst);
+            return "running".to_string();
+        }
+        return "starting".to_string();
+    }
+
+    if IS_RUNNING.load(Ordering::SeqCst) {
+        let p = ACTIVE_PORT.load(Ordering::SeqCst);
+        let port = if p > 0 { p } else { 8080 };
+        if std::net::TcpStream::connect_timeout(
+            &std::net::SocketAddr::from(([127, 0, 0, 1], port)),
+            Duration::from_millis(150),
+        ).is_err() {
+            IS_RUNNING.store(false, Ordering::SeqCst);
+            return "stopped".to_string();
+        }
+        return "running".to_string();
+    }
+
+    "stopped".to_string()
+}
+
 #[tauri::command]
 pub fn get_server_status() -> String {
-    if IS_RUNNING.load(Ordering::SeqCst) {
-        "running".to_string()
-    } else if IS_STARTING.load(Ordering::SeqCst) {
-        "starting".to_string()
-    } else {
-        "stopped".to_string()
-    }
+    check_server_status_internal()
 }
 
 #[tauri::command]

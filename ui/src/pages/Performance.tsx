@@ -118,7 +118,11 @@ export const PerformancePage: React.FC = () => {
                 style={{ width: '150px', padding: '4px 8px', fontSize: '0.85rem' }}
                 value={config?.overrides?.ctx_size || config?.default_context_size || 32768}
                 onChange={async (e) => {
-                  updateConfig({ overrides: { ...(config?.overrides || {}), ctx_size: Number(e.target.value) } });
+                  const val = Number(e.target.value);
+                  updateConfig({
+                    default_context_size: val,
+                    overrides: { ...(config?.overrides || {}), ctx_size: val }
+                  });
                   await saveConfig();
                 }}
               >

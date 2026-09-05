@@ -142,12 +142,25 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Context Window Limit</label>
+              <label className="form-label">
+                Context Window Limit
+                <InfoTooltip
+                  title="Context Window Limit (-c / --ctx-size)"
+                  description="Maximum number of tokens (prompt + response + history) the model can hold in memory simultaneously."
+                  recommendation="Synchronized with the Context Window setting in Performance & System Tuning."
+                />
+              </label>
               <input
                 type="number"
                 className="form-input font-mono"
-                value={config?.default_context_size || 32768}
-                onChange={(e) => updateConfig({ default_context_size: Number(e.target.value) })}
+                value={config?.overrides?.ctx_size ?? config?.default_context_size ?? 32768}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  updateConfig({
+                    default_context_size: val,
+                    overrides: { ...(config?.overrides || {}), ctx_size: val }
+                  });
+                }}
               />
             </div>
 

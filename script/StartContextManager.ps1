@@ -119,9 +119,36 @@ if (-not $pyExe) {
     }
 }
 
+if ($uvExe) {
+    $uvRunnable = $false
+    try {
+        $uvCheck = & $uvExe --version 2>&1
+        if ($LASTEXITCODE -eq 0 -and $uvCheck -notmatch "Application Control|blocked|Access is denied") {
+            $uvRunnable = $true
+        }
+    } catch {}
+    if (-not $uvRunnable) {
+        Write-Host "  Notice: uv ($uvExe) is unavailable or restricted by security policy; falling back to python." -ForegroundColor DarkGray
+        $uvExe = $null
+    }
+}
+
+if ($pyExe) {
+    $pyRunnable = $false
+    try {
+        $pyCheck = & $pyExe --version 2>&1
+        if ($LASTEXITCODE -eq 0 -and $pyCheck -notmatch "Application Control|blocked|Access is denied") {
+            $pyRunnable = $true
+        }
+    } catch {}
+    if (-not $pyRunnable) {
+        $pyExe = $null
+    }
+}
+
 if (-not $uvExe -and -not $pyExe) {
-    Write-Host "[ContextManager] ERROR: Neither 'uv' nor 'python' was found on your system." -ForegroundColor Red
-    Write-Host "  Please install uv (`winget install astral-sh.uv`) or Python 3.10+ to enable Context Manager." -ForegroundColor Yellow
+    Write-Host "[ContextManager] ERROR: Neither 'uv' nor 'python' was found or runnable on your system." -ForegroundColor Red
+    Write-Host "  Please ensure Python 3.10+ or uv is installed and permitted by system policy to enable Context Manager." -ForegroundColor Yellow
     exit 1
 }
 
@@ -172,23 +199,81 @@ Write-Host "==========================================================" -Foregro
 Write-Host "  Port : $proxyPort" -ForegroundColor White
 
 $venvPy = if ($env:OS -match "Windows") { Join-Path $venvDir "Scripts\python.exe" } else { Join-Path $venvDir "bin/python" }
+$useVenv = $false
 
 if ($uvExe) {
     Write-Host "  Runner: uv ($uvExe)" -ForegroundColor DarkGray
     if (-not (Test-Path $venvDir) -or -not (Test-Path $venvPy)) {
         Write-Host "  Creating venv with uv..." -ForegroundColor Cyan
-        & $uvExe venv $venvDir --quiet
+        try { & $uvExe venv $venvDir --quiet } catch {}
     }
     Write-Host "  Installing dependencies..." -ForegroundColor Cyan
-    & $uvExe pip install -r $reqFile --quiet --python $venvPy
-} else {
-    Write-Host "  Runner: python ($pyExe)" -ForegroundColor DarkGray
-    if (-not (Test-Path $venvDir) -or -not (Test-Path $venvPy)) {
+    try { & $uvExe pip install -r $reqFile --quiet --python $venvPy } catch {}
+
+    if (Test-Path $venvPy) {
+        try {
+            $vCheck = & $venvPy --version 2>&1
+            if ($LASTEXITCODE -eq 0 -and $vCheck -notmatch "Application Control|blocked|Access is denied") {
+                $useVenv = $true
+            }
+        } catch {}
+    }
+} elseif ($pyExe) {
+    if (Test-Path $venvPy) {
+        try {
+            $vCheck = & $venvPy --version 2>&1
+            if ($LASTEXITCODE -eq 0 -and $vCheck -notmatch "Application Control|blocked|Access is denied") {
+                $useVenv = $true
+            }
+        } catch {}
+    }
+
+    if (-not (Test-Path $venvDir)) {
         Write-Host "  Creating venv..." -ForegroundColor Cyan
-        & $pyExe -m venv $venvDir
+        try {
+            & $pyExe -m venv $venvDir
+            if (Test-Path $venvPy) {
+                $vCheck = & $venvPy --version 2>&1
+                if ($LASTEXITCODE -eq 0 -and $vCheck -notmatch "Application Control|blocked|Access is denied") {
+                    $useVenv = $true
+                }
+            }
+        } catch {}
     }
-    Write-Host "  Installing dependencies..." -ForegroundColor Cyan
-    & $venvPy -m pip install -r $reqFile --quiet
+
+    if ($useVenv) {
+        Write-Host "  Runner: venv python ($venvPy)" -ForegroundColor DarkGray
+        Write-Host "  Installing dependencies..." -ForegroundColor Cyan
+        try { & $venvPy -m pip install -r $reqFile --quiet } catch {}
+    } else {
+        Write-Host "  Runner: host python ($pyExe)" -ForegroundColor DarkGray
+    }
+}
+
+# Resolve active Python executable
+$activePy = if ($useVenv -and (Test-Path $venvPy)) { $venvPy } else { $pyExe }
+
+if (-not $activePy) {
+    Write-Host "[ContextManager] ERROR: No working Python executable found." -ForegroundColor Red
+    exit 1
+}
+
+# Check that core dependencies are available in active Python
+$hasDeps = $false
+try {
+    $depCheck = & $activePy -c "import uvicorn, fastapi, pydantic, httpx; print('DEPS_OK')" 2>&1
+    if ($depCheck -match "DEPS_OK") {
+        $hasDeps = $true
+    }
+} catch {}
+
+if (-not $hasDeps) {
+    Write-Host "  Installing dependencies to python environment..." -ForegroundColor Cyan
+    try {
+        & $activePy -m pip install -r $reqFile --quiet
+    } catch {
+        Write-Host "  [ContextManager] Warning: pip install encountered: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
 }
 
 # 4. Prepare logs directory
@@ -207,47 +292,69 @@ Write-Host "  Logs : $cmLog" -ForegroundColor DarkGray
 Write-Host "==========================================================" -ForegroundColor Green
 
 # 5. Launch Proxy
-$venvPy = if ($env:OS -match "Windows") { Join-Path $venvDir "Scripts\python.exe" } else { Join-Path $venvDir "bin/python" }
-$uvicornExe = if ($env:OS -match "Windows") { Join-Path $venvDir "Scripts\uvicorn.exe" } else { Join-Path $venvDir "bin/uvicorn" }
 $lloCoreDir = Split-Path -Parent $cmDir
 $pidFile = Join-Path $userAppDir "context-manager.pid"
+$uvicornArgs = @("-m", "uvicorn", "context_manager.proxy:app", "--host", "0.0.0.0", "--port", "$proxyPort")
 
 if ($Foreground) {
     Write-Host "Starting Context Manager proxy in foreground on port $proxyPort..." -ForegroundColor Cyan
-    & $venvPy -m uvicorn context_manager.proxy:app --host 0.0.0.0 --port $proxyPort
+    & $activePy @uvicornArgs
 } else {
     Write-Host "Launching Context Manager proxy in background (port $proxyPort)..." -ForegroundColor Cyan
     $launchedPid = $null
 
-    if ($env:OS -match "Windows") {
-        $cmdLine = "`"$uvicornExe`" context_manager.proxy:app --host 0.0.0.0 --port $proxyPort"
+    if ($env:OS -match "Windows" -or $IsWindows) {
+        $cmdLine = "cmd.exe /c `"`"$activePy`" -m uvicorn context_manager.proxy:app --host 0.0.0.0 --port $proxyPort > `"$cmLog`" 2> `"$cmErrLog`"`""
         try {
             $res = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmdLine; CurrentDirectory = $lloCoreDir }
             if ($res.ReturnValue -eq 0) {
                 $launchedPid = $res.ProcessId
-                Write-Host "  Context Manager Proxy running (PID: $launchedPid)" -ForegroundColor Green
+                Write-Host "  Context Manager Proxy process started (PID: $launchedPid)" -ForegroundColor Green
             } else {
                 Write-Host "  [ContextManager] CIM launch code $($res.ReturnValue), falling back to Start-Process..." -ForegroundColor Yellow
-                $argList = @("context_manager.proxy:app", "--host", "0.0.0.0", "--port", "$proxyPort")
-                $proc = Start-Process -FilePath $uvicornExe -ArgumentList $argList -WorkingDirectory $lloCoreDir -RedirectStandardOutput $cmLog -RedirectStandardError $cmErrLog -WindowStyle Hidden -PassThru
+                $proc = Start-Process -FilePath $activePy -ArgumentList $uvicornArgs -WorkingDirectory $lloCoreDir -WindowStyle Hidden -PassThru
                 $launchedPid = $proc.Id
-                Write-Host "  Context Manager Proxy running (PID: $launchedPid)" -ForegroundColor Green
             }
         } catch {
             Write-Host "  [ContextManager] CIM launch exception: $($_.Exception.Message), falling back to Start-Process..." -ForegroundColor Yellow
-            $argList = @("context_manager.proxy:app", "--host", "0.0.0.0", "--port", "$proxyPort")
-            $proc = Start-Process -FilePath $uvicornExe -ArgumentList $argList -WorkingDirectory $lloCoreDir -RedirectStandardOutput $cmLog -RedirectStandardError $cmErrLog -WindowStyle Hidden -PassThru
+            $proc = Start-Process -FilePath $activePy -ArgumentList $uvicornArgs -WorkingDirectory $lloCoreDir -WindowStyle Hidden -PassThru
             $launchedPid = $proc.Id
-            Write-Host "  Context Manager Proxy running (PID: $launchedPid)" -ForegroundColor Green
         }
     } else {
-        $argList = @("context_manager.proxy:app", "--host", "0.0.0.0", "--port", "$proxyPort")
-        $proc = Start-Process -FilePath $uvicornExe -ArgumentList $argList -WorkingDirectory $lloCoreDir -RedirectStandardOutput $cmLog -RedirectStandardError $cmErrLog -WindowStyle Hidden -PassThru
+        $proc = Start-Process -FilePath $activePy -ArgumentList $uvicornArgs -WorkingDirectory $lloCoreDir -RedirectStandardOutput $cmLog -RedirectStandardError $cmErrLog -PassThru
         $launchedPid = $proc.Id
-        Write-Host "  Context Manager Proxy running (PID: $launchedPid)" -ForegroundColor Green
     }
 
-    if ($launchedPid) {
-        Set-Content -Path $pidFile -Value $launchedPid -Encoding UTF8 -ErrorAction SilentlyContinue
+    # Verify endpoint health before returning
+    Write-Host "  Verifying Context Manager health on port $proxyPort..." -NoNewline -ForegroundColor Cyan
+    $deadline = (Get-Date).AddSeconds(8)
+    $healthy = $false
+    while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Milliseconds 400
+        try {
+            $hResp = Invoke-RestMethod -Uri "http://127.0.0.1:$proxyPort/health" -TimeoutSec 2 -ErrorAction SilentlyContinue
+            if ($hResp -and $hResp.status -eq "ok") {
+                $healthy = $true
+                break
+            }
+        } catch {}
+        Write-Host "." -NoNewline -ForegroundColor Cyan
+    }
+    Write-Host ""
+
+    if ($healthy) {
+        Write-Host "  Context Manager Proxy verified live at http://127.0.0.1:$proxyPort" -ForegroundColor Green
+        # Locate python worker process PID for accurate lifecycle management
+        $workerProcs = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+            $_.Name -eq "python.exe" -and $_.CommandLine -like "*context_manager.proxy*"
+        })
+        $targetPid = if ($workerProcs.Count -gt 0) { $workerProcs[0].ProcessId } else { $launchedPid }
+        if ($targetPid) {
+            Set-Content -Path $pidFile -Value $targetPid -Encoding UTF8 -ErrorAction SilentlyContinue
+        }
+    } else {
+        $errSnippet = if (Test-Path $cmErrLog) { (Get-Content $cmErrLog -Raw -ErrorAction SilentlyContinue) } else { "" }
+        Write-Host "  [ContextManager] Health check timed out on port $proxyPort. $errSnippet" -ForegroundColor Red
+        exit 1
     }
 }

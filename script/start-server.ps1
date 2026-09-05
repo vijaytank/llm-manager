@@ -469,7 +469,7 @@ $formattedServerArgs = $serverArgs | ForEach-Object {
 Write-Host "Starting llama-server..." -ForegroundColor Cyan
 Write-Host "Command: $LlamaServer $($formattedServerArgs -join ' ')" -ForegroundColor DarkGray
 
-$proc = Start-Process -FilePath $LlamaServer -ArgumentList $formattedServerArgs -WorkingDirectory $LlamaDir -PassThru -NoNewWindow -RedirectStandardOutput $logPath -RedirectStandardError $errPath
+$proc = Start-Process -FilePath $LlamaServer -ArgumentList $formattedServerArgs -WorkingDirectory $LlamaDir -PassThru -WindowStyle Hidden -RedirectStandardOutput $logPath -RedirectStandardError $errPath
 Write-Host "Server process launched (PID: $($proc.Id))" -ForegroundColor Green
 Write-Host "llama-server stdout log: $logPath" -ForegroundColor DarkGray
 Write-Host "llama-server stderr log: $errPath" -ForegroundColor DarkGray
@@ -516,6 +516,7 @@ if ($ready -and $cmEnabled) {
                     $activeCmPort = [int]$reloadedCfg.context_manager.proxy_port
                 }
             }
+            Write-Host "Context Manager Proxy active on port $activeCmPort (upstream llama-server port $Port)" -ForegroundColor Green
         } catch {
             Write-Host "[WARNING] Failed to start Context Manager Proxy: $($_.Exception.Message)" -ForegroundColor Yellow
         }
@@ -572,7 +573,7 @@ Write-Host ""
 Write-Host "Client environment variables exported successfully." -ForegroundColor Green
 
 # 7. Optionally launch Claude Code CLI in a new window (interactive console only)
-if ([Environment]::UserInteractive) {
+if ([Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
     try {
         $claudeCli = Get-Command "claude" -ErrorAction SilentlyContinue
         if ($claudeCli) {
