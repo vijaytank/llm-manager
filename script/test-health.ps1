@@ -73,10 +73,20 @@ if (Test-Path $ConfigFile) {
     try {
         $loaded = Get-Content $ConfigFile -Raw | ConvertFrom-Json
         $keys = $loaded.PSObject.Properties.Name
-        $requiredKeys = @("installation_type", "llama_server_path", "models_dir", "cache_type_k", "flash_attn")
+        $requiredKeys = @("installation_type", "llama_server_path", "models_dir")
+        $optionalOverrides = @("cache_type_k", "flash_attn", "ctx_size", "ubatch_size", "parallel")
         $missing = @()
         foreach ($rk in $requiredKeys) {
             if ($rk -notin $keys) { $missing += $rk }
+        }
+        # Also check that overrides block exists if any override keys are present
+        $hasOverridesBlock = $loaded.overrides -and $loaded.overrides.PSObject.Properties.Name.Count -gt 0
+        $hasFlatKeys = $false
+        foreach ($ok in $optionalOverrides) {
+            if ($ok -in $keys) { $hasFlatKeys = $true }
+        }
+        if ($hasFlatKeys -and -not $hasOverridesBlock) {
+            $missing += "overrides block (flat inference keys found but no overrides block - consider migrating to overrides)"
         }
         Write-HealthResult -TestName "Config JSON Format & Keys Check" -Success ($missing.Count -eq 0) -Detail $(if ($missing.Count -eq 0) { "Schema is valid and complete." } else { "Missing keys: $($missing -join ', ')" })
     } catch {
@@ -109,20 +119,28 @@ Write-Host "`n[Check 4] Testing SetupRouter Execution..." -ForegroundColor Cyan
 $setupRouterScript = Join-Path $ManagerDir "llo-core\SetupRouter.ps1"
 if (Test-Path $setupRouterScript) {
     try {
-        # Run SetupRouter inside a dry-run/mock context (temporary outputs)
+        # Run SetupRouter inside a dry-run/mock context (temporary outputs).
+        # Uses the temp-file model contract (PS-04) instead of pipeline capture,
+        # which is fragile to stray bare expressions in SetupRouter.ps1.
         $tempDir = if ($env:TEMP) { $env:TEMP } elseif ($env:TMPDIR) { $env:TMPDIR } else { '/tmp' }
         $tempPreset = Join-Path $tempDir "models-preset-test.ini"
         $tempConfig = Join-Path $tempDir "llo-config-test.json"
+        $tempModelsFile = Join-Path $tempDir "llo-models-test.json"
         if (Test-Path $ConfigFile) { Copy-Item $ConfigFile $tempConfig }
         
-        $modelsList = & $setupRouterScript -PresetFile $tempPreset -ConfigFile $tempConfig
+        $null = & $setupRouterScript -PresetFile $tempPreset -ConfigFile $tempConfig -ModelsTempFile $tempModelsFile
         $success = (Test-Path $tempPreset)
-        $modelsCount = if ($null -ne $modelsList) { @($modelsList).Count } else { 0 }
+        $modelsCount = 0
+        if (Test-Path $tempModelsFile) {
+            $modelsJson = Get-Content $tempModelsFile -Raw | ConvertFrom-Json
+            $modelsCount = @($modelsJson).Count
+        }
         Write-HealthResult -TestName "SetupRouter Execution Test" -Success $success -Detail "Router generated models list successfully. Found $modelsCount models."
         
         # Clean up temporary test files
         if (Test-Path $tempPreset) { Remove-Item $tempPreset -Force }
         if (Test-Path $tempConfig) { Remove-Item $tempConfig -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $tempModelsFile) { Remove-Item $tempModelsFile -Force -ErrorAction SilentlyContinue }
     } catch {
         Write-HealthResult -TestName "SetupRouter Execution Test" -Success $false -Detail $_.Exception.Message
     }

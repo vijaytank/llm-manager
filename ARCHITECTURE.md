@@ -247,7 +247,30 @@ To maintain backward compatibility with flat configuration schemas, `SetupRouter
 
 ---
 
-## 6. File Map
+## 6. Context Manager Proxy (Python)
+
+An optional subsystem that sits between clients and the llama-server, translating the Anthropic protocol to OpenAI's, compressing long sessions, and enforcing a context-size budget. Enabled only when `context_manager.enabled = true` in `llo-config.json`; launched via `script/StartContextManager.ps1` (default proxy port `8090`, upstream `8080`).
+
+### Components (`llo-core/context_manager/`)
+*   `proxy.py` — Async HTTP client/server. Translates Anthropic request/response envelopes to OpenAI, rewrites URLs to the local llama-server, and injects the translated (compressed) message list. Handles session IDs, streaming, and tool-call passthrough.
+*   `context_engine.py` — Core compression logic. Tracks per-session state (`SessionState`), counts tokens via `tokenizer_cache`, decides when compression is needed (`needs_compression`), summarizes old turns via the llama-server, and persists state to disk checkpoints under `%APPDATA%\LLM Manager\checkpoints\`.
+*   `tokenizer_cache.py` — Shared HuggingFace tokenizer with alias normalization (e.g. `claude-3-5-sonnet-20241022`), a persistent token-count cache, and per-repo overrides.
+*   `preset_reader.py` — Parses `models-preset.ini` to resolve active model aliases.
+*   `config.py` — Pydantic settings model (`ContextManagerConfig`) with defaults: `warn_threshold=0.70`, `keep_turns=6`, `proxy_port=8090`, `ctx_limit=0` (auto), `summary_max_tokens=768`.
+*   `tests/` — 11 pytest modules (compression, token counting, session tracking, protocol conversion, HTTP round-trip). Run with `pytest llo-core/context_manager/tests`.
+
+### Compression Policy
+`needs_compression` triggers when `prompt_tokens + max_tokens_requested >= ctx_limit * warn_threshold` (default threshold `0.70`). When triggered, `ContextEngine.compress` keeps the last `keep_turns` turns uncompressed, summarizes the delta turns into a `[Compressed History Summary]` system block, and clamps message tokens to `85%` of `ctx_limit`. `ctx_limit = 0` auto-reads the value from `models-preset.ini` (falls back to `65536`). Idempotency is enforced via a SHA-256 of the turns to summarize, so unchanged deltas are skipped.
+
+### Configuration Directory Split
+Both the Rust Tauri backend and the Python proxy resolve configuration from the user's AppData directory (`%APPDATA%\LLM Manager\llo-config.json` on Windows, `~/.config/LLM Manager` on macOS/Linux), **not** the workspace root.
+*   **Rust**: `get_user_data_dir()` (`ui/src-tauri/src/scripts.rs`) resolves `%APPDATA%\LLM Manager` and `get_config_path()` (`ui/src-tauri/src/commands/config.rs`) builds `llo-config.json` from it. On first launch, `load_config()` copies a bundled default config into that path if missing.
+*   **PowerShell**: `Paths.ps1` (`Get-LLMManagerConfigPath`) implements the same lookup. `StartContextManager.ps1` passes `-ConfigFile` so the backend reads the GUI's config.
+*   **Rationale**: When the GUI launches `start-server.ps1`/`stop-server.ps1`, it passes its AppData path via `-ConfigFile` so the PowerShell backend acts on the GUI's configuration rather than a config sitting in the repo.
+
+---
+
+## 7. File Map
 
 | File | Role |
 |---|---|

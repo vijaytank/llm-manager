@@ -479,6 +479,27 @@ Write-Host "  -> Parallel Slots     : $parallelDisplay" -ForegroundColor Green
 Write-Host "  -> KV Cache Reuse     : Enabled ($cacheReuseChunk token prefix threshold)" -ForegroundColor Green
 Write-Host "  -> Idle Slot Caching  : Enabled" -ForegroundColor Green
 
+# Step 2.3: Optional context size override
+if ($hw) {
+    # Compute a recommended context size based on hardware profile
+    $recommendedCtx = 32768  # safe default
+    if ($vramGB -le 4.0) {
+        $recommendedCtx = 16384
+    } elseif ($vramGB -ge 12.0) {
+        $recommendedCtx = 65536
+    } elseif ($vramGB -ge 8.0) {
+        $recommendedCtx = 32768
+    }
+    Write-Host "`n[Optional] Context Size Override" -ForegroundColor Yellow
+    Write-Host "  Recommended context size for your hardware: $recommendedCtx tokens" -ForegroundColor DarkGray
+    $ctxOverride = Get-UserInput "Set a custom context size in tokens? (Enter to skip, or enter a value like 8192, 65536)" -DefaultVal ""
+    if ($ctxOverride -match '^\d+$' -and [int]$ctxOverride -gt 0) {
+        if (-not $config.overrides) { $config.overrides = @{} }
+        $config.overrides["ctx_size"] = [int]$ctxOverride
+        Write-Host "  Context size override saved: $ctxOverride tokens" -ForegroundColor DarkYellow
+    }
+}
+
 # Optional: Speculative decoding via n-gram (no draft model required)
 Write-Host "`n[Optional] N-Gram Speculative Decoding" -ForegroundColor Yellow
 if ($vramGB -gt 0 -and $vramGB -lt 6.0) {
@@ -612,7 +633,7 @@ Write-Host "    * Default Template: $tmplDisp" -ForegroundColor White
 Write-Host "`n  [Optimizations & Performance]" -ForegroundColor Cyan
 $flashAttnSummary = if ($config.overrides -and $config.overrides.ContainsKey("flash_attn")) { $config.overrides["flash_attn"] } elseif ($config.flash_attn) { $config.flash_attn } else { 'auto (hardware-derived)' }
 $cacheKSummary = if ($config.overrides -and $config.overrides.ContainsKey("cache_type_k")) { $config.overrides["cache_type_k"] } elseif ($config.cache_type_k) { $config.cache_type_k } else { 'auto (hardware-derived)' }
-$ctxSizeSummary = if ($config.overrides -and $config.overrides.ContainsKey("ctx_size")) { "$($config.overrides['ctx_size']) tokens" } elseif ($config.default_context_size) { "$($config.default_context_size) tokens" } else { 'auto (model/hardware-derived)' }
+$ctxSizeSummary = if ($config.overrides -and $config.overrides.ContainsKey("ctx_size")) { "$($config.overrides['ctx_size']) tokens" } elseif ($config.overrides -and $config.overrides.ContainsKey("default_context_size")) { "$($config.overrides['default_context_size']) tokens" } elseif ($config.default_context_size) { "$($config.default_context_size) tokens" } else { 'auto (model/hardware-derived)' }
 $ubatchSummary = if ($config.overrides -and $config.overrides.ContainsKey("ubatch_size")) { "$($config.overrides['ubatch_size']) tokens" } elseif ($config.ubatch_size) { "$($config.ubatch_size) tokens" } else { 'auto (hardware-derived)' }
 
 Write-Host "    * Flash Attention : $flashAttnSummary" -ForegroundColor White

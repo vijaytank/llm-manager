@@ -15,11 +15,12 @@
 # fallback_provider, etc.) continue to be read from the flat config as before.
 
 param(
-    [string]$ModelsDir    = "",
-    [string]$TemplatesDir = "",
-    [string]$GrammarsDir  = "",
-    [string]$PresetFile   = "",
-    [string]$ConfigFile   = ""
+    [string]$ModelsDir      = "",
+    [string]$TemplatesDir   = "",
+    [string]$GrammarsDir    = "",
+    [string]$PresetFile     = "",
+    [string]$ConfigFile     = "",
+    [string]$ModelsTempFile = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -789,5 +790,13 @@ if ($modelEntries.Count -gt 0) {
 Set-Content -Path $PresetFile -Value $presetLines -Encoding ASCII
 Write-Host "Preset configuration written: $PresetFile" -ForegroundColor Green
 
-# Return model list to caller (start-server.ps1 captures this via @(. $setupScript))
+# Write model list to temp file if requested by caller (start-server.ps1).
+# This replaces the legacy pipeline-return pattern which is fragile to stray
+# bare expressions in this script.
+if ($ModelsTempFile) {
+    $modelEntries.ToArray() | ConvertTo-Json -Depth 5 | Set-Content $ModelsTempFile -Encoding UTF8
+    Write-Host "  [debug] Model list written to temp file: $ModelsTempFile" -ForegroundColor DarkGray
+}
+
+# Always return model list for callers that capture pipeline output directly.
 return $modelEntries.ToArray()

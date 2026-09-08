@@ -89,19 +89,29 @@ if (-not (Test-Path $setupScript)) {
     throw "SetupRouter.ps1 script not found at: $setupScript"
 }
 
-# Run setup and capture returned GGUF models list
-# Wrap in @() to prevent PowerShell from unrolling a single-element array into a scalar,
-# which would make $models.Count return $null instead of 1 and fall through to bootstrap mode.
-# Forward all user-data paths so SetupRouter reads config and preset from the correct location.
-$setupArgs = @{}
-$setupArgs["ConfigFile"] = $ConfigFile
-$setupArgs["PresetFile"] = $PresetFile
+# Run setup and capture returned GGUF models list.
+# Uses a temp JSON file to avoid pipeline contamination from stray bare expressions
+# in SetupRouter.ps1 (powerful pattern that is fragile to debug statements).
+$setupTempFile = [System.IO.Path]::GetTempFileName()
+$setupArgs = @{
+    "ConfigFile"     = $ConfigFile
+    "PresetFile"     = $PresetFile
+    "ModelsTempFile" = $setupTempFile
+}
 if (-not [string]::IsNullOrWhiteSpace($ModelsDir)) {
     $setupArgs["ModelsDir"] = $ModelsDir
 } elseif ($config.models_dir) {
     $setupArgs["ModelsDir"] = $config.models_dir
 }
-$models = @(. $setupScript @setupArgs)
+& $setupScript @setupArgs
+Remove-Item $setupTempFile -Force -ErrorAction SilentlyContinue
+if (Test-Path $setupTempFile) {
+    $models = @(Get-Content $setupTempFile -Raw | ConvertFrom-Json)
+    Remove-Item $setupTempFile -Force -ErrorAction SilentlyContinue
+} else {
+    # Fallback: legacy pipeline capture (deprecated, to be removed)
+    $models = @(. $setupScript @setupArgs)
+}
 
 # 2. Stop any existing llama-server on the port
 if ($IsWindows) {
@@ -344,12 +354,12 @@ if ($models.Count -gt 0) {
         Write-Host "Parallel Slots: $Parallel (from CLI switch)" -ForegroundColor DarkYellow
     } elseif ($PSBoundParameters.ContainsKey("Parallel") -and $Parallel -eq -1) {
         Write-Host "Parallel Slots: auto (from CLI switch -1)" -ForegroundColor DarkYellow
-    } elseif ($config.ContainsKey("parallel_slots") -and [int]$config.parallel_slots -gt 0) {
-        $finalParallel = [int]$config.parallel_slots
+    } elseif ($config.overrides -and $config.overrides.ContainsKey("parallel") -and [int]$config.overrides.parallel -gt 0) {
+        $finalParallel = [int]$config.overrides.parallel
         $serverArgs += @("-np", "$finalParallel")
-        Write-Host "Parallel Slots: $finalParallel (from UI config.parallel_slots)" -ForegroundColor Green
-    } elseif ($config.ContainsKey("parallel_slots") -and [int]$config.parallel_slots -eq -1) {
-        Write-Host "Parallel Slots: auto (from UI config -1)" -ForegroundColor DarkGray
+        Write-Host "Parallel Slots: $finalParallel (from config.overrides.parallel)" -ForegroundColor Green
+    } elseif ($config.overrides -and $config.overrides.ContainsKey("parallel") -and [int]$config.overrides.parallel -eq -1) {
+        Write-Host "Parallel Slots: auto (from config.overrides -1)" -ForegroundColor DarkGray
     } elseif ($selectedEntry.Parallel -and [int]$selectedEntry.Parallel -gt 0) {
         $finalParallel = [int]$selectedEntry.Parallel
         $serverArgs += @("-np", "$finalParallel")
@@ -358,14 +368,14 @@ if ($models.Count -gt 0) {
         $serverArgs += @("-np", "1")
     }
 
-    # ── Micro-batch Size (-ub) Resolution Hierarchy: CLI > UI Config > Default (512) ──
+    # ── Micro-batch Size (-ub) Resolution Hierarchy: CLI > UI Config (overrides) > Default (512) ──
     $finalUbatch = 0
     if ($PSBoundParameters.ContainsKey("UbatchSize") -and $UbatchSize -gt 0) {
         $finalUbatch = $UbatchSize
         Write-Host "Micro-Batch Size: $finalUbatch tokens (from CLI switch)" -ForegroundColor DarkYellow
-    } elseif ($config.ContainsKey("ubatch_size") -and [int]$config.ubatch_size -gt 0) {
-        $finalUbatch = [int]$config.ubatch_size
-        Write-Host "Micro-Batch Size: $finalUbatch tokens (from UI config.ubatch_size)" -ForegroundColor Green
+    } elseif ($config.overrides -and $config.overrides.ContainsKey("ubatch_size") -and [int]$config.overrides.ubatch_size -gt 0) {
+        $finalUbatch = [int]$config.overrides.ubatch_size
+        Write-Host "Micro-Batch Size: $finalUbatch tokens (from config.overrides.ubatch_size)" -ForegroundColor Green
     }
     if ($finalUbatch -gt 0) {
         $serverArgs += @("-ub", "$finalUbatch")
@@ -608,11 +618,17 @@ if ([Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
                     "claude --model `$m"
                 ) -join "; "
                 
+                # Use -EncodedCommand with UTF-16LE Base64 to avoid shell quoting
+                # issues with backticks, dollar signs, and special characters on
+                # Windows PowerShell 5 (powershell.exe) and pwsh.
+                $cmdBytes = [System.Text.Encoding]::Unicode.GetBytes($startupCmds)
+                $encodedCmd = [Convert]::ToBase64String($cmdBytes)
+                
                 if ($IsWindows) {
-                    Start-Process powershell -ArgumentList "-NoExit", "-Command", "`"$startupCmds`""
+                    Start-Process powershell -ArgumentList "-NoExit", "-EncodedCommand", $encodedCmd
                 } else {
-                    # macOS/Linux: PowerShell 7 binary is 'pwsh'
-                    Start-Process pwsh -ArgumentList "-NoExit", "-Command", "`"$startupCmds`""
+                    # macOS/Linux: PowerShell 7+ binary is 'pwsh'
+                    Start-Process pwsh -ArgumentList "-NoExit", "-EncodedCommand", $encodedCmd
                 }
             }
         } else {

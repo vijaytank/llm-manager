@@ -14,6 +14,8 @@ class ContextManagerConfig(BaseModel):
     tokenizer_repo: str = Field(default="", description="Explicit HuggingFace tokenizer repository override")
     summary_max_tokens: int = Field(default=768, description="Max token limit for summarization response")
     summarize_with_model: str = Field(default="same", description="Model to use for summarization")
+    eviction_interval_sec: int = Field(default=300, description="How often to evict stale sessions (seconds)")
+    session_ttl_sec: int = Field(default=86400, description="Session inactivity TTL (seconds)")
 
 def load_config(config_path: Optional[str] = None) -> ContextManagerConfig:
     """Load ContextManagerConfig from llo-config.json or system appdata path."""

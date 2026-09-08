@@ -94,6 +94,8 @@ class ContextEngine:
         summarize_with_model: str = "same",
         tokenizer_cache: Optional[TokenizerCache] = None,
         tokenizer_repo_override: str = "",
+        eviction_interval_sec: float = 300.0,
+        session_ttl_sec: float = 86400.0,
     ):
         self.warn_threshold = warn_threshold
         self.keep_turns = keep_turns
@@ -105,11 +107,18 @@ class ContextEngine:
         self.sessions: Dict[str, SessionState] = {}
         self._eviction_task: Optional[asyncio.Task] = None
         self._running: bool = False
+        self._eviction_interval_sec = eviction_interval_sec
+        self._session_ttl_sec = session_ttl_sec
 
     def start_background_tasks(self):
         if self._eviction_task is None or self._eviction_task.done():
             self._running = True
-            self._eviction_task = asyncio.create_task(self._eviction_loop())
+            self._eviction_task = asyncio.create_task(
+                self._eviction_loop(
+                    interval_seconds=self._eviction_interval_sec,
+                    max_age_seconds=self._session_ttl_sec,
+                )
+            )
 
     async def stop_background_tasks(self):
         self._running = False
@@ -366,6 +375,15 @@ class ContextEngine:
                 f"Aggressive compression may cause information loss."
             )
 
+        # Truncate conversation_text to a safe input budget before sending to summarizer.
+        # Keep the most recent context; prepend a notice about omitted earlier turns.
+        max_input_chars = self.summary_max_tokens * 4 * 4  # ~4x output budget, ~4 chars/token
+        if len(conversation_text) > max_input_chars:
+            conversation_text = (
+                "[Earlier turns omitted due to length]\n\n"
+                + conversation_text[-max_input_chars:]
+            )
+
         try:
             new_summary = await self._request_summary(
                 conversation_text,
@@ -396,7 +414,10 @@ class ContextEngine:
 
         session.messages = rebuilt
 
-        await asyncio.to_thread(self._save_checkpoint_to_disk, session)
+        # Take a snapshot of messages before dispatching to thread so the async
+        # context is not racing with the thread reading session.messages.
+        messages_snapshot = list(session.messages)
+        await asyncio.to_thread(self._save_checkpoint_to_disk, session, messages_snapshot)
 
         max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
         return self._clamp_message_tokens(rebuilt, max_allowed, model_alias)
@@ -439,7 +460,7 @@ class ContextEngine:
 
         return clamped
 
-    def _save_checkpoint_to_disk(self, session: SessionState):
+    def _save_checkpoint_to_disk(self, session: SessionState, messages_snapshot: Optional[List[Dict[str, Any]]] = None):
         try:
             filepath = self._get_checkpoint_path(session.session_id)
             data = {
@@ -448,7 +469,7 @@ class ContextEngine:
                 "summary_up_to_turn": session.summary_up_to_turn,
                 "last_compress_hash": session.last_compress_hash,
                 "message_count": len(session.messages),
-                "messages": session.messages
+                "messages": messages_snapshot if messages_snapshot is not None else session.messages
             }
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)

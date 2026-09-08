@@ -23,6 +23,8 @@ async def lifespan(app: FastAPI):
         summary_max_tokens=cfg.summary_max_tokens,
         summarize_with_model=cfg.summarize_with_model,
         tokenizer_repo_override=cfg.tokenizer_repo,
+        eviction_interval_sec=cfg.eviction_interval_sec,
+        session_ttl_sec=cfg.session_ttl_sec,
     )
     eng.start_background_tasks()
     limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
@@ -359,6 +361,9 @@ async def forward_stream_anthropic(
                     break
                 try:
                     chunk_json = json.loads(data_str)
+                except (json.JSONDecodeError, ValueError):
+                    continue  # malformed SSE data line — skip
+                try:
                     choices = chunk_json.get("choices", [])
                     if choices:
                         choice0 = choices[0]
@@ -438,8 +443,9 @@ async def forward_stream_anthropic(
                                         }
                                     }
                                     yield f"event: content_block_delta\ndata: {json.dumps(delta_evt)}\n\n".encode("utf-8")
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"[proxy] Error processing stream chunk: {e}")
+                    break
 
         if not has_emitted_any_block:
             yield f"event: content_block_start\ndata: {json.dumps({'type': 'content_block_start', 'index': 0, 'content_block': {'type': 'text', 'text': ''}})}\n\n".encode("utf-8")
@@ -598,8 +604,6 @@ async def proxy_all(request: Request, path: str):
         )
         resp = await client.send(req, stream=is_stream)
     except Exception:
-        if is_owned_client:
-            await client.aclose()
         raise
 
     if resp.status_code != 200:

@@ -133,26 +133,59 @@ def test_openai_chat_roundtrip():
 def test_compression_triggered_when_threshold_exceeded():
     with TestClient(app) as client:
         client.app.state.config.enabled = True
+        client.app.state.config.ctx_limit = 1000  # Low ctx_limit to trigger compression
         client.app.state.config.warn_threshold = 0.5
         client.app.state.config.keep_turns = 2
+        # Also set on the engine directly since it was already created with defaults
+        client.app.state.engine.warn_threshold = 0.5
         upstream_url = f"{client.app.state.config.llama_server_url}/v1/chat/completions"
 
-        # 1. Mock summarizer call
-        summarizer_route = respx.post(upstream_url).mock(
-            return_value=httpx.Response(
-                200,
-                json={
-                    "choices": [
-                        {
-                            "message": {
-                                "role": "assistant",
-                                "content": "- User asked several questions\n- Assistant answered them."
+        # Use side_effect with a call counter so summarizer and final inference
+        # calls receive different responses — a single mock cannot distinguish them.
+        call_count = 0
+
+        def mock_upstream(request):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:  # summarizer call
+                return httpx.Response(
+                    200,
+                    json={
+                        "choices": [
+                            {
+                                "message": {
+                                    "role": "assistant",
+                                    "content": "- User asked several questions\n- Assistant answered them."
+                                }
                             }
+                        ]
+                    }
+                )
+            else:  # final inference call
+                return httpx.Response(
+                    200,
+                    json={
+                        "id": "chatcmpl-999",
+                        "object": "chat.completion",
+                        "choices": [
+                            {
+                                "index": 0,
+                                "message": {
+                                    "role": "assistant",
+                                    "content": "Final answer after compression"
+                                },
+                                "finish_reason": "stop"
+                            }
+                        ],
+                        "usage": {
+                            "prompt_tokens": 5,
+                            "completion_tokens": 3,
+                            "total_tokens": 8
                         }
-                    ]
-                }
-            )
-        )
+                    }
+                )
+
+        respx.post(upstream_url).mock(side_effect=mock_upstream)
 
         # Build enough turns to trigger compression with small ctx_limit
         large_messages = [
@@ -173,4 +206,9 @@ def test_compression_triggered_when_threshold_exceeded():
             headers={"x-llm-session-id": "roundtrip-session-test"}
         )
         assert resp.status_code == 200
-        assert summarizer_route.called
+        assert call_count >= 2  # at least summarizer + final inference
+        data = resp.json()
+        # Verify final response has proper OpenAI-format fields
+        assert data["id"] == "chatcmpl-999"
+        assert data["choices"][0]["message"]["content"] == "Final answer after compression"
+        assert data["usage"]["prompt_tokens"] == 5

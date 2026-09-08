@@ -67,7 +67,7 @@ export const PerformancePage: React.FC = () => {
               <select
                 className="form-input font-mono"
                 style={{ width: '220px', padding: '4px 8px', fontSize: '0.85rem' }}
-                value={config?.overrides?.cache_type_k || config?.cache_type_k || 'f16'}
+                value={config?.overrides?.cache_type_k ?? config?.cache_type_k ?? 'f16'}
                 onChange={async (e) => {
                   const val = e.target.value;
                   updateConfig({ overrides: { ...(config?.overrides || {}), cache_type_k: val, cache_type_v: val } });
@@ -92,7 +92,7 @@ export const PerformancePage: React.FC = () => {
               <select
                 className="form-input font-mono"
                 style={{ width: '150px', padding: '4px 8px', fontSize: '0.85rem' }}
-                value={config?.overrides?.flash_attn || config?.flash_attn || 'on'}
+                value={config?.overrides?.flash_attn ?? config?.flash_attn ?? 'on'}
                 onChange={async (e) => {
                   updateConfig({ overrides: { ...(config?.overrides || {}), flash_attn: e.target.value } });
                   await saveConfig();
@@ -116,7 +116,7 @@ export const PerformancePage: React.FC = () => {
               <select
                 className="form-input font-mono"
                 style={{ width: '150px', padding: '4px 8px', fontSize: '0.85rem' }}
-                value={config?.overrides?.ctx_size || config?.default_context_size || 32768}
+                value={config?.overrides?.ctx_size ?? config?.default_context_size ?? 32768}
                 onChange={async (e) => {
                   const val = Number(e.target.value);
                   updateConfig({
@@ -199,13 +199,13 @@ export const PerformancePage: React.FC = () => {
                   />
                 </div>
                 <div className="param-value font-mono">
-                  {(config?.overrides?.parallel || config?.parallel_slots || 1) === 1 ? '1 Slot (Single User - Max Speed ⭐)' : `${config?.overrides?.parallel || config?.parallel_slots || 1} Slots`}
+                  {(config?.overrides?.parallel ?? config?.parallel_slots ?? 1) === 1 ? '1 Slot (Single User - Max Speed ⭐)' : `${config?.overrides?.parallel ?? config?.parallel_slots ?? 1} Slots`}
                 </div>
               </div>
               <select
                 className="form-input font-mono"
                 style={{ width: '150px' }}
-                value={config?.overrides?.parallel || config?.parallel_slots || 1}
+                value={config?.overrides?.parallel ?? config?.parallel_slots ?? 1}
                 onChange={async (e) => {
                   updateConfig({ overrides: { ...(config?.overrides || {}), parallel: Number(e.target.value) } });
                   await saveConfig();
@@ -267,7 +267,7 @@ export const PerformancePage: React.FC = () => {
               <select
                 className="form-input font-mono"
                 style={{ width: '120px' }}
-                value={config?.threads || 0}
+                value={config?.threads ?? 0}
                 onChange={async (e) => {
                   updateConfig({ threads: Number(e.target.value) });
                   await saveConfig();

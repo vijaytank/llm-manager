@@ -51,7 +51,10 @@ Tracks `llama.cpp` argument changes on `git pull`, validating script options aga
 ### 5. Fallback & Bootstrapping
 When no local GGUF models are found and no GPU is available, falls back to a lightweight Hugging Face bootstrap model. When a cloud fallback provider is configured, routes client traffic to Ollama, OpenAI, Anthropic, or NVIDIA NIM instead.
 
-### 6. Desktop GUI Application
+### 6. Context Manager Proxy (Python)
+An optional Python proxy (`llo-core/context_manager/`) that sits between clients and the llama-server, translating the Anthropic protocol to OpenAI's, compressing/replaying long sessions to fit the context budget, and enforcing a `ctx_limit`. It runs via `script/StartContextManager.ps1` (only when `context_manager.enabled = true` in config). Components: `proxy.py` (HTTP round-trip + protocol translation), `context_engine.py` (compression, token counting, needs-compression heuristics, checkpoint persistence), `tokenizer_cache.py` (shared HF tokenizer), `preset_reader.py` (parses `models-preset.ini`), `config.py` (Pydantic settings model). Tests are in `llo-core/context_manager/tests/`. Details are in the user guide.
+
+### 7. Desktop GUI Application
 Provides a premium desktop GUI built with **Tauri + React + TypeScript** that visually mirrors all CLI functionality. It offers real-time server logging, system health audits, active model switching, and dynamic sliders for custom memory tuning and config overrides. Details are located in the user guide.
 
 ---
@@ -84,13 +87,13 @@ Run script syntax checks, compatibility audits, and full system health checks fr
 ```
 
 ### 2. Python Context Manager Tests
-Run the pytest test suite covering message compression, token counting, and Anthropic $\leftrightarrow$ OpenAI protocol conversion:
+Run the pytest suite covering message compression, token counting, session tracking, and Anthropic $\leftrightarrow$ OpenAI protocol conversion (11 test modules):
 ```powershell
 # Using global pytest or active environment
 pytest llo-core/context_manager/tests
 
-# Or using the auto-created user venv
-& "$env:APPDATA\LLM Manager\context_manager_venv\Scripts\python.exe" -m pytest llo-core/context_manager/tests
+# Or using the project virtualenv
+& "llo-core/.venv\Scripts\python.exe" -m pytest llo-core/context_manager/tests
 ```
 
 ### 3. Tauri Desktop GUI (Rust Backend & React Frontend)

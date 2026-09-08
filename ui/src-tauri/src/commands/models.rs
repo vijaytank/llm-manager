@@ -68,11 +68,38 @@ pub fn scan_models(models_dir_path: Option<String>) -> Result<Vec<ModelInfo>, St
         let is_mmproj = lower_fn.contains("mmproj") || lower_fn.contains("vision-projector");
 
         let (quant, ctx, tmpl) = match parse_gguf_file(&path) {
-            Ok(meta) => (meta.quantization, meta.context_length, format!("{}.jinja", meta.architecture)),
+            Ok(meta) => {
+                let template_name = format!("{}.jinja", meta.architecture);
+                // Resolve the templates directory the same way scan_models does.
+                let templates_dir = {
+                    let cfg = crate::commands::config::load_config().ok();
+                    let cfg_dir = cfg.and_then(|c| {
+                        if !c.templates_dir.is_empty() {
+                            Some(PathBuf::from(c.templates_dir))
+                        } else {
+                            None
+                        }
+                    });
+                    cfg_dir.unwrap_or_else(|| {
+                        let root = crate::scripts::get_workspace_root();
+                        if root.join("templates").exists() {
+                            root.join("templates")
+                        } else {
+                            root.join("..").join("templates")
+                        }
+                    })
+                };
+                let tmpl = if templates_dir.join(&template_name).exists() {
+                    template_name
+                } else {
+                    "built-in (GGUF)".to_string()
+                };
+                (meta.quantization, meta.context_length, tmpl)
+            }
             Err(_) => (
                 if lower_fn.contains("q4_k_m") { "Q4_K_M".to_string() } else { "GGUF".to_string() },
                 32768,
-                "chatml.jinja".to_string(),
+                "built-in (GGUF)".to_string(),
             ),
         };
 

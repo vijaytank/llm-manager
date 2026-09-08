@@ -77,7 +77,12 @@ fn skip_gguf_value<R: Read>(r: &mut R, val_type: u32) -> Result<(), String> {
             }
         }
         10..=12 => { let mut b = [0u8; 8]; r.read_exact(&mut b).map_err(|e| e.to_string())?; }
-        _ => return Err(format!("Unknown GGUF value type: {}", val_type)),
+        _ => {
+            // Unknown/future GGUF value type — skip 8 bytes as best-effort
+            // and continue parsing rather than aborting the KV loop.
+            let mut b = [0u8; 8];
+            r.read_exact(&mut b).map_err(|e| e.to_string())?;
+        }
     }
     Ok(())
 }
@@ -268,10 +273,10 @@ mod tests {
             f.write_all(&0u64.to_le_bytes()).unwrap();      // tensor_count
             f.write_all(&4u64.to_le_bytes()).unwrap();      // kv_count = 4
 
-            write_kv_u32(&mut f, "llm.block_count", 80);
-            write_kv_u32(&mut f, "llm.attention.head_count_kv", 8);
-            write_kv_u32(&mut f, "llm.rope.dimension_count", 128);
-            write_kv_u32(&mut f, "general.file_type", 7);  // Q8_0
+            write_kv_u32(&mut f, "llama.block_count", 80);
+            write_kv_u32(&mut f, "llama.attention.head_count_kv", 8);
+            write_kv_u32(&mut f, "llama.rope.dimension_count", 128);
+            write_kv_u32(&mut f, "general.file_type", 7); // Q8_0
         }
 
         let meta = parse_gguf_file(&test_file).expect("Should parse GGUF header");
@@ -295,10 +300,10 @@ mod tests {
             f.write_all(&0u64.to_le_bytes()).unwrap();      // tensor_count
             f.write_all(&4u64.to_le_bytes()).unwrap();      // kv_count = 4
 
-            write_kv_u32(&mut f, "llm.block_count", 32);
-            write_kv_u32(&mut f, "llm.attention.head_count_kv", 32);
-            write_kv_u32(&mut f, "llm.rope.dimension_count", 96); // Phi-3 uses 96 instead of 128
-            write_kv_u32(&mut f, "general.file_type", 2);         // Q4_K_M
+            write_kv_u32(&mut f, "phi3.block_count", 32);
+            write_kv_u32(&mut f, "phi3.attention.head_count_kv", 32);
+            write_kv_u32(&mut f, "phi3.rope.dimension_count", 96); // Phi-3 uses 96 instead of 128
+            write_kv_u32(&mut f, "general.file_type", 2); // Q4_K_M
         }
 
         let meta = parse_gguf_file(&test_file).expect("Should parse GGUF header");
