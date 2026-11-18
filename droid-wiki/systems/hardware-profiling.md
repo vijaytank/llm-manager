@@ -114,16 +114,16 @@ if ($safeRamMB -lt 4096) { $safeRamMB = 4096 }     # Floor at 4 GB
 
 ```mermaid
 graph TD
-    GPU[GPU Detected?] -->|No| CPU_None[Tier: cpu<br/>Reason: No GPU detected]
+    GPU[GPU Detected?] -->|No| CPU_None[Tier: cpu\nReason: No GPU detected]
     GPU -->|Yes| Adapter{AdapterClass}
-    Adapter -->|integrated| CPU_iGPU[Tier: cpu<br/>Reason: Integrated GPU - CPU path faster]
+    Adapter -->|integrated| CPU_iGPU[Tier: cpu\nReason: Integrated GPU - CPU path faster]
     Adapter -->|dedicated| Backend{UsableForInference?}
-    Backend -->|No| CPU_NoBE[Tier: cpu<br/>Reason: No CUDA/Vulkan backend]
+    Backend -->|No| CPU_NoBE[Tier: cpu\nReason: No CUDA/Vulkan backend]
     Backend -->|Yes| VRAM{Total VRAM}
-    VRAM -->|≤ 2048 MB| CPU_LowV[Tier: cpu<br/>Reason: VRAM below 2 GB threshold]
-    VRAM -->|2049-4096 MB| Low[Tier: low<br/>Reason: Partial offload + fit-throttle]
-    VRAM -->|4097-8192 MB| Mid[Tier: mid<br/>Reason: Full offload small/mid models]
-    VRAM -->|> 8192 MB| High[Tier: high<br/>Reason: Full offload + large context]
+    VRAM -->|≤ 2048 MB| CPU_LowV[Tier: cpu\nReason: VRAM below 2 GB threshold]
+    VRAM -->|2049-4096 MB| Low[Tier: low\nReason: Partial offload + fit-throttle]
+    VRAM -->|4097-8192 MB| Mid[Tier: mid\nReason: Full offload small/mid models]
+    VRAM -->|> 8192 MB| High[Tier: high\nReason: Full offload + large context]
 ```
 
 | Tier | VRAM Range | Typical Use Case |

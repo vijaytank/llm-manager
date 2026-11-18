@@ -9,17 +9,17 @@ This page documents the system architecture, data flows, and core algorithms of 
 ```mermaid
 graph TB
     subgraph "User Interface"
-        CLI[PowerShell CLI<br/>main.ps1 / script/*.ps1]
-        GUI[Tauri Desktop App<br/>React + Rust]
+        CLI[PowerShell CLI\nmain.ps1 / script/*.ps1]
+        GUI[Tauri Desktop App\nReact + Rust]
     end
 
     subgraph "Core Engine (PowerShell)"
-        Profile[Profile.ps1<br/>Hardware Profiler]
-        Router[SetupRouter.ps1<br/>Parameter Derivation]
-        Assets[FetchAssets.ps1<br/>Template/Grammar Sync]
-        Help[ParseHelp.ps1<br/>Flag Parser]
-        Diff[GitDiff.ps1<br/>Change Detector]
-        Paths[Paths.ps1<br/>Config Resolution]
+        Profile[Profile.ps1\nHardware Profiler]
+        Router[SetupRouter.ps1\nParameter Derivation]
+        Assets[FetchAssets.ps1\nTemplate/Grammar Sync]
+        Help[ParseHelp.ps1\nFlag Parser]
+        Diff[GitDiff.ps1\nChange Detector]
+        Paths[Paths.ps1\nConfig Resolution]
     end
 
     subgraph "Operational Scripts"
@@ -31,29 +31,29 @@ graph TB
     end
 
     subgraph "Context Manager Proxy (Python)"
-        CMProxy[proxy.py<br/>FastAPI Server]
-        CMEngine[context_engine.py<br/>Compression Engine]
-        CMTokenizer[tokenizer_cache.py<br/>HF Tokenizer Cache]
-        CMPreset[preset_reader.py<br/>Preset Parser]
-        CMConfig[config.py<br/>Settings Model]
+        CMProxy[proxy.py\nFastAPI Server]
+        CMEngine[context_engine.py\nCompression Engine]
+        CMTokenizer[tokenizer_cache.py\nHF Tokenizer Cache]
+        CMPreset[preset_reader.py\nPreset Parser]
+        CMConfig[config.py\nSettings Model]
     end
 
     subgraph "Tauri Backend (Rust)"
-        TauriCmd[Tauri Commands<br/>config, profile, server,<br/>models, gguf, health]
-        TauriScripts[scripts.rs<br/>Workspace Resolution]
-        TauriPS[PS Bridge<br/>run_powershell_script]
+        TauriCmd[Tauri Commands\nconfig, profile, server,\nmodels, gguf, health]
+        TauriScripts[scripts.rs\nWorkspace Resolution]
+        TauriPS[PS Bridge\nrun_powershell_script]
     end
 
     subgraph "Tauri Frontend (React)"
-        ReactPages[Pages<br/>Overview, Models,<br/>Performance, Settings...]
-        ReactStores[Zustand Stores<br/>hardware, config,<br/>server, models, validation]
-        ReactLib[lib/validation.ts<br/>Exact KV Calculator]
+        ReactPages[Pages\nOverview, Models,\nPerformance, Settings...]
+        ReactStores[Zustand Stores\nhardware, config,\nserver, models, validation]
+        ReactLib[lib/validation.ts\nExact KV Calculator]
     end
 
     subgraph "External"
-        LlamaServer[llama-server<br/>llama.cpp binary]
-        LlamaRepo[ggml-org/llama.cpp<br/>GitHub repo]
-        HFModels[Hugging Face Hub<br/>Bootstrap models]
+        LlamaServer[llama-server\nllama.cpp binary]
+        LlamaRepo[ggml-org/llama.cpp\nGitHub repo]
+        HFModels[Hugging Face Hub\nBootstrap models]
     end
 
     CLI --> Profile
@@ -139,16 +139,16 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    GPU[GPU Detected?] -->|No| CPU_None[Tier: cpu<br/>No GPU detected]
+    GPU[GPU Detected?] -->|No| CPU_None[Tier: cpu\nNo GPU detected]
     GPU -->|Yes| Adapter{AdapterClass?}
-    Adapter -->|integrated| CPU_iGPU[Tier: cpu<br/>iGPU - CPU path faster]
+    Adapter -->|integrated| CPU_iGPU[Tier: cpu\niGPU - CPU path faster]
     Adapter -->|dedicated| Backend{UsableForInference?}
-    Backend -->|No| CPU_NoBE[Tier: cpu<br/>No CUDA/Vulkan backend]
+    Backend -->|No| CPU_NoBE[Tier: cpu\nNo CUDA/Vulkan backend]
     Backend -->|Yes| VRAM{Total VRAM?}
-    VRAM -->|≤ 2 GB| CPU_LowV[Tier: cpu<br/>VRAM too small]
-    VRAM -->|2–4 GB| Low[Tier: low<br/>Partial offload + fit-throttle]
-    VRAM -->|4–8 GB| Mid[Tier: mid<br/>Full offload small/mid models]
-    VRAM -->|> 8 GB| High[Tier: high<br/>Full offload + large context]
+    VRAM -->|≤ 2 GB| CPU_LowV[Tier: cpu\nVRAM too small]
+    VRAM -->|2–4 GB| Low[Tier: low\nPartial offload + fit-throttle]
+    VRAM -->|4–8 GB| Mid[Tier: mid\nFull offload small/mid models]
+    VRAM -->|> 8 GB| High[Tier: high\nFull offload + large context]
 ```
 
 | Tier | VRAM Range | Reason Printed |
@@ -231,7 +231,7 @@ ctxSize = largest of {4096, 8192, 16384, 32768, 65536, 131072, 262144} ≤ maxCt
 ```mermaid
 graph TD
     Model[Model Alias] --> Check{Incompatible pattern?}
-    Check -->|moe, mixture, vision,<br/>llava, clip, phi-3-v,<br/>qwen.*vl, minicpm-v, cogvlm| Disable[spec_type = none<br/>+ Warning]
+    Check -->|moe, mixture, vision,\nllava, clip, phi-3-v,\nqwen.*vl, minicpm-v, cogvlm| Disable[spec_type = none\n+ Warning]
     Check -->|Other| Enable[spec_type = ngram-simple]
     Disable --> LowTier{Low tier?}
     LowTier -->|Yes| ForceNone[Force spec_type = none]
@@ -267,14 +267,14 @@ sequenceDiagram
 ```mermaid
 graph LR
     subgraph "Workspace Root (Repo)"
-        RepoConfig[llo-config.json<br/>Template / Initial]
+        RepoConfig[llo-config.json\nTemplate / Initial]
     end
 
     subgraph "User AppData (Runtime)"
-        AppDataConfig[%APPDATA%/LLM Manager/llo-config.json<br/>Primary config]
-        AppDataPreset[%APPDATA%/LLM Manager/models-preset.ini<br/>Generated at startup]
-        AppDataLogs[%APPDATA%/LLM Manager/logs/<br/>llama-server.log / err.log]
-        AppDataCheckpoints[%APPDATA%/LLM Manager/checkpoints/<br/>Session compression state]
+        AppDataConfig[%APPDATA%/LLM Manager/llo-config.json\nPrimary config]
+        AppDataPreset[%APPDATA%/LLM Manager/models-preset.ini\nGenerated at startup]
+        AppDataLogs[%APPDATA%/LLM Manager/logs/\nllama-server.log / err.log]
+        AppDataCheckpoints[%APPDATA%/LLM Manager/checkpoints/\nSession compression state]
     end
 
     RepoConfig -.->|First launch copy| AppDataConfig

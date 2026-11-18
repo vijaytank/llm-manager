@@ -12,13 +12,13 @@ The Context Manager Proxy (`llo-core/context_manager/`) sits between clients and
 
 ```mermaid
 graph TB
-    Client[Client<br/>Anthropic SDK] -->|POST /v1/messages| Proxy[proxy.py<br/>FastAPI :8090]
+    Client[Client\nAnthropic SDK] -->|POST /v1/messages| Proxy[proxy.py\nFastAPI :8090]
     Proxy -->|Extract session_id| Session[SessionState]
-    Proxy -->|Translate + Compress| Engine[context_engine.py<br/>ContextEngine]
-    Engine -->|Token count| Tokenizer[tokenizer_cache.py<br/>HF Tokenizer]
-    Engine -->|Summarize via| LlamaServer[llama-server<br/>:8080]
-    Engine -->|Read ctx_limit| Preset[preset_reader.py<br/>models-preset.ini]
-    Engine -->|Persist| Checkpoints[AppData/checkpoints/<br/>session_id.json]
+    Proxy -->|Translate + Compress| Engine[context_engine.py\nContextEngine]
+    Engine -->|Token count| Tokenizer[tokenizer_cache.py\nHF Tokenizer]
+    Engine -->|Summarize via| LlamaServer[llama-server\n:8080]
+    Engine -->|Read ctx_limit| Preset[preset_reader.py\nmodels-preset.ini]
+    Engine -->|Persist| Checkpoints[AppData/checkpoints/\nsession_id.json]
     Proxy -->|Forward OpenAI| LlamaServer
     LlamaServer -->|Response| Proxy
     Proxy -->|Translate back| Client

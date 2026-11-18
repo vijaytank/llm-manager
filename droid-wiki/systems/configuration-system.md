@@ -20,13 +20,13 @@ main.ps1                              # Wizard: initial config + VSCode generati
 
 ```mermaid
 graph LR
-    Workspace[Workspace Root<br/>llo-config.json (template)] -->|First launch copy| AppData[AppData/LLM Manager/]
-    AppData --> Config[llo-config.json<br/>Primary config]
-    AppData --> Preset[models-preset.ini<br/>Generated at startup]
-    AppData --> Cache[.cached_flags.json<br/>llama-server flag cache]
-    AppData --> Assets[.assets-manifest.json<br/>Template/grammar SHA cache]
+    Workspace[Workspace Root\nllo-config.json (template)] -->|First launch copy| AppData[AppData/LLM Manager/]
+    AppData --> Config[llo-config.json\nPrimary config]
+    AppData --> Preset[models-preset.ini\nGenerated at startup]
+    AppData --> Cache[.cached_flags.json\nllama-server flag cache]
+    AppData --> Assets[.assets-manifest.json\nTemplate/grammar SHA cache]
     AppData --> Logs[logs/llama-server.log]
-    AppData --> Checkpoints[checkpoints/<br/>Session compression state]
+    AppData --> Checkpoints[checkpoints/\nSession compression state]
     
     Tauri[Tauri App] -->|load_config/save_config| Config
     Tauri -->|start_server -ConfigFile| Preset

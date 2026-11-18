@@ -9,22 +9,22 @@ Native desktop GUI for LLM Manager built with Tauri 2, React 18, TypeScript, and
 ```mermaid
 graph TB
     subgraph "Frontend (React + TypeScript)"
-        Pages[Pages<br/>Overview, Models,<br/>Performance, Settings,<br/>Diagnostics, Logs, Integrations]
-        Stores[Zustand Stores<br/>hardware, config, server,<br/>models, validation]
-        Components[Components<br/>PageShell, ImpactBanner,<br/>InfoTooltip, Layout]
-        Lib[lib/validation.ts<br/>Exact KV Calculator]
+        Pages[Pages\nOverview, Models,\nPerformance, Settings,\nDiagnostics, Logs, Integrations]
+        Stores[Zustand Stores\nhardware, config, server,\nmodels, validation]
+        Components[Components\nPageShell, ImpactBanner,\nInfoTooltip, Layout]
+        Lib[lib/validation.ts\nExact KV Calculator]
     end
 
     subgraph "IPC Layer"
-        Invoke[@tauri-apps/api/core<br/>invoke()]
-        Events[@tauri-apps/api/event<br/>listen()]
+        Invoke[@tauri-apps/api/core\ninvoke()]
+        Events[@tauri-apps/api/event\nlisten()]
     end
 
     subgraph "Backend (Rust)"
-        Commands[Tauri Commands<br/>config, profile, server,<br/>models, gguf, health]
-        Scripts[scripts.rs<br/>Workspace Resolution]
-        PSBridge[run_powershell_script<br/>PS Dispatch]
-        LogTail[Log Tailers<br/>stdout/stderr streaming]
+        Commands[Tauri Commands\nconfig, profile, server,\nmodels, gguf, health]
+        Scripts[scripts.rs\nWorkspace Resolution]
+        PSBridge[run_powershell_script\nPS Dispatch]
+        LogTail[Log Tailers\nstdout/stderr streaming]
     end
 
     subgraph "PowerShell Core"

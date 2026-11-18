@@ -16,12 +16,12 @@ The Context Manager Proxy sits between clients (Claude Code, custom apps) and `l
 
 ```mermaid
 graph TB
-    Client[Client<br/>Anthropic SDK / HTTP] -->|POST /v1/messages| Proxy[proxy.py<br/>FastAPI]
-    Proxy -->|Translate + Compress| Engine[context_engine.py<br/>ContextEngine]
-    Engine -->|Token count| Tokenizer[tokenizer_cache.py<br/>HF Tokenizer]
-    Engine -->|Summarize| LlamaServer[llama-server<br/>Upstream]
-    Engine -->|Read ctx_limit| Preset[preset_reader.py<br/>models-preset.ini]
-    Engine -->|Persist| Checkpoints[AppData/checkpoints/<br/>session_state.json]
+    Client[Client\nAnthropic SDK / HTTP] -->|POST /v1/messages| Proxy[proxy.py\nFastAPI]
+    Proxy -->|Translate + Compress| Engine[context_engine.py\nContextEngine]
+    Engine -->|Token count| Tokenizer[tokenizer_cache.py\nHF Tokenizer]
+    Engine -->|Summarize| LlamaServer[llama-server\nUpstream]
+    Engine -->|Read ctx_limit| Preset[preset_reader.py\nmodels-preset.ini]
+    Engine -->|Persist| Checkpoints[AppData/checkpoints/\nsession_state.json]
     Proxy -->|Forward OpenAI| LlamaServer
     LlamaServer -->|Response| Proxy
     Proxy -->|Translate back| Client
