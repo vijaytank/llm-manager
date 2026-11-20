@@ -4,12 +4,14 @@ import os
 import uuid
 import time
 import httpx
+import ssl
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse
 from typing import Optional, Dict, Any, List
 from collections import defaultdict
 from threading import Lock
+import re
 
 from .config import load_config, ContextManagerConfig
 from .preset_reader import read_preset_ctx_limit
@@ -148,9 +150,60 @@ class MetricsCollector:
 metrics = MetricsCollector()
 
 
+# Rate Limiter (simple in-memory token bucket per client IP)
+class RateLimiter:
+    def __init__(self, max_requests: int = 100, window_sec: int = 60):
+        self.max_requests = max_requests
+        self.window_sec = window_sec
+        self._lock = Lock()
+        self.requests: Dict[str, List[float]] = defaultdict(list)
+    
+    def is_allowed(self, client_id: str) -> bool:
+        now = time.time()
+        with self._lock:
+            # Remove old requests outside the window
+            cutoff = now - self.window_sec
+            self.requests[client_id] = [t for t in self.requests[client_id] if t > cutoff]
+            
+            if len(self.requests[client_id]) >= self.max_requests:
+                return False
+            
+            self.requests[client_id].append(now)
+            return True
+    
+    def get_remaining(self, client_id: str) -> int:
+        now = time.time()
+        with self._lock:
+            cutoff = now - self.window_sec
+            self.requests[client_id] = [t for t in self.requests[client_id] if t > cutoff]
+            return max(0, self.max_requests - len(self.requests[client_id]))
+
+
+def validate_session_id(session_id: str, cfg: ContextManagerConfig) -> bool:
+    """Validate session ID format and length to prevent fixation attacks."""
+    if not session_id:
+        return False
+    if len(session_id) < cfg.session_id_min_length:
+        return False
+    if len(session_id) > cfg.session_id_max_length:
+        return False
+    # Check allowed characters
+    allowed_pattern = re.compile(f'^[{re.escape(cfg.session_id_allowed_chars)}]+$')
+    if not allowed_pattern.match(session_id):
+        return False
+    return True
+
+
+rate_limiter = RateLimiter()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cfg = load_config()
+    
+    # Update rate limiter with config values
+    rate_limiter.max_requests = cfg.rate_limit_requests
+    rate_limiter.window_sec = cfg.rate_limit_window_sec
     
     def on_summarize():
         metrics.record_summarization()
@@ -177,6 +230,20 @@ async def lifespan(app: FastAPI):
     app.state.engine = eng
     app.state.http_client = http_client
     app.state.metrics = metrics
+    
+    # Create SSL context if TLS enabled
+    ssl_context = None
+    if cfg.tls_enabled and cfg.tls_cert_path and cfg.tls_key_path:
+        try:
+            ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            ssl_context.load_cert_chain(cfg.tls_cert_path, cfg.tls_key_path)
+            print(f"[ContextManager] TLS enabled with cert: {cfg.tls_cert_path}")
+        except Exception as e:
+            print(f"[ContextManager] Warning: Failed to load TLS cert: {e}")
+            ssl_context = None
+    
+    app.state.ssl_context = ssl_context
+    
     try:
         yield
     finally:
@@ -627,6 +694,17 @@ async def proxy_all(request: Request, path: str):
     cfg = get_config(request)
     eng = get_engine(request)
 
+    # Rate limiting
+    if cfg.rate_limit_enabled:
+        client_ip = request.client.host if request.client else "unknown"
+        if not rate_limiter.is_allowed(client_ip):
+            metrics.record_error("rate_limit_exceeded")
+            return JSONResponse(
+                {"error": {"message": "Rate limit exceeded", "type": "rate_limit_error"}},
+                status_code=429,
+                headers={"Retry-After": str(cfg.rate_limit_window_sec)}
+            )
+
     clean_path = path.lstrip("/")
     is_anthropic_messages = (
         clean_path == "v1/messages" or
@@ -705,6 +783,14 @@ async def proxy_all(request: Request, path: str):
     max_tokens = body.get("max_tokens", 512)
     is_stream = body.get("stream", False)
     session_id = extract_session_id(request, body)
+
+    # Validate session ID format to prevent fixation attacks
+    if not validate_session_id(session_id, cfg):
+        metrics.record_error("invalid_session_id")
+        return JSONResponse(
+            {"error": {"message": "Invalid session ID format", "type": "invalid_session_id"}},
+            status_code=400
+        )
 
     # Convert messages to normalized format for ContextEngine
     if is_anthropic_messages:
