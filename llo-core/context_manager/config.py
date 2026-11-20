@@ -16,6 +16,12 @@ class ContextManagerConfig(BaseModel):
     summarize_with_model: str = Field(default="same", description="Model to use for summarization")
     eviction_interval_sec: int = Field(default=300, description="How often to evict stale sessions (seconds)")
     session_ttl_sec: int = Field(default=86400, description="Session inactivity TTL (seconds)")
+    # Connection pool settings
+    http_max_connections: int = Field(default=100, description="Max concurrent connections in HTTP pool")
+    http_max_keepalive: int = Field(default=20, description="Max keepalive connections in HTTP pool")
+    http_timeout_sec: int = Field(default=600, description="HTTP request timeout in seconds")
+    # Prometheus metrics
+    metrics_enabled: bool = Field(default=True, description="Enable Prometheus metrics endpoint")
 
 def load_config(config_path: Optional[str] = None) -> ContextManagerConfig:
     """Load ContextManagerConfig from llo-config.json or system appdata path."""

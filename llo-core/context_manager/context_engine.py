@@ -96,6 +96,7 @@ class ContextEngine:
         tokenizer_repo_override: str = "",
         eviction_interval_sec: float = 300.0,
         session_ttl_sec: float = 86400.0,
+        on_summarize: Optional[callable] = None,
     ):
         self.warn_threshold = warn_threshold
         self.keep_turns = keep_turns
@@ -109,6 +110,7 @@ class ContextEngine:
         self._running: bool = False
         self._eviction_interval_sec = eviction_interval_sec
         self._session_ttl_sec = session_ttl_sec
+        self._on_summarize = on_summarize
 
     def start_background_tasks(self):
         if self._eviction_task is None or self._eviction_task.done():
@@ -391,6 +393,12 @@ class ContextEngine:
                 prior_summary=session.summary_block,
                 http_client=http_client
             )
+            # Call summarization callback if provided
+            if self._on_summarize:
+                try:
+                    self._on_summarize()
+                except Exception:
+                    pass  # Don't let callback errors break compression
         except RuntimeError as e:
             print(f"[ContextEngine] Summarization failed, falling back to message clamping without session corruption: {e}")
             max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)

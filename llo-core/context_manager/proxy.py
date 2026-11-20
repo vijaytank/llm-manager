@@ -2,20 +2,159 @@ import hashlib
 import json
 import os
 import uuid
+import time
 import httpx
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse
 from typing import Optional, Dict, Any, List
+from collections import defaultdict
+from threading import Lock
 
 from .config import load_config, ContextManagerConfig
 from .preset_reader import read_preset_ctx_limit
 from .context_engine import ContextEngine
 
+# Simple in-memory metrics storage (for Prometheus exposition)
+class MetricsCollector:
+    def __init__(self):
+        self._lock = Lock()
+        self.requests_total = defaultdict(int)
+        self.requests_duration = defaultdict(list)
+        self.active_sessions = 0
+        self.compressions_total = 0
+        self.summarizations_total = 0
+        self.errors_total = defaultdict(int)
+        self.upstream_requests_total = defaultdict(int)
+        self.upstream_errors_total = defaultdict(int)
+        self.cache_hits = 0
+        self.cache_misses = 0
+    
+    def record_request(self, method: str, path: str, duration: float, status: int):
+        with self._lock:
+            key = f"{method}:{path}"
+            self.requests_total[key] += 1
+            self.requests_duration[key].append(duration)
+            # Keep only last 1000 durations per endpoint
+            if len(self.requests_duration[key]) > 1000:
+                self.requests_duration[key] = self.requests_duration[key][-1000:]
+    
+    def record_compression(self):
+        with self._lock:
+            self.compressions_total += 1
+    
+    def record_summarization(self):
+        with self._lock:
+            self.summarizations_total += 1
+    
+    def record_error(self, error_type: str):
+        with self._lock:
+            self.errors_total[error_type] += 1
+    
+    def record_upstream_request(self, method: str, status: int):
+        with self._lock:
+            key = f"{method}:{status}"
+            self.upstream_requests_total[key] += 1
+    
+    def record_upstream_error(self, error_type: str):
+        with self._lock:
+            self.upstream_errors_total[error_type] += 1
+    
+    def set_active_sessions(self, count: int):
+        with self._lock:
+            self.active_sessions = count
+    
+    def record_cache_hit(self):
+        with self._lock:
+            self.cache_hits += 1
+    
+    def record_cache_miss(self):
+        with self._lock:
+            self.cache_misses += 1
+    
+    def generate_prometheus(self) -> str:
+        with self._lock:
+            lines = [
+                "# HELP llo_proxy_requests_total Total number of HTTP requests",
+                "# TYPE llo_proxy_requests_total counter",
+            ]
+            for key, count in self.requests_total.items():
+                method, path = key.split(":", 1)
+                lines.append(f'llo_proxy_requests_total{{method="{method}",path="{path}"}} {count}')
+            
+            lines.extend([
+                "",
+                "# HELP llo_proxy_request_duration_seconds Request latency in seconds",
+                "# TYPE llo_proxy_request_duration_seconds summary",
+            ])
+            for key, durations in self.requests_duration.items():
+                if durations:
+                    method, path = key.split(":", 1)
+                    count = len(durations)
+                    sum_dur = sum(durations)
+                    lines.append(f'llo_proxy_request_duration_seconds_count{{method="{method}",path="{path}"}} {count}')
+                    lines.append(f'llo_proxy_request_duration_seconds_sum{{method="{method}",path="{path}"}} {sum_dur:.6f}')
+            
+            lines.extend([
+                "",
+                "# HELP llo_proxy_active_sessions Number of active sessions",
+                "# TYPE llo_proxy_active_sessions gauge",
+                f"llo_proxy_active_sessions {self.active_sessions}",
+                "",
+                "# HELP llo_proxy_compressions_total Total number of context compressions",
+                "# TYPE llo_proxy_compressions_total counter",
+                f"llo_proxy_compressions_total {self.compressions_total}",
+                "",
+                "# HELP llo_proxy_summarizations_total Total number of summarization calls",
+                "# TYPE llo_proxy_summarizations_total counter",
+                f"llo_proxy_summarizations_total {self.summarizations_total}",
+                "",
+                "# HELP llo_proxy_errors_total Total number of errors by type",
+                "# TYPE llo_proxy_errors_total counter",
+            ])
+            for error_type, count in self.errors_total.items():
+                lines.append(f'llo_proxy_errors_total{{type="{error_type}"}} {count}')
+            
+            lines.extend([
+                "",
+                "# HELP llo_proxy_upstream_requests_total Total upstream requests",
+                "# TYPE llo_proxy_upstream_requests_total counter",
+            ])
+            for key, count in self.upstream_requests_total.items():
+                method, status = key.split(":", 1)
+                lines.append(f'llo_proxy_upstream_requests_total{{method="{method}",status="{status}"}} {count}')
+            
+            lines.extend([
+                "",
+                "# HELP llo_proxy_upstream_errors_total Total upstream errors",
+                "# TYPE llo_proxy_upstream_errors_total counter",
+            ])
+            for error_type, count in self.upstream_errors_total.items():
+                lines.append(f'llo_proxy_upstream_errors_total{{type="{error_type}"}} {count}')
+            
+            lines.extend([
+                "",
+                "# HELP llo_proxy_cache_hits_total Total cache hits",
+                "# TYPE llo_proxy_cache_hits_total counter",
+                f"llo_proxy_cache_hits_total {self.cache_hits}",
+                "",
+                "# HELP llo_proxy_cache_misses_total Total cache misses",
+                "# TYPE llo_proxy_cache_misses_total counter",
+                f"llo_proxy_cache_misses_total {self.cache_misses}",
+            ])
+            
+            return "\n".join(lines) + "\n"
+
+metrics = MetricsCollector()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cfg = load_config()
+    
+    def on_summarize():
+        metrics.record_summarization()
+    
     eng = ContextEngine(
         warn_threshold=cfg.warn_threshold,
         keep_turns=cfg.keep_turns,
@@ -25,13 +164,19 @@ async def lifespan(app: FastAPI):
         tokenizer_repo_override=cfg.tokenizer_repo,
         eviction_interval_sec=cfg.eviction_interval_sec,
         session_ttl_sec=cfg.session_ttl_sec,
+        on_summarize=on_summarize,
     )
     eng.start_background_tasks()
-    limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
-    http_client = httpx.AsyncClient(limits=limits, timeout=600.0)
+    # Use configurable connection pool limits
+    limits = httpx.Limits(
+        max_connections=cfg.http_max_connections,
+        max_keepalive_connections=cfg.http_max_keepalive
+    )
+    http_client = httpx.AsyncClient(limits=limits, timeout=cfg.http_timeout_sec)
     app.state.config = cfg
     app.state.engine = eng
     app.state.http_client = http_client
+    app.state.metrics = metrics
     try:
         yield
     finally:
@@ -87,6 +232,17 @@ async def health_check(request: Request):
         "warn_threshold": cfg.warn_threshold,
         "keep_turns": cfg.keep_turns
     }
+
+@app.get("/metrics")
+async def metrics_endpoint(request: Request):
+    """Prometheus metrics endpoint"""
+    cfg = get_config(request)
+    if not cfg.metrics_enabled:
+        return PlainTextResponse("# Metrics disabled\n", status_code=404)
+    # Update active sessions count
+    eng = get_engine(request)
+    metrics.set_active_sessions(len(eng.sessions))
+    return PlainTextResponse(metrics.generate_prometheus(), media_type="text/plain; version=0.0.4; charset=utf-8")
 
 def convert_anthropic_tools_to_openai(anthropic_tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     openai_tools = []
@@ -467,6 +623,7 @@ async def forward_stream_openai(response: httpx.Response, client: httpx.AsyncCli
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
 async def proxy_all(request: Request, path: str):
+    start_time = time.time()
     cfg = get_config(request)
     eng = get_engine(request)
 
@@ -478,11 +635,18 @@ async def proxy_all(request: Request, path: str):
     )
     is_openai_chat = clean_path.endswith("chat/completions")
 
+    # Record request metrics
+    def record_metrics(status_code: int):
+        duration = time.time() - start_time
+        metrics.record_request(request.method, clean_path, duration, status_code)
+
     # Handle Anthropic count_tokens endpoint
     if clean_path.endswith("count_tokens"):
         try:
             body = await request.json()
         except Exception:
+            record_metrics(400)
+            metrics.record_error("invalid_json")
             return JSONResponse(
                 {"error": {"message": "Invalid JSON in request body", "type": "invalid_request_error"}},
                 status_code=400
@@ -490,6 +654,7 @@ async def proxy_all(request: Request, path: str):
         messages = convert_anthropic_to_openai_messages(body)
         model_alias = body.get("model", "")
         token_count = eng.count_tokens_messages(messages, model_alias=model_alias)
+        record_metrics(200)
         return JSONResponse({"input_tokens": token_count})
 
     client = get_http_client(request)
@@ -506,10 +671,15 @@ async def proxy_all(request: Request, path: str):
                 content=req_content
             )
             resp = await client.send(req, stream=True)
-        except Exception:
+        except Exception as e:
+            record_metrics(502)
+            metrics.record_error("upstream_connection")
+            metrics.record_upstream_error("connection")
             raise
 
         if resp.headers.get("content-type", "").startswith("text/event-stream"):
+            record_metrics(resp.status_code)
+            metrics.record_upstream_request(request.method, resp.status_code)
             return StreamingResponse(
                 forward_stream_openai(resp, client),
                 status_code=resp.status_code,
@@ -518,6 +688,8 @@ async def proxy_all(request: Request, path: str):
         else:
             content_bytes = await resp.aread()
             await resp.aclose()
+            record_metrics(resp.status_code)
+            metrics.record_upstream_request(request.method, resp.status_code)
             return Response(content=content_bytes, status_code=resp.status_code, headers=dict(resp.headers))
 
     # Inspect request body
@@ -550,6 +722,8 @@ async def proxy_all(request: Request, path: str):
 
     # Run context compression check
     if messages:
+        # Check if compression will be needed before calling
+        needs_comp = eng.needs_compression(messages, max_tokens if isinstance(max_tokens, int) else 512, ctx_limit, model_alias)
         rebuilt_messages = await eng.maybe_compress(
             session_id=session_id,
             messages=messages,
@@ -558,6 +732,8 @@ async def proxy_all(request: Request, path: str):
             model_alias=model_alias,
             http_client=client
         )
+        if needs_comp:
+            metrics.record_compression()
     else:
         rebuilt_messages = messages
 
@@ -603,12 +779,18 @@ async def proxy_all(request: Request, path: str):
             content=json.dumps(upstream_body).encode("utf-8")
         )
         resp = await client.send(req, stream=is_stream)
-    except Exception:
+    except Exception as e:
+        record_metrics(502)
+        metrics.record_error("upstream_connection")
+        metrics.record_upstream_error("connection")
         raise
 
     if resp.status_code != 200:
         content_bytes = await resp.aread()
         await resp.aclose()
+        record_metrics(resp.status_code)
+        metrics.record_upstream_request("POST", resp.status_code)
+        metrics.record_upstream_error(f"http_{resp.status_code}")
 
         err_text = content_bytes.decode("utf-8", errors="replace")
         if is_anthropic_messages:
@@ -630,6 +812,8 @@ async def proxy_all(request: Request, path: str):
             )
 
     if is_stream:
+        record_metrics(200)
+        metrics.record_upstream_request("POST", 200)
         if is_anthropic_messages:
             return StreamingResponse(
                 forward_stream_anthropic(resp, client, model_alias, input_tokens, eng),
@@ -645,6 +829,8 @@ async def proxy_all(request: Request, path: str):
     else:
         content_bytes = await resp.aread()
         await resp.aclose()
+        record_metrics(200)
+        metrics.record_upstream_request("POST", 200)
         
         if is_anthropic_messages:
             try:
