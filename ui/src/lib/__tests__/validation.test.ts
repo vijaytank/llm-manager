@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { validateConfiguration, validateModelLaunch, calculateKvCacheGb } from '../validation';
+import {
+  validateConfiguration,
+  validateModelLaunch,
+  calculateKvCacheGb,
+  calculateKvCacheGbFixed,
+} from '../validation';
 import { AppConfig } from '../../store/configStore';
 import { SystemHardware } from '../../store/hardwareStore';
 import { ModelInfo } from '../../store/modelsStore';
@@ -92,14 +97,35 @@ const mockHugeModel: ModelInfo = {
 };
 
 describe('validation engine & kv cache math', () => {
-  it('calculates mathematically exact KV cache size for various context lengths & precisions', () => {
+  it('calculates mathematically exact KV cache size for various context lengths & precisions (fixed architecture)', () => {
     // 32 layers, 1024 kvDim, f16 -> 131,072 bytes per token
-    expect(calculateKvCacheGb(8192, 32, 'f16', 'f16')).toBe(1.0);
-    expect(calculateKvCacheGb(32768, 32, 'f16', 'f16')).toBe(4.0);
-    expect(calculateKvCacheGb(65536, 32, 'f16', 'f16')).toBe(8.0);
+    expect(calculateKvCacheGbFixed(8192, 32, 'f16', 'f16')).toBe(1.0);
+    expect(calculateKvCacheGbFixed(32768, 32, 'f16', 'f16')).toBe(4.0);
+    expect(calculateKvCacheGbFixed(65536, 32, 'f16', 'f16')).toBe(8.0);
 
     // q8_0 precision -> ~2.13 GB at 32K
-    expect(calculateKvCacheGb(32768, 32, 'q8_0', 'q8_0')).toBe(2.13);
+    expect(calculateKvCacheGbFixed(32768, 32, 'q8_0', 'q8_0')).toBe(2.13);
+  });
+
+  it('calculates dynamic KV cache size based on model size (aligned with PowerShell)', () => {
+    // For 4.5 GB model, f16 cache:
+    // baseKV = 12.0 * 4.5 = 54 MB per 1K tokens (q8_0 baseline)
+    // kvRatio = 4.0 / 2.125 = 1.88235
+    // kvMBPerKToken = 54 * 1.88235 = 101.65 MB per 1K tokens
+    // 8192 tokens = 8.192 * 101.65 / 1024 = ~0.81 GB
+    const kv8k = calculateKvCacheGb(8192, 4.5, 'f16', 'f16');
+    expect(kv8k).toBeCloseTo(0.81, 1);
+
+    // 32768 tokens = 32.768 * 101.65 / 1024 = ~3.25 GB
+    const kv32k = calculateKvCacheGb(32768, 4.5, 'f16', 'f16');
+    expect(kv32k).toBeCloseTo(3.25, 1);
+
+    // q8_0 for 4.5 GB model
+    // kvRatio = 2.125 / 2.125 = 1.0
+    // kvMBPerKToken = 54 * 1.0 = 54 MB per 1K tokens
+    // 32768 tokens = 32.768 * 54 / 1024 = ~1.73 GB
+    const kv32k_q8 = calculateKvCacheGb(32768, 4.5, 'q8_0', 'q8_0');
+    expect(kv32k_q8).toBeCloseTo(1.73, 1);
   });
 
   it('detects GPU layers warning and provides auto-fix on CPU-only system', () => {

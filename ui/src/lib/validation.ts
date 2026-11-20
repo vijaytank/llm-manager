@@ -31,9 +31,39 @@ export function estimateBlockCount(fileSizeGb: number): number {
   return 80; // 32B+
 }
 
-/// Mathematically Exact KV Cache Memory Calculator
+/// Mathematically Exact KV Cache Memory Calculator (aligned with PowerShell Get-SafeContextSize)
 /// Formula: (ctxTokens * layers * kvDim * (bytesPerElemK + bytesPerElemV)) / 1024^3
+/// Uses dynamic block count estimation based on model size (same as PowerShell estimateBlockCount)
 export function calculateKvCacheGb(
+  ctxTokens: number,
+  modelSizeGb: number = 4.5,
+  cacheTypeK: string = 'f16',
+  cacheTypeV: string = 'f16',
+  parallelSlots: number = 1
+): number {
+  const bytesPerElemK = cacheTypeK === 'q4_0' ? 0.5625 : cacheTypeK === 'q8_0' ? 1.0625 : 2.0;
+  const bytesPerElemV = cacheTypeV === 'q4_0' ? 0.5625 : cacheTypeV === 'q8_0' ? 1.0625 : 2.0;
+
+  // Dynamic block count estimation matching PowerShell estimateBlockCount
+  // ~12.0 MB per GB of model size is conservative baseline for q8_0 KV cache
+  const modelGB = modelSizeGb;
+  const baseKVMBPerKToken = 12.0 * modelGB; // MB per 1000 tokens for q8_0 baseline
+
+  // Calculate ratio relative to q8_0+q8_0 baseline (2.125 bytes per element)
+  const kvRatio = (bytesPerElemK + bytesPerElemV) / 2.125;
+  const kvMBPerKToken = Math.max(baseKVMBPerKToken * kvRatio, 5.0); // Floor at 5.0 MB per 1000 tokens
+
+  const parallel = Math.max(1, parallelSlots);
+  const kvMBPerKTokenTotal = kvMBPerKToken * parallel;
+
+  // Convert to GB: (ctxTokens / 1000) * kvMBPerKTokenTotal / 1024
+  const totalGb = ((ctxTokens / 1000) * kvMBPerKTokenTotal) / 1024;
+
+  return Number(totalGb.toFixed(2));
+}
+
+/// Legacy function for backward compatibility - uses fixed architecture assumptions
+export function calculateKvCacheGbFixed(
   ctxTokens: number,
   blockCount: number = 32,
   cacheTypeK: string = 'f16',
@@ -122,7 +152,7 @@ export function validateConfiguration(
   const ctx = config.overrides?.ctx_size ?? config.default_context_size ?? 32768;
   const estimatedKvGb = calculateKvCacheGb(
     ctx,
-    estimateBlockCount(activeModelSizeGb),
+    activeModelSizeGb,
     config.overrides?.cache_type_k ?? config.cache_type_k,
     config.overrides?.cache_type_v ?? config.cache_type_v,
     config.overrides?.parallel ?? config.parallel_slots ?? 1
@@ -216,7 +246,7 @@ export function validateModelLaunch(
   const ctx = config.overrides?.ctx_size ?? config.default_context_size ?? 32768;
   const estimatedKvGb = calculateKvCacheGb(
     ctx,
-    estimateBlockCount(model.fileSizeGb),
+    model.fileSizeGb,
     config.overrides?.cache_type_k ?? config.cache_type_k,
     config.overrides?.cache_type_v ?? config.cache_type_v,
     config.overrides?.parallel ?? config.parallel_slots ?? 1
