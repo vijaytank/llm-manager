@@ -14,7 +14,9 @@
 #   Linux   : /proc/cpuinfo, /proc/meminfo, nvidia-smi, rocm-smi, /sys/class/drm
 
 param(
-    [switch]$Json
+    [switch]$Json,
+    [switch]$NoCache,
+    [int]$CacheTtlHours = 24
 )
 
 $isWin = $IsWindows -or ($env:OS -match "Windows") -or ($PSVersionTable.PSEdition -eq "Desktop")
@@ -23,9 +25,45 @@ $isLin = $IsLinux -or (-not $isWin -and -not $isMac)
 
 $ErrorActionPreference = "Stop"
 
+# Cache file path for hardware profile
+$cacheFile = Join-Path $env:TEMP "llo-hardware-profile-cache.json"
+
+function Get-CachedProfile {
+    if ($NoCache -or -not (Test-Path $cacheFile)) {
+        return $null
+    }
+    try {
+        $cache = Get-Content $cacheFile -Raw | ConvertFrom-Json
+        $cachedTime = [datetime]::ParseExact($cache.Timestamp, "yyyy-MM-dd HH:mm:ss", $null)
+        $ageHours = (Get-Date) - $cachedTime | ForEach-Object { $_.TotalHours }
+        if ($ageHours -lt $CacheTtlHours) {
+            if (-not $Json) {
+                Write-Host "  [CACHE] Using cached hardware profile (age: $([math]::Round($ageHours,1))h)" -ForegroundColor DarkGray
+            }
+            return $cache
+        }
+    } catch {}
+    return $null
+}
+
+function Save-CachedProfile {
+    param([pscustomobject]$Profile)
+    try {
+        $Profile | ConvertTo-Json -Depth 5 | Set-Content -Path $cacheFile -Encoding UTF8
+    } catch {
+        if (-not $Json) { Write-Host "[WARNING] Failed to save hardware cache: $($_.Exception.Message)" -ForegroundColor Yellow }
+    }
+}
+
 function Get-SystemHardwareProfile {
     if (-not $Json) {
         Write-Host "Profiling system hardware..." -ForegroundColor Cyan
+    }
+
+    # Check cache first
+    $cached = Get-CachedProfile
+    if ($cached) {
+        return $cached
     }
 
     # ── 1. CPU ────────────────────────────────────────────────────────────────
@@ -442,6 +480,11 @@ function Get-SystemHardwareProfile {
         Timestamp = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
     }
 
+    # Save to cache (unless NoCache specified)
+    if (-not $NoCache) {
+        Save-CachedProfile -Profile $profile
+    }
+
     return $profile
 }
 
@@ -452,7 +495,8 @@ if ($Json) {
     $p = Get-SystemHardwareProfile
     $p | ConvertTo-Json -Depth 5
 } elseif ($MyInvocation.MyCommand.Name -eq 'Profile.ps1') {
-    $p = Get-SystemHardwareProfile
+    # When run directly, bypass cache to show fresh results
+    $p = Get-SystemHardwareProfile -NoCache
     Write-Host ""
     Write-Host "--- System Hardware Profile ---" -ForegroundColor Green
     Write-Host "CPU  : $($p.CPU.Name)"
