@@ -56,7 +56,7 @@
       "pwsh -Command \"& { Get-ChildItem -Recurse -Filter *.ps1 -Exclude node_modules,dist,build,.git | ForEach-Object { $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content $_ -Raw), [ref]$null) } }\""
     ],
     "*.rs": [
-      "cargo fmt --check"
+      "cargo fmt --check --manifest-path ui/src-tauri/Cargo.toml --"
     ],
     "*.py": [
       "ruff check --fix",
