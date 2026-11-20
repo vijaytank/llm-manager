@@ -41,5 +41,9 @@
   color: var(--text-muted);
 }
 
-.diag-icon.success { color: var(--status-success); }
-.diag-icon.warning { color: var(--status-warning); }
+.diag-icon.success {
+  color: var(--status-success);
+}
+.diag-icon.warning {
+  color: var(--status-warning);
+}

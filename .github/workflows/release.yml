@@ -1,0 +1,345 @@
+name: Release Automation
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '22'
+
+jobs:
+  # Determine version and generate changelog
+  prepare-release:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      tag_name: ${{ steps.version.outputs.tag_name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # Extract version from tag
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"
+            TAG_NAME="${TAG}"
+          else
+            # Manual trigger - bump version
+            CURRENT_VERSION=$(node -p "require('./ui/package.json').version")
+            echo "Current version: $CURRENT_VERSION"
+            
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+            case "${{ github.event.inputs.version_type }}" in
+              major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+              minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+              patch) PATCH=$((PATCH + 1)) ;;
+            esac
+            VERSION="$MAJOR.$MINOR.$PATCH"
+            TAG_NAME="v$VERSION"
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Install conventional-changelog-cli
+          npm install -g conventional-changelog-cli
+          
+          # Generate changelog for this version
+          CHANGELOG=$(conventional-changelog -p angular -i CHANGELOG.md -s -r 0 2>/dev/null || echo "")
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        run: |
+          npm pkg set version="${{ steps.version.outputs.version }}" --workspaces=false
+          npm pkg set version="${{ steps.version.outputs.version }}" --workspace=ui
+
+      - name: Update Cargo.toml version
+        working-directory: ui/src-tauri
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${{ steps.version.outputs.version }}\"/" Cargo.toml
+
+      - name: Commit version bump
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ui/package.json ui/src-tauri/Cargo.toml
+          git commit -m "chore(release): ${{ steps.version.outputs.tag_name }}"
+          git push
+
+  # Build Frontend
+  build-frontend:
+    name: Build Frontend
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Build production bundle
+        working-directory: ui
+        run: npm run build
+
+      - name: Upload frontend dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-dist-${{ needs.prepare-release.outputs.version }}
+          path: ui/dist/
+          retention-days: 30
+
+  # Build Tauri App (Windows)
+  build-tauri-windows:
+    name: Build Tauri Windows
+    needs: [prepare-release, build-frontend]
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-dist-${{ needs.prepare-release.outputs.version }}
+          path: ui/dist
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ui/src-tauri -> target
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Install Tauri CLI
+        working-directory: ui
+        run: npm install -g @tauri-apps/cli
+
+      - name: Build Tauri Windows (NSIS)
+        working-directory: ui
+        run: npm run tauri build -- --target x86_64-pc-windows-msvc
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-windows-${{ needs.prepare-release.outputs.version }}
+          path: ui/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/
+          retention-days: 30
+
+  # Build Tauri App (macOS)
+  build-tauri-macos:
+    name: Build Tauri macOS
+    needs: [prepare-release, build-frontend]
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-dist-${{ needs.prepare-release.outputs.version }}
+          path: ui/dist
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ui/src-tauri -> target
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Install Tauri CLI
+        working-directory: ui
+        run: npm install -g @tauri-apps/cli
+
+      - name: Build Tauri macOS (DMG + AppImage)
+        working-directory: ui
+        run: npm run tauri build -- --target x86_64-apple-darwin
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-macos-${{ needs.prepare-release.outputs.version }}
+          path: ui/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/
+          retention-days: 30
+
+  # Build Tauri App (Linux)
+  build-tauri-linux:
+    name: Build Tauri Linux
+    needs: [prepare-release, build-frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libudev-dev
+
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-dist-${{ needs.prepare-release.outputs.version }}
+          path: ui/dist
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ui/src-tauri -> target
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Install Tauri CLI
+        working-directory: ui
+        run: npm install -g @tauri-apps/cli
+
+      - name: Build Tauri Linux (AppImage)
+        working-directory: ui
+        run: npm run tauri build -- --target x86_64-unknown-linux-gnu
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-linux-${{ needs.prepare-release.outputs.version }}
+          path: ui/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/
+          retention-days: 30
+
+  # Create GitHub Release
+  create-release:
+    name: Create GitHub Release
+    needs: [prepare-release, build-tauri-windows, build-tauri-macos, build-tauri-linux]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tauri-*-${{ needs.prepare-release.outputs.version }}
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: find artifacts -type f -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage*" | sort
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.tag_name }}
+          name: LLM Manager ${{ needs.prepare-release.outputs.tag_name }}
+          body: |
+            ## LLM Manager ${{ needs.prepare-release.outputs.tag_name }}
+            
+            ${{ needs.prepare-release.outputs.changelog }}
+            
+            ### Downloads
+            - **Windows**: `LLM_Manager_${{ needs.prepare-release.outputs.version }}_x64_en-US.msi` (NSIS installer)
+            - **macOS**: `LLM_Manager_${{ needs.prepare-release.outputs.version }}_x64.dmg` (DMG)
+            - **Linux**: `LLM_Manager-${{ needs.prepare-release.outputs.version }}_amd64.AppImage` (AppImage)
+            
+            ### Installation
+            - **Windows**: Run the `.msi` installer
+            - **macOS**: Open the `.dmg` and drag to Applications
+            - **Linux**: Make AppImage executable (`chmod +x`) and run
+            
+            ### What's New
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ needs.prepare-release.outputs.tag_name }}/CHANGELOG.md) for details.
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/*.exe
+            artifacts/*.msi
+            artifacts/*.dmg
+            artifacts/*.AppImage*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

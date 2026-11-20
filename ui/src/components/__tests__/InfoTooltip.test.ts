@@ -21,16 +21,18 @@ describe('InfoTooltip & Dynamic Hardware Recommendation Engine', () => {
     expect(profile?.performanceTier).toBe('mid');
 
     // Recommendation logic for KV cache precision: <= 12GB VRAM suggests q8_0
-    const kvRecommendation = profile?.vramGb && profile.vramGb <= 12
-      ? 'q8_0 is recommended on your system to cut VRAM usage by 50% without quality loss.'
-      : 'f16 provides maximum floating-point precision.';
+    const kvRecommendation =
+      profile?.vramGb && profile.vramGb <= 12
+        ? 'q8_0 is recommended on your system to cut VRAM usage by 50% without quality loss.'
+        : 'f16 provides maximum floating-point precision.';
 
     expect(kvRecommendation).toContain('q8_0 is recommended');
 
     // Recommendation for context window
-    const ctxRecommendation = profile?.vramGb && profile.vramGb <= 8
-      ? '32,768 tokens with q8_0 KV cache is optimal for your 8 GB GPU.'
-      : '65,536 tokens for long documents.';
+    const ctxRecommendation =
+      profile?.vramGb && profile.vramGb <= 8
+        ? '32,768 tokens with q8_0 KV cache is optimal for your 8 GB GPU.'
+        : '65,536 tokens for long documents.';
 
     expect(ctxRecommendation).toContain('8 GB GPU');
   });
@@ -50,9 +52,10 @@ describe('InfoTooltip & Dynamic Hardware Recommendation Engine', () => {
     useHardwareStore.setState({ profile: mockHardware });
     const profile = useHardwareStore.getState().profile;
 
-    const kvRecommendation = profile?.vramGb && profile.vramGb <= 12
-      ? 'q8_0 is recommended'
-      : 'f16 provides maximum floating-point precision.';
+    const kvRecommendation =
+      profile?.vramGb && profile.vramGb <= 12
+        ? 'q8_0 is recommended'
+        : 'f16 provides maximum floating-point precision.';
 
     expect(kvRecommendation).toBe('f16 provides maximum floating-point precision.');
   });
@@ -75,7 +78,9 @@ describe('InfoTooltip & Dynamic Hardware Recommendation Engine', () => {
     const isCpuOnly = profile?.adapterClass === 'none' || profile?.performanceTier === 'cpu';
     expect(isCpuOnly).toBe(true);
 
-    const faRecommendation = isCpuOnly ? 'Disabled in CPU-only mode.' : 'Keep enabled for modern GPUs.';
+    const faRecommendation = isCpuOnly
+      ? 'Disabled in CPU-only mode.'
+      : 'Keep enabled for modern GPUs.';
     expect(faRecommendation).toBe('Disabled in CPU-only mode.');
   });
 });

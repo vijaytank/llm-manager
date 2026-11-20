@@ -16,11 +16,12 @@ interface HealthReportLike {
 
 export const buildHealthLogEntry = (report?: HealthReportLike | null, error?: unknown) => {
   if (error) {
-    const message = error instanceof Error
-      ? error.message
-      : typeof error === 'string'
-        ? error
-        : (error as { message?: string } | undefined)?.message ?? 'Unknown error';
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : ((error as { message?: string } | undefined)?.message ?? 'Unknown error');
 
     return {
       level: 'ERROR' as const,
@@ -62,7 +63,11 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
     }
   }, [status, config, configSnapshot, setConfigSnapshot]);
 
-  const isConfigDirty = status === 'running' && !!configSnapshot && !!config && JSON.stringify(config) !== configSnapshot;
+  const isConfigDirty =
+    status === 'running' &&
+    !!configSnapshot &&
+    !!config &&
+    JSON.stringify(config) !== configSnapshot;
 
   const handleStart = async () => {
     try {
@@ -120,7 +125,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
   };
 
   const handleFontChange = (delta: number) => {
-    setFontScale((prev) => Math.min(1.25, Math.max(0.8, Math.round((prev + delta) * 100) / 100)));
+    setFontScale(prev => Math.min(1.25, Math.max(0.8, Math.round((prev + delta) * 100) / 100)));
   };
 
   return (
@@ -137,8 +142,13 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
         {isConfigDirty && (
           <div className="topbar-dirty-banner">
             <span className="dirty-text">⚠️ Settings changed!</span>
-            <button className="btn btn-warning btn-sm" onClick={handleRestart} disabled={restarting}>
-              <RefreshCw size={13} className={restarting ? 'spin' : ''} /> {restarting ? 'Restarting...' : 'Restart Server'}
+            <button
+              className="btn btn-warning btn-sm"
+              onClick={handleRestart}
+              disabled={restarting}
+            >
+              <RefreshCw size={13} className={restarting ? 'spin' : ''} />{' '}
+              {restarting ? 'Restarting...' : 'Restart Server'}
             </button>
           </div>
         )}

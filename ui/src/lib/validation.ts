@@ -24,11 +24,11 @@ export interface ValidationResult {
 }
 
 export function estimateBlockCount(fileSizeGb: number): number {
-  if (fileSizeGb < 3)   return 22;   // ~1B
-  if (fileSizeGb < 6)   return 32;   // 3B–7B
-  if (fileSizeGb < 12)  return 40;   // 8B–13B
-  if (fileSizeGb < 25)  return 60;   // 14B–30B
-  return 80;                          // 32B+
+  if (fileSizeGb < 3) return 22; // ~1B
+  if (fileSizeGb < 6) return 32; // 3B–7B
+  if (fileSizeGb < 12) return 40; // 8B–13B
+  if (fileSizeGb < 25) return 60; // 14B–30B
+  return 80; // 32B+
 }
 
 /// Mathematically Exact KV Cache Memory Calculator
@@ -77,7 +77,7 @@ export function validateConfiguration(
       recommendation: 'Set GPU offload layers to 0 for CPU-only systems.',
       autoFix: {
         label: 'Fix Automatically: Set GPU Layers to 0',
-        applyFix: (cfg) => ({
+        applyFix: cfg => ({
           ...cfg,
           overrides: { ...cfg.overrides, n_gpu_layers: 0 },
         }),
@@ -92,11 +92,12 @@ export function validateConfiguration(
       param: 'flash_attn',
       severity: 'warn',
       title: 'Flash Attention Unsupported on CPU',
-      explanation: 'Flash Attention requires CUDA/Metal GPU hardware tensor cores. Enabling it on CPU will crash the server on startup.',
+      explanation:
+        'Flash Attention requires CUDA/Metal GPU hardware tensor cores. Enabling it on CPU will crash the server on startup.',
       recommendation: 'Disable Flash Attention for CPU-only inference.',
       autoFix: {
         label: 'Fix Automatically: Disable Flash Attention',
-        applyFix: (cfg) => ({
+        applyFix: cfg => ({
           ...cfg,
           flash_attn: 'off',
           overrides: { ...cfg.overrides, flash_attn: 'off' },
@@ -128,7 +129,7 @@ export function validateConfiguration(
   );
   const totalMem = activeModelSizeGb + estimatedKvGb;
 
-  if (!isCpuOnly && totalMem > vramGb * 0.90) {
+  if (!isCpuOnly && totalMem > vramGb * 0.9) {
     const safeCtx = vramGb >= 8 ? 16384 : 8192;
     assessments.push({
       param: 'default_context_size',
@@ -138,7 +139,7 @@ export function validateConfiguration(
       recommendation: `Reduce context window to ${safeCtx.toLocaleString()} tokens to keep KV cache fully inside GPU VRAM.`,
       autoFix: {
         label: `Fix Automatically: Set Context to ${safeCtx.toLocaleString()}`,
-        applyFix: (cfg) => ({
+        applyFix: cfg => ({
           ...cfg,
           overrides: { ...cfg.overrides, ctx_size: safeCtx },
         }),
@@ -155,11 +156,12 @@ export function validateConfiguration(
       param: 'cache_type_k',
       severity: 'warn',
       title: 'KV Precision Mismatch',
-      explanation: 'q8_0 KV cache quantization requires Flash Attention to prevent llama.cpp from silently falling back to f32.',
+      explanation:
+        'q8_0 KV cache quantization requires Flash Attention to prevent llama.cpp from silently falling back to f32.',
       recommendation: 'Enable Flash Attention or switch KV cache precision to f16.',
       autoFix: {
         label: 'Fix Automatically: Enable Flash Attention',
-        applyFix: (cfg) => ({
+        applyFix: cfg => ({
           ...cfg,
           flash_attn: 'on',
           overrides: { ...cfg.overrides, flash_attn: 'on' },
@@ -223,7 +225,7 @@ export function validateModelLaunch(
 
   // Case D: Severe RAM Deficit (Blocked launch)
   if (totalModelMem > ramGb * 0.85) {
-    const maxSafeSize = (ramGb * 0.70).toFixed(1);
+    const maxSafeSize = (ramGb * 0.7).toFixed(1);
     return {
       canLaunch: false,
       severity: 'danger',
@@ -241,7 +243,7 @@ export function validateModelLaunch(
       title: 'CPU RAM Execution Mode',
       message: `Model ${model.name} (${model.fileSizeGb} GB) will load into System RAM. Available RAM: ${ramGb} GB.`,
       recommendation: 'GPU layers auto-set to 0 for safe CPU execution.',
-      autoTuneConfig: (cfg) => ({
+      autoTuneConfig: cfg => ({
         ...cfg,
         active_model: model.name,
         flash_attn: 'off',
@@ -257,8 +259,9 @@ export function validateModelLaunch(
       severity: 'caution',
       title: 'Partial GPU Offload Warning',
       message: `Model + KV cache (${totalModelMem.toFixed(2)} GB) exceeds your GPU VRAM (${vramGb} GB). Layers will spill over to System RAM (~3–5× slower than pure VRAM).`,
-      recommendation: 'Click "Launch Auto-Tuned" to automatically set maximum GPU layers and context size to fit in VRAM 100%.',
-      autoTuneConfig: (cfg) => {
+      recommendation:
+        'Click "Launch Auto-Tuned" to automatically set maximum GPU layers and context size to fit in VRAM 100%.',
+      autoTuneConfig: cfg => {
         const safeCtx = vramGb >= 8 ? 16384 : 8192;
         return {
           ...cfg,
@@ -281,7 +284,7 @@ export function validateModelLaunch(
     title: 'Fits VRAM (Full GPU Offload)',
     message: `Model ${model.name} (${model.fileSizeGb} GB) + KV cache (${estimatedKvGb} GB) fit comfortably in your ${vramGb} GB VRAM.`,
     recommendation: 'Full GPU acceleration active.',
-    autoTuneConfig: (cfg) => ({
+    autoTuneConfig: cfg => ({
       ...cfg,
       active_model: model.name,
       flash_attn: 'on',

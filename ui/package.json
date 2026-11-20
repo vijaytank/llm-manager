@@ -27,14 +27,40 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@tauri-apps/cli": "^2.2.0",
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^6.3.0",
     "esbuild": "^0.28.2",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.1",
+    "prettier": "^3.10.1",
     "typescript": "~7.0.2",
+    "typescript-eslint": "^8.73.0",
     "vite": "^8.3.8",
     "vitest": "^5.1.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "npx prettier --write"
+    ],
+    "*.{js,jsx,json,css,md}": [
+      "npx prettier --write"
+    ],
+    "*.ps1": [
+      "pwsh -Command \"& { Get-ChildItem -Recurse -Filter *.ps1 -Exclude node_modules,dist,build,.git | ForEach-Object { $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content $_ -Raw), [ref]$null) } }\""
+    ],
+    "*.rs": [
+      "cargo fmt --check"
+    ],
+    "*.py": [
+      "ruff check --fix",
+      "ruff format"
+    ]
   }
 }

@@ -43,33 +43,55 @@ export const DiagnosticsPage: React.FC = () => {
                 recommendation="Run after installation or when port errors occur."
               />
             </h2>
-            <p className="card-sub">Audits PowerShell scripts, binary paths, system dependencies, and port availability</p>
+            <p className="card-sub">
+              Audits PowerShell scripts, binary paths, system dependencies, and port availability
+            </p>
           </div>
           <div className="diag-actions">
             <button className="btn btn-primary" onClick={handleRunHealthCheck} disabled={loading}>
-              <Activity size={16} className={loading ? 'spin' : ''} /> {loading ? 'Auditing...' : 'Run Full Health Check'}
+              <Activity size={16} className={loading ? 'spin' : ''} />{' '}
+              {loading ? 'Auditing...' : 'Run Full Health Check'}
             </button>
           </div>
         </div>
 
         {report ? (
           <div className="glass-card card-padding">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '16px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <ShieldCheck size={24} style={{ color: 'var(--accent)' }} />
                 <h3>Health Audit Results ({report.timestamp})</h3>
               </div>
-              <span className={`badge ${report.checksFailed === 0 ? 'badge-success' : 'badge-warning'}`}>
+              <span
+                className={`badge ${report.checksFailed === 0 ? 'badge-success' : 'badge-warning'}`}
+              >
                 {report.checksPassed} Passed • {report.checksFailed} Warnings
               </span>
             </div>
 
             <div className="diag-report-list">
               {Object.entries(report.details).map(([key, val], i) => (
-                <div key={i} className="info-row" style={{ padding: '10px 14px', background: 'var(--bg-elevated)', borderRadius: '6px' }}>
+                <div
+                  key={i}
+                  className="info-row"
+                  style={{
+                    padding: '10px 14px',
+                    background: 'var(--bg-elevated)',
+                    borderRadius: '6px',
+                  }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <CheckCircle size={16} style={{ color: 'var(--accent)' }} />
-                    <span className="font-semibold" style={{ textTransform: 'capitalize' }}>{key.replace('_', ' ')}</span>
+                    <span className="font-semibold" style={{ textTransform: 'capitalize' }}>
+                      {key.replace('_', ' ')}
+                    </span>
                   </div>
                   <span className="font-mono">{val}</span>
                 </div>
@@ -77,8 +99,12 @@ export const DiagnosticsPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="glass-card card-padding" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px' }}>
-            Click "Run Full Health Check" above to audit system environment, binary paths, and script integrity.
+          <div
+            className="glass-card card-padding"
+            style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px' }}
+          >
+            Click "Run Full Health Check" above to audit system environment, binary paths, and
+            script integrity.
           </div>
         )}
       </div>

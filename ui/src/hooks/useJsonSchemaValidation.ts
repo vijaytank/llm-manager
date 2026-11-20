@@ -34,18 +34,18 @@ export function useJsonSchemaValidation(jsonText: string) {
         setErrors([]);
         setIsValid(true);
       } else {
-        const validationErrors: ValidationError[] = (validate.errors || []).map((err) => ({
+        const validationErrors: ValidationError[] = (validate.errors || []).map(err => ({
           line: 0,
           column: 0,
           message: err.message || 'Validation error',
           keyword: err.keyword || '',
           instancePath: err.instancePath || '',
-          schemaPath: err.schemaPath || ''
+          schemaPath: err.schemaPath || '',
         }));
 
         // Calculate line/column from instancePath
         const lines = jsonText.split('\n');
-        validationErrors.forEach((err) => {
+        validationErrors.forEach(err => {
           if (err.instancePath) {
             const propName = err.instancePath.replace('/', '');
             let charIndex = 0;
@@ -68,7 +68,8 @@ export function useJsonSchemaValidation(jsonText: string) {
       }
     } catch (e: any) {
       // JSON parse error - find line/column
-      let line = 1, column = 1;
+      let line = 1,
+        column = 1;
       if (e instanceof SyntaxError) {
         const errorMessage = e.message;
         const posMatch = errorMessage.match(/position (\d+)/);
@@ -79,14 +80,16 @@ export function useJsonSchemaValidation(jsonText: string) {
           column = lines[lines.length - 1].length + 1;
         }
       }
-      setErrors([{
-        line,
-        column,
-        message: e.message || 'Invalid JSON',
-        keyword: 'parse',
-        instancePath: '',
-        schemaPath: ''
-      }]);
+      setErrors([
+        {
+          line,
+          column,
+          message: e.message || 'Invalid JSON',
+          keyword: 'parse',
+          instancePath: '',
+          schemaPath: '',
+        },
+      ]);
       setIsValid(false);
     }
   }, [jsonText, validate]);

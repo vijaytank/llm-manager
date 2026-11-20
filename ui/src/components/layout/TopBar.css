@@ -99,7 +99,9 @@
   justify-content: center;
   border-radius: 4px;
 
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 .btn-icon:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
@@ -155,7 +157,8 @@
   align-items: center;
   gap: 6px;
 }
-.theme-option:hover, .theme-option.active {
+.theme-option:hover,
+.theme-option.active {
   background: var(--accent-subtle);
   color: var(--accent);
 }
@@ -165,6 +168,10 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

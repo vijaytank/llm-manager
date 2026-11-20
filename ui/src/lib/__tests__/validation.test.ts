@@ -109,10 +109,10 @@ describe('validation engine & kv cache math', () => {
     };
 
     const res = validateConfiguration(invalidConfig, mockCpuHardware);
-    expect(res.assessments.some((a) => a.param === 'n_gpu_layers')).toBe(true);
-    const nGpuAssessment = res.assessments.find((a) => a.param === 'n_gpu_layers');
+    expect(res.assessments.some(a => a.param === 'n_gpu_layers')).toBe(true);
+    const nGpuAssessment = res.assessments.find(a => a.param === 'n_gpu_layers');
     expect(nGpuAssessment?.autoFix).toBeDefined();
-    
+
     const fixed = nGpuAssessment!.autoFix!.applyFix(invalidConfig);
     expect(fixed.overrides.n_gpu_layers).toBe(0);
   });
@@ -124,8 +124,8 @@ describe('validation engine & kv cache math', () => {
     };
 
     const res = validateConfiguration(invalidConfig, mockCpuHardware);
-    expect(res.assessments.some((a) => a.param === 'flash_attn')).toBe(true);
-    const faAssessment = res.assessments.find((a) => a.param === 'flash_attn');
+    expect(res.assessments.some(a => a.param === 'flash_attn')).toBe(true);
+    const faAssessment = res.assessments.find(a => a.param === 'flash_attn');
     expect(faAssessment?.autoFix).toBeDefined();
 
     const fixed = faAssessment!.autoFix!.applyFix(invalidConfig);
@@ -164,8 +164,8 @@ describe('validation engine & kv cache math', () => {
       overrides: { flash_attn: 'on' },
     };
     const res = validateConfiguration(configWithOverride, mockCpuHardware);
-    expect(res.assessments.some((a) => a.param === 'flash_attn')).toBe(true);
-    const faAssessment = res.assessments.find((a) => a.param === 'flash_attn');
+    expect(res.assessments.some(a => a.param === 'flash_attn')).toBe(true);
+    const faAssessment = res.assessments.find(a => a.param === 'flash_attn');
     const fixed = faAssessment!.autoFix!.applyFix(configWithOverride);
     expect(fixed.overrides.flash_attn).toBe('off');
   });
@@ -183,4 +183,3 @@ describe('validation engine & kv cache math', () => {
     expect(tuned.overrides.flash_attn).toBe('on');
   });
 });
-

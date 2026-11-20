@@ -16,7 +16,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
 }
 
 .info-tooltip-trigger:hover,
@@ -28,7 +31,9 @@
 
 .info-tooltip-card.portal-tooltip {
   padding: 12px 14px;
-  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.9), 0 0 0 1px var(--border-accent);
+  box-shadow:
+    0 16px 36px -4px rgba(0, 0, 0, 0.9),
+    0 0 0 1px var(--border-accent);
   pointer-events: auto;
   text-align: left;
   animation: fadeIn 0.15s ease-out;
@@ -106,6 +111,12 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

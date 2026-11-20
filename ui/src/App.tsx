@@ -26,7 +26,7 @@ export const App: React.FC = () => {
   const { validate } = useValidationStore();
   const { models } = useModelsStore();
 
-  const activeModel = models.find((m) => m.name === config?.active_model);
+  const activeModel = models.find(m => m.name === config?.active_model);
 
   useEffect(() => {
     fetchConfig();
@@ -34,7 +34,7 @@ export const App: React.FC = () => {
 
     // Synchronize initial server status with backend
     invoke<string>('get_server_status')
-      .then((st) => {
+      .then(st => {
         if (st && (st === 'running' || st === 'starting' || st === 'stopped')) {
           setStatus(st);
         }
@@ -43,21 +43,23 @@ export const App: React.FC = () => {
 
     let cleanupFns: Array<() => void> = [];
     Promise.all([
-      listen<string>('server-status-changed', (event) => {
+      listen<string>('server-status-changed', event => {
         setStatus(event.payload as any);
       }),
-      listen<any>('server-log', (event) => {
+      listen<any>('server-log', event => {
         addLog(event.payload);
       }),
-      listen<string>('navigate-to', (event) => {
+      listen<string>('navigate-to', event => {
         setActivePage(event.payload as PageId);
       }),
-    ]).then((unlistens) => {
-      cleanupFns = unlistens;
-    }).catch((err) => console.warn('Failed to register IPC event listeners:', err));
+    ])
+      .then(unlistens => {
+        cleanupFns = unlistens;
+      })
+      .catch(err => console.warn('Failed to register IPC event listeners:', err));
 
     return () => {
-      cleanupFns.forEach((fn) => fn());
+      cleanupFns.forEach(fn => fn());
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -65,7 +67,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     const syncStatus = () => {
       invoke<string>('get_server_status')
-        .then((st) => {
+        .then(st => {
           if (st && (st === 'running' || st === 'starting' || st === 'stopped')) {
             setStatus(st);
           }

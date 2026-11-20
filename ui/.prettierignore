@@ -1,0 +1,55 @@
+# Build outputs
+dist/
+build/
+*.min.js
+*.min.css
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Rust
+target/
+Cargo.lock
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Generated
+*.generated.*
+*.d.ts
+
+# Package files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Git
+.git/

@@ -10,7 +10,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -61,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <nav className="sidebar-nav">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.map(item => {
           const Icon = item.icon;
           const isActive = activePage === item.id;
           return (
