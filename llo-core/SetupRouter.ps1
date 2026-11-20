@@ -48,6 +48,48 @@ if ([string]::IsNullOrWhiteSpace($ModelsDir))    { $ModelsDir    = [System.IO.Pa
 if ([string]::IsNullOrWhiteSpace($TemplatesDir)) { $TemplatesDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\templates")) }
 if ([string]::IsNullOrWhiteSpace($GrammarsDir))  { $GrammarsDir  = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\grammars")) }
 
+# ── Model scan cache ──────────────────────────────────────────────────────────
+$modelCacheFile = Join-Path $env:TEMP "llo-model-scan-cache.json"
+$modelCacheTtlHours = 1
+
+function Get-CachedModelScan {
+    if (-not (Test-Path $modelCacheFile)) { return $null }
+    try {
+        $cache = Get-Content $modelCacheFile -Raw | ConvertFrom-Json
+        $cachedTime = [datetime]::ParseExact($cache.Timestamp, "yyyy-MM-dd HH:mm:ss", $null)
+        $ageHours = (Get-Date) - $cachedTime | ForEach-Object { $_.TotalHours }
+        if ($ageHours -lt $modelCacheTtlHours) {
+            # Verify files haven't changed by checking mtime
+            $allMatch = $true
+            foreach ($entry in $cache.Entries) {
+                if (-not (Test-Path $entry.Path)) { $allMatch = $false; break }
+                $fileInfo = Get-Item $entry.Path
+                if ($fileInfo.LastWriteTime -ne [datetime]::ParseExact($entry.LastWriteTime, "yyyy-MM-dd HH:mm:ss", $null)) {
+                    $allMatch = $false; break
+                }
+            }
+            if ($allMatch) {
+                Write-Host "  [CACHE] Using cached model scan (age: $([math]::Round($ageHours,2))h)" -ForegroundColor DarkGray
+                return $cache.Entries
+            }
+        }
+    } catch {}
+    return $null
+}
+
+function Save-CachedModelScan {
+    param($Entries)
+    try {
+        $cache = @{
+            Timestamp = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+            Entries   = $Entries
+        }
+        $cache | ConvertTo-Json -Depth 5 | Set-Content -Path $modelCacheFile -Encoding UTF8
+    } catch {
+        Write-Host "[WARNING] Failed to save model scan cache: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
+
 # ── Load Hardware Profiler ─────────────────────────────────────────────────────
 $profileScript = Join-Path $PSScriptRoot "Profile.ps1"
 if (-not (Test-Path $profileScript)) { throw "Profile.ps1 not found at: $profileScript" }
@@ -566,53 +608,70 @@ function Find-MatchingTemplate {
 
 $usedAliases = @{}
 
-foreach ($gguf in $ggufs) {
-    $baseName = $gguf.BaseName
-    $rawAlias = ConvertTo-ModelAlias -Filename $baseName
-
-    # Resolve alias collisions
-    $alias = $rawAlias
-    $i = 2
-    while ($usedAliases.ContainsKey($alias)) { $alias = "$rawAlias-$i"; $i++ }
-    $usedAliases[$alias] = $true
-
-    $templatePath = Find-MatchingTemplate -Alias $alias
-    $fileSizeMB   = [math]::Round($gguf.Length / 1MB, 0)
-
-    # Compute safe context ceiling for this model on this hardware
-    $ctxSize = Get-SafeContextSize `
-        -ModelBytes   $gguf.Length `
-        -RamMB        $hardware.RAM.BudgetMB `
-        -VramMB       $hardware.GPU.BudgetVramMB `
-        -GpuTier      $hardware.GPU.PerformanceTier `
-        -Parallel     $inferParams.parallel `
-        -CacheTypeK   $inferParams.cache_type_k `
-        -Integrations $config.integrations
-
-    # User context size override takes priority
-    if ($config.overrides -and $config.overrides.ContainsKey("ctx_size") -and [int]$config.overrides["ctx_size"] -gt 0) {
-        $ctxSize = [int]$config.overrides["ctx_size"]
-        Write-Host "    [override] ctx-size = $ctxSize  (from config.overrides.ctx_size)" -ForegroundColor DarkYellow
-    } elseif ($config.overrides -and $config.overrides.ContainsKey("default_context_size") -and [int]$config.overrides["default_context_size"] -gt 0) {
-        $ctxSize = [int]$config.overrides["default_context_size"]
-        Write-Host "    [override] ctx-size = $ctxSize  (from config.overrides.default_context_size)" -ForegroundColor DarkYellow
+# Try to load cached model scan
+$cachedEntries = Get-CachedModelScan
+if ($cachedEntries) {
+    $modelEntries = $cachedEntries
+    Write-Host "Found $($modelEntries.Count) local GGUF model(s) (from cache):" -ForegroundColor Cyan
+    foreach ($m in $modelEntries) {
+        Write-Host "  - $($m.Alias) ($([math]::Round($m.SizeMB/1024, 2)) GB)  ->  ctx=$($m.CtxSize) tokens"
     }
+} else {
+    foreach ($gguf in $ggufs) {
+        $baseName = $gguf.BaseName
+        $rawAlias = ConvertTo-ModelAlias -Filename $baseName
 
-    # Warn if model exceeds VRAM budget (GPU tiers only; CPU tier uses RAM spill via mmap)
-    if ($hardware.GPU.PerformanceTier -ne "cpu" -and
-        $hardware.GPU.BudgetVramMB -gt 0 -and
-        $fileSizeMB -gt $hardware.GPU.BudgetVramMB) {
-        Write-Host "  [WARNING] '$alias' ($([math]::Round($fileSizeMB/1024,2)) GB) exceeds VRAM budget ($([math]::Round($hardware.GPU.BudgetVramMB/1024,2)) GB). Fit-throttle will reduce GPU layers." -ForegroundColor Yellow
+        # Resolve alias collisions
+        $alias = $rawAlias
+        $i = 2
+        while ($usedAliases.ContainsKey($alias)) { $alias = "$rawAlias-$i"; $i++ }
+        $usedAliases[$alias] = $true
+
+        $templatePath = Find-MatchingTemplate -Alias $alias
+        $fileSizeMB   = [math]::Round($gguf.Length / 1MB, 0)
+
+        # Compute safe context ceiling for this model on this hardware
+        $ctxSize = Get-SafeContextSize `
+            -ModelBytes   $gguf.Length `
+            -RamMB        $hardware.RAM.BudgetMB `
+            -VramMB       $hardware.GPU.BudgetVramMB `
+            -GpuTier      $hardware.GPU.PerformanceTier `
+            -Parallel     $inferParams.parallel `
+            -CacheTypeK   $inferParams.cache_type_k `
+            -Integrations $config.integrations
+
+        # User context size override takes priority
+        if ($config.overrides -and $config.overrides.ContainsKey("ctx_size") -and [int]$config.overrides["ctx_size"] -gt 0) {
+            $ctxSize = [int]$config.overrides["ctx_size"]
+            Write-Host "    [override] ctx-size = $ctxSize  (from config.overrides.ctx_size)" -ForegroundColor DarkYellow
+        } elseif ($config.overrides -and $config.overrides.ContainsKey("default_context_size") -and [int]$config.overrides["default_context_size"] -gt 0) {
+            $ctxSize = [int]$config.overrides["default_context_size"]
+            Write-Host "    [override] ctx-size = $ctxSize  (from config.overrides.default_context_size)" -ForegroundColor DarkYellow
+        }
+
+        # Warn if model exceeds VRAM budget (GPU tiers only; CPU tier uses RAM spill via mmap)
+        if ($hardware.GPU.PerformanceTier -ne "cpu" -and
+            $hardware.GPU.BudgetVramMB -gt 0 -and
+            $fileSizeMB -gt $hardware.GPU.BudgetVramMB) {
+            Write-Host "  [WARNING] '$alias' ($([math]::Round($fileSizeMB/1024,2)) GB) exceeds VRAM budget ($([math]::Round($hardware.GPU.BudgetVramMB/1024,2)) GB). Fit-throttle will reduce GPU layers." -ForegroundColor Yellow
+        }
+
+        $modelEntries.Add([pscustomobject]@{
+            Alias        = $alias
+            Path         = $gguf.FullName
+            SizeMB       = $fileSizeMB
+            TemplateFile = $templatePath
+            CtxSize      = $ctxSize
+            LastWriteTime = (Get-Item $gguf.FullName).LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+        })
     }
-
-    $modelEntries.Add([pscustomobject]@{
-        Alias        = $alias
-        Path         = $gguf.FullName
-        SizeMB       = $fileSizeMB
-        TemplateFile = $templatePath
-        CtxSize      = $ctxSize
-    })
+    
+    # Save model scan to cache
+    Save-CachedModelScan -Entries $modelEntries.ToArray()
 }
+
+# Convert to List for later manipulation if needed
+$modelEntries = [System.Collections.Generic.List[object]]::new($modelEntries)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # WRITE PRESET FILE
