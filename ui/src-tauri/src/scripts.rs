@@ -1,6 +1,6 @@
+use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use std::fs;
 
 /// Returns the user data directory for writable files (config, logs) at runtime.
 /// Uses `%APPDATA%\LLM Manager` on Windows, ensuring write permissions regardless of install dir.
@@ -41,7 +41,7 @@ pub fn get_workspace_root() -> PathBuf {
             }
         }
     }
-    
+
     // 2. Check current_exe location & parent directories (Release build / Installed binary)
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
@@ -76,7 +76,10 @@ pub fn get_workspace_root() -> PathBuf {
     // 3. Fallback: Walk up from current working directory
     let mut current = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     for _ in 0..5 {
-        if current.join("llo-core").exists() || current.join("llo-config.json").exists() || current.join("script").exists() {
+        if current.join("llo-core").exists()
+            || current.join("llo-config.json").exists()
+            || current.join("script").exists()
+        {
             return current;
         }
         if let Some(parent) = current.parent() {
@@ -93,7 +96,7 @@ pub fn get_workspace_root() -> PathBuf {
 #[allow(dead_code)]
 pub fn run_powershell_script(script_relative_path: &str, args: &[&str]) -> Result<String, String> {
     let root = get_workspace_root();
-    
+
     // Check multiple candidate locations for the target script
     let mut candidate_paths = vec![
         root.join(script_relative_path),
@@ -106,7 +109,13 @@ pub fn run_powershell_script(script_relative_path: &str, args: &[&str]) -> Resul
             candidate_paths.push(exe_dir.join(script_relative_path));
             candidate_paths.push(exe_dir.join("resources").join(script_relative_path));
             candidate_paths.push(exe_dir.join("_up_").join("_up_").join(script_relative_path));
-            candidate_paths.push(exe_dir.join("resources").join("_up_").join("_up_").join(script_relative_path));
+            candidate_paths.push(
+                exe_dir
+                    .join("resources")
+                    .join("_up_")
+                    .join("_up_")
+                    .join(script_relative_path),
+            );
         }
     }
 
@@ -132,8 +141,10 @@ pub fn run_powershell_script(script_relative_path: &str, args: &[&str]) -> Resul
 
     if cfg!(target_os = "windows") {
         command
-            .arg("-ExecutionPolicy").arg("Bypass")
-            .arg("-WindowStyle").arg("Hidden")
+            .arg("-ExecutionPolicy")
+            .arg("Bypass")
+            .arg("-WindowStyle")
+            .arg("Hidden")
             .arg("-NonInteractive");
 
         // Prevent Windows from creating a visible console window for this child process.
@@ -155,7 +166,12 @@ pub fn run_powershell_script(script_relative_path: &str, args: &[&str]) -> Resul
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        return Err(format!("Script failed with exit code {:?}:\nStdout: {}\nStderr: {}", output.status.code(), stdout, stderr));
+        return Err(format!(
+            "Script failed with exit code {:?}:\nStdout: {}\nStderr: {}",
+            output.status.code(),
+            stdout,
+            stderr
+        ));
     }
 
     let stdout_str = String::from_utf8_lossy(&output.stdout).to_string();
@@ -180,7 +196,9 @@ mod tests {
     fn test_get_user_data_dir() {
         let dir = get_user_data_dir();
         assert!(dir.exists(), "User data dir must exist");
-        assert!(dir.join("logs").exists() || get_user_log_dir().exists(), "User log dir must exist");
+        assert!(
+            dir.join("logs").exists() || get_user_log_dir().exists(),
+            "User log dir must exist"
+        );
     }
 }
-

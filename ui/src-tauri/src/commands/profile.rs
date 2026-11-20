@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::scripts::run_powershell_script;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -56,12 +56,27 @@ pub fn detect_hardware() -> Result<SystemHardwareProfile, String> {
 
     match serde_json::from_str::<SystemHardwareProfile>(&script_res) {
         Ok(profile) => {
-            let _ = std::fs::write(&log_path, format!("--- HARDWARE PROBE SUCCESS ---\n{}\n", serde_json::to_string_pretty(&profile).unwrap_or_default()));
+            let _ = std::fs::write(
+                &log_path,
+                format!(
+                    "--- HARDWARE PROBE SUCCESS ---\n{}\n",
+                    serde_json::to_string_pretty(&profile).unwrap_or_default()
+                ),
+            );
             Ok(profile)
         }
         Err(e) => {
-            let _ = std::fs::write(&log_path, format!("--- HARDWARE PROBE SERDE ERROR ---\nError: {}\nRaw script_res:\n{}\n", e, script_res));
-            Err(format!("Hardware probe output parsing error: {}. Output was: {}", e, script_res))
+            let _ = std::fs::write(
+                &log_path,
+                format!(
+                    "--- HARDWARE PROBE SERDE ERROR ---\nError: {}\nRaw script_res:\n{}\n",
+                    e, script_res
+                ),
+            );
+            Err(format!(
+                "Hardware probe output parsing error: {}. Output was: {}",
+                e, script_res
+            ))
         }
     }
 }
@@ -99,7 +114,10 @@ mod tests {
     fn test_live_hardware_detection() {
         let live_profile = detect_hardware().expect("Live hardware detection must succeed");
         let json_str = serde_json::to_string_pretty(&live_profile).unwrap();
-        println!("\n=== LIVE TAURI IPC JSON OUTPUT ===\n{}\n==================================", json_str);
+        println!(
+            "\n=== LIVE TAURI IPC JSON OUTPUT ===\n{}\n==================================",
+            json_str
+        );
         assert_ne!(live_profile.gpu.name, "No Compatible GPU");
         assert!(live_profile.gpu.total_vram_mb > 0);
         assert_eq!(live_profile.gpu.adapter_class, "dedicated");
