@@ -12,13 +12,18 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.14.26",
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-dialog": "^2.2.0",
     "@tauri-apps/plugin-shell": "^2.2.0",
+    "@types/react-window": "^1.8.8",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.77.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-window": "^2.5.3",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

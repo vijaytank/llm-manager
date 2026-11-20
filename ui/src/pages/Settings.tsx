@@ -1,17 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PageShell } from '../components/layout/PageShell';
-import { Save, FolderOpen, Code, Sliders, Check, AlertTriangle } from 'lucide-react';
+import { Save, FolderOpen, Code, Sliders, Check, AlertTriangle, X } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useConfigStore, AppConfig } from '../store/configStore';
 import { InfoTooltip } from '../components/InfoTooltip';
+import { useJsonSchemaValidation } from '../hooks/useJsonSchemaValidation';
 import './Settings.css';
 
 export const SettingsPage: React.FC = () => {
   const { config, updateConfig, saveConfig } = useConfigStore();
   const [activeTab, setActiveTab] = useState<'visual' | 'json'>('visual');
   const [jsonText, setJsonText] = useState(JSON.stringify(config, null, 2));
-  const [jsonError, setJsonError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // JSON Schema validation
+  const { errors, isValid, validate } = useJsonSchemaValidation(jsonText);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Sync jsonText with config when visual tab changes
+  useEffect(() => {
+    if (activeTab === 'visual') {
+      setJsonText(JSON.stringify(config, null, 2));
+    }
+  }, [config, activeTab]);
+
+  // Validate on change
+  useEffect(() => {
+    if (activeTab === 'json') {
+      const timer = setTimeout(() => {
+        validate();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [jsonText, activeTab, validate]);
 
   const handleBrowseServerBinary = async () => {
     try {
@@ -50,13 +71,12 @@ export const SettingsPage: React.FC = () => {
   const handleSaveJson = async () => {
     try {
       const parsed: AppConfig = JSON.parse(jsonText);
-      setJsonError(null);
       updateConfig(parsed);
       await saveConfig();
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (e: any) {
-      setJsonError(e.toString());
+      // Error handled by validation hook
     }
   };
 
@@ -288,27 +308,80 @@ export const SettingsPage: React.FC = () => {
           </div>
         ) : (
           <div className="glass-card card-padding">
-            <h2 style={{ marginBottom: '12px' }}>Raw Configuration JSON</h2>
-            {jsonError && (
-              <div className="impact-banner severity-danger" style={{ marginBottom: '12px' }}>
-                <AlertTriangle size={16} /> Invalid JSON Syntax: {jsonError}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h2 style={{ marginBottom: 0 }}>Raw Configuration JSON</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isValid ? (
+                  <span className="badge badge-success">
+                    <Check size={12} /> Valid JSON Schema
+                  </span>
+                ) : (
+                  <span className="badge badge-danger">
+                    <X size={12} /> {errors.length} Error(s)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {errors.length > 0 && (
+              <div className="impact-banner severity-danger" style={{ marginBottom: '12px', maxHeight: '150px', overflow: 'auto' }}>
+                <AlertTriangle size={16} /> JSON Schema Validation Errors:
+                <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', fontSize: '0.85rem' }}>
+                  {errors.slice(0, 10).map((err, idx) => (
+                    <li key={idx} style={{ marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                      Line {err.line}, Col {err.column}: {err.message}
+                      {err.instancePath && <code style={{ marginLeft: '8px', fontSize: '0.8em' }}>{err.instancePath}</code>}
+                    </li>
+                  ))}
+                  {errors.length > 10 && <li style={{ color: 'var(--text-muted)' }}>... and {errors.length - 10} more</li>}
+                </ul>
               </div>
             )}
-            <textarea
-              className="form-input font-mono"
-              rows={22}
-              style={{ width: '100%', resize: 'vertical' }}
-              value={jsonText}
-              onChange={(e) => {
-                setJsonText(e.target.value);
-                try {
-                  JSON.parse(e.target.value);
-                  setJsonError(null);
-                } catch (err: any) {
-                  setJsonError(err.toString());
-                }
-              }}
-            />
+
+            <div style={{ position: 'relative' }}>
+              <textarea
+                ref={textareaRef}
+                className="form-input font-mono"
+                rows={22}
+                style={{ width: '100%', resize: 'vertical' }}
+                value={jsonText}
+                onChange={(e) => {
+                  setJsonText(e.target.value);
+                }}
+                aria-invalid={!isValid}
+                aria-describedby={errors.length > 0 ? 'json-errors' : undefined}
+              />
+              {/* Error line markers */}
+              {errors.length > 0 && (
+                <div
+                  id="json-errors"
+                  style={{
+                    position: 'absolute',
+                    left: '0',
+                    top: '0',
+                    bottom: '0',
+                    width: '4px',
+                    pointerEvents: 'none',
+                    zIndex: 10,
+                  }}
+                >
+                  {errors.map((err) => (
+                    <div
+                      key={`${err.line}-${err.column}`}
+                      style={{
+                        position: 'absolute',
+                        top: `calc(${err.line} * 1.5rem - 1.5rem)`,
+                        left: 0,
+                        width: '4px',
+                        height: '1.5rem',
+                        background: 'var(--status-error)',
+                        borderRadius: '0 2px 2px 0',
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

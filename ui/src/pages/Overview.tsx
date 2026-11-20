@@ -311,6 +311,60 @@ export const OverviewPage: React.FC = () => {
         </div>
       )}
 
+      {/* Quick Actions */}
+      <div className="glass-card card-padding" style={{ marginBottom: '20px' }}>
+        <div className="card-header">
+          <Zap className="card-icon" size={20} />
+          <h3 className="card-title">Quick Actions</h3>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginTop: '12px' }}>
+          <button className="btn btn-outline quick-action" onClick={() => { updateConfig({ active_model: baseModels[0]?.name || '' }); saveConfig(); invoke('start_server', { port }); }}>
+            <Play size={18} style={{ marginRight: '8px' }} /> Launch Default Model
+          </button>
+          <button className="btn btn-outline quick-action" onClick={() => { updateConfig({ active_model: baseModels[0]?.name || '' }); saveConfig(); invoke('start_server', { port }); }}>
+            <Wand2 size={18} style={{ marginRight: '8px' }} /> Auto-Tune & Launch
+          </button>
+          <button className="btn btn-outline quick-action" onClick={() => invoke('launch_claude_terminal', { port, model: config?.active_model })}>
+            <Terminal size={18} style={{ marginRight: '8px' }} /> Open Claude Code
+          </button>
+          <button className="btn btn-outline quick-action" onClick={fetchHardware}>
+            <RefreshCw size={18} style={{ marginRight: '8px' }} /> Re-detect Hardware
+          </button>
+          <button className="btn btn-outline quick-action" onClick={() => { fetchModels(config?.models_dir); }}>
+            <Boxes size={18} style={{ marginRight: '8px' }} /> Rescan Models
+          </button>
+          <button className="btn btn-outline quick-action" onClick={() => invoke('run_health_check')}>
+            <Check size={18} style={{ marginRight: '8px' }} /> Run Health Check
+          </button>
+        </div>
+      </div>
+
+      {baseModels.length > 0 && (
+        <div className="glass-card card-padding" style={{ marginBottom: '20px' }}>
+          <div className="card-header">
+            <Boxes className="card-icon" size={20} />
+            <h3 className="card-title">Recent Models ({baseModels.length} total)</h3>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
+            {baseModels.slice(0, 6).map((m, i) => (
+              <button
+                key={i}
+                className="btn btn-outline quick-action"
+                style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+                onClick={() => { setSelectedModelFilename(m.filename); }}
+              >
+                {m.name} ({m.fileSizeGb} GB)
+              </button>
+            ))}
+            {baseModels.length > 6 && (
+              <span className="text-muted" style={{ alignSelf: 'center', fontSize: '0.8rem' }}>
+                +{baseModels.length - 6} more...
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="overview-grid">
         {/* Hardware Profile Card */}
         <div className="glass-card card-padding">
