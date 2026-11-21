@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { PageShell } from '../components/layout/PageShell';
-import { Cpu, HardDrive, Sliders } from 'lucide-react';
+import { Cpu, HardDrive, Sliders, Zap, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useHardwareStore } from '../store/hardwareStore';
 import { useConfigStore } from '../store/configStore';
 import { InfoTooltip } from '../components/InfoTooltip';
+import { calculateKvCacheGb, estimateBlockCount } from '../lib/validation';
 import './Performance.css';
 
 export const PerformancePage: React.FC = () => {
@@ -13,6 +14,33 @@ export const PerformancePage: React.FC = () => {
   const isCpuOnly = profile?.adapterClass === 'none' || profile?.performanceTier === 'cpu';
   const vramGb = profile?.vramGb || 0;
   const cores = profile?.physicalCores || 4;
+
+  // Live preview state
+  const [previewCtx, setPreviewCtx] = useState(config?.overrides?.ctx_size ?? config?.default_context_size ?? 32768);
+  const [previewCacheK, setPreviewCacheK] = useState(config?.overrides?.cache_type_k ?? config?.cache_type_k ?? 'f16');
+  const [previewCacheV, setPreviewCacheV] = useState(config?.overrides?.cache_type_v ?? config?.cache_type_v ?? 'f16');
+  const [previewFlashAttn, setPreviewFlashAttn] = useState(config?.overrides?.flash_attn ?? config?.flash_attn ?? 'on');
+  const [previewParallel, setPreviewParallel] = useState(config?.overrides?.parallel ?? config?.parallel_slots ?? 1);
+  const [previewUbatch, setPreviewUbatch] = useState(config?.overrides?.ubatch_size ?? config?.ubatch_size ?? 512);
+  const [previewModelSize, setPreviewModelSize] = useState(4.5);
+
+  // Live memory calculations
+  const liveKvGb = useMemo(() => {
+    if (isCpuOnly) return 0;
+    return calculateKvCacheGb(
+      previewCtx,
+      estimateBlockCount(previewModelSize),
+      previewCacheK,
+      previewCacheV,
+      previewParallel
+    );
+  }, [previewCtx, previewModelSize, previewCacheK, previewCacheV, previewParallel, isCpuOnly]);
+
+  const liveTotalGb = useMemo(() => previewModelSize + liveKvGb + 0.5, [previewModelSize, liveKvGb]);
+  const liveVramUsage = vramGb > 0 ? (liveTotalGb / vramGb) * 100 : 0;
+  const liveRamUsage = (liveTotalGb / (profile?.totalRamGb || 16)) * 100;
+  const fitsVram = vramGb > 0 ? liveTotalGb <= vramGb * 0.9 : true;
+  const fitsRam = liveTotalGb <= (profile?.totalRamGb || 16) * 0.85;
 
   return (
     <PageShell title="Performance & System Tuning">
@@ -46,6 +74,150 @@ export const PerformancePage: React.FC = () => {
             <div className="info-row">
               <span className="info-label">Memory Spill Prevention</span>
               <span className="badge badge-success">Fit-Throttle Active</span>
+            </div>
+          </div>
+
+          {/* Live Preview Card */}
+          <div className="glass-card card-padding" style={{ borderLeft: '4px solid var(--accent)' }}>
+            <div className="card-header">
+              <Zap className="card-icon" size={20} />
+              <h3>
+                Live Memory Preview
+                <InfoTooltip
+                  title="Live Memory Preview"
+                  description="Real-time estimation of VRAM/RAM usage based on current slider values. Adjust settings below to see immediate impact."
+                  recommendation="Keep VRAM usage under 90% and RAM usage under 85% for stable inference."
+                  impact="Helps you find optimal settings before saving and restarting the server."
+                />
+              </h3>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '12px' }}>
+              <div className="preview-metric">
+                <div className="metric-label">Model Size</div>
+                <div className="metric-value font-mono">{previewModelSize.toFixed(1)} GB</div>
+                <input
+                  type="range"
+                  min="1"
+                  max="70"
+                  step="0.5"
+                  value={previewModelSize}
+                  onChange={(e) => setPreviewModelSize(Number(e.target.value))}
+                  style={{ width: '100%', marginTop: '8px' }}
+                />
+              </div>
+              <div className="preview-metric">
+                <div className="metric-label">Context Window</div>
+                <div className="metric-value font-mono">{previewCtx.toLocaleString()} tokens</div>
+                <select
+                  className="form-input font-mono"
+                  style={{ width: '100%', marginTop: '8px' }}
+                  value={previewCtx}
+                  onChange={(e) => setPreviewCtx(Number(e.target.value))}
+                >
+                  <option value={8192}>8,192</option>
+                  <option value={16384}>16,384</option>
+                  <option value={32768}>32,768</option>
+                  <option value={65536}>65,536</option>
+                  <option value={131072}>131,072</option>
+                </select>
+              </div>
+              <div className="preview-metric">
+                <div className="metric-label">KV Cache Precision</div>
+                <div className="metric-value font-mono">{previewCacheK}</div>
+                <select
+                  className="form-input font-mono"
+                  style={{ width: '100%', marginTop: '8px' }}
+                  value={previewCacheK}
+                  onChange={(e) => { setPreviewCacheK(e.target.value); setPreviewCacheV(e.target.value); }}
+                >
+                  <option value="f16">f16 (Full)</option>
+                  <option value="q8_0">q8_0 (8-bit ⭐)</option>
+                  <option value="q4_0">q4_0 (4-bit)</option>
+                </select>
+              </div>
+              <div className="preview-metric">
+                <div className="metric-label">Parallel Slots</div>
+                <div className="metric-value font-mono">{previewParallel}</div>
+                <select
+                  className="form-input font-mono"
+                  style={{ width: '100%', marginTop: '8px' }}
+                  value={previewParallel}
+                  onChange={(e) => setPreviewParallel(Number(e.target.value))}
+                >
+                  <option value={1}>1 (Max Speed)</option>
+                  <option value={2}>2</option>
+                  <option value={4}>4</option>
+                </select>
+              </div>
+              <div className="preview-metric">
+                <div className="metric-label">Flash Attention</div>
+                <div className="metric-value font-mono">{previewFlashAttn}</div>
+                <select
+                  className="form-input font-mono"
+                  style={{ width: '100%', marginTop: '8px' }}
+                  value={previewFlashAttn}
+                  onChange={(e) => setPreviewFlashAttn(e.target.value)}
+                >
+                  <option value="on">on (Active ⭐)</option>
+                  <option value="off">off (Disabled)</option>
+                  <option value="auto">auto (Detect)</option>
+                </select>
+              </div>
+              <div className="preview-metric">
+                <div className="metric-label">Micro-Batch Size</div>
+                <div className="metric-value font-mono">{previewUbatch}</div>
+                <select
+                  className="form-input font-mono"
+                  style={{ width: '100%', marginTop: '8px' }}
+                  value={previewUbatch}
+                  onChange={(e) => setPreviewUbatch(Number(e.target.value))}
+                >
+                  <option value={128}>128</option>
+                  <option value={256}>256</option>
+                  <option value={512}>512 (Default)</option>
+                  <option value={1024}>1024 (High VRAM)</option>
+                  <option value={2048}>2048 (Ultra)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '16px', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px' }}>
+              <h4 style={{ margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="font-mono">Estimated Memory Usage:</span>
+              </h4>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                <div className={`preview-bar ${fitsVram ? 'ok' : 'warn'}`}>
+                  <div className="preview-bar-label">
+                    <span>VRAM Usage</span>
+                    <span className="font-mono">{vramGb > 0 ? `${liveTotalGb.toFixed(2)} / ${vramGb} GB (${liveVramUsage.toFixed(0)}%)` : 'N/A (CPU Mode)'}</span>
+                  </div>
+                  <div className="preview-bar-track">
+                    <div className="preview-bar-fill" style={{ width: `${Math.min(liveVramUsage, 100)}%`, background: fitsVram ? 'var(--accent-green, #10b981)' : 'var(--status-error)' }}></div>
+                  </div>
+                </div>
+                <div className={`preview-bar ${fitsRam ? 'ok' : 'warn'}`}>
+                  <div className="preview-bar-label">
+                    <span>System RAM Usage</span>
+                    <span className="font-mono">{liveTotalGb.toFixed(2)} / ${profile?.totalRamGb || 16} GB (${liveRamUsage.toFixed(0)}%)</span>
+                  </div>
+                  <div className="preview-bar-track">
+                    <div className="preview-bar-fill" style={{ width: `${Math.min(liveRamUsage, 100)}%`, background: fitsRam ? 'var(--accent-green, #10b981)' : 'var(--status-error)' }}></div>
+                  </div>
+                </div>
+                <div className={`preview-status ${fitsVram && fitsRam ? 'ok' : 'warn'}`}>
+                  {fitsVram && fitsRam ? (
+                    <>
+                      <CheckCircle size={20} style={{ color: 'var(--accent-green, #10b981)' }} />
+                      <span>Fits in memory ✓</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle size={20} style={{ color: 'var(--status-error)' }} />
+                      <span>Memory overflow risk!</span>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 

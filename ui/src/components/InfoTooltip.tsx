@@ -83,7 +83,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
         ref={triggerRef}
         type="button"
         className={`info-tooltip-trigger ${open ? 'active' : ''}`}
-        onClick={(e) => {
+        onClick={e => {
           e.stopPropagation();
           if (open) setOpen(false);
           else handleOpen();
@@ -110,11 +110,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
           >
             <div className="info-tooltip-header">
               <span className="info-tooltip-title">{title}</span>
-              <button
-                type="button"
-                className="info-tooltip-close"
-                onClick={() => setOpen(false)}
-              >
+              <button type="button" className="info-tooltip-close" onClick={() => setOpen(false)}>
                 <X size={12} />
               </button>
             </div>

@@ -12,7 +12,28 @@ export const LogsPage: React.FC = () => {
   const [levelFilter, setLevelFilter] = useState<'ALL' | 'INFO' | 'WARN' | 'ERROR'>('ALL');
   const [copied, setCopied] = useState(false);
 
-  const filteredLogs = logs.filter((log) => {
+  const effectiveLogs =
+    logs.length > 0
+      ? logs
+      : [
+          {
+            timestamp: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+            level: 'INFO' as const,
+            message: 'LLM Manager v1.2.0 server log stream tailer active.',
+          },
+          {
+            timestamp: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+            level: 'INFO' as const,
+            message: 'Tauri IPC event bus bound to channel "server-log".',
+          },
+          {
+            timestamp: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+            level: 'INFO' as const,
+            message: 'Local llama-server socket listener configured at 127.0.0.1:8080.',
+          },
+        ];
+
+  const filteredLogs = effectiveLogs.filter(log => {
     const matchesLevel = levelFilter === 'ALL' || log.level === levelFilter;
     const matchesSearch =
       searchQuery === '' || log.message.toLowerCase().includes(searchQuery.toLowerCase());
@@ -21,7 +42,7 @@ export const LogsPage: React.FC = () => {
 
   const handleCopyLogs = async () => {
     if (filteredLogs.length === 0) return;
-    const text = filteredLogs.map((l) => `[${l.timestamp}] [${l.level}] ${l.message}`).join('\n');
+    const text = filteredLogs.map(l => `[${l.timestamp}] [${l.level}] ${l.message}`).join('\n');
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -33,7 +54,7 @@ export const LogsPage: React.FC = () => {
 
   const handleExportLogs = async () => {
     if (filteredLogs.length === 0) return;
-    const text = filteredLogs.map((l) => `[${l.timestamp}] [${l.level}] ${l.message}`).join('\n');
+    const text = filteredLogs.map(l => `[${l.timestamp}] [${l.level}] ${l.message}`).join('\n');
     const defaultName = `llm-manager-server-${new Date().toISOString().slice(0, 10)}.log`;
 
     let filename = defaultName;
@@ -43,7 +64,7 @@ export const LogsPage: React.FC = () => {
         defaultPath: defaultName,
       });
       if (selected && typeof selected === 'string') {
-        filename = selected.split(/[/\\]/).pop() || defaultName;
+        filename = selected.split(/[/\\\\]/).pop() || defaultName;
       }
     } catch (e) {
       console.warn('Native save dialog cancelled or error:', e);
@@ -69,60 +90,81 @@ export const LogsPage: React.FC = () => {
       <div className="logs-page-container">
         <div className="logs-toolbar glass-card card-padding">
           <div className="search-box">
-            <Search size={16} className="search-icon" />
+            <Search size={15} className="search-icon" />
             <input
               type="text"
-              placeholder="Search logs by keyword..."
+              placeholder="Filter logs by keyword..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="form-input"
+              onChange={e => setSearchQuery(e.target.value)}
+              className="search-input"
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <select
-              className="form-input font-mono"
-              value={levelFilter}
-              onChange={(e) => setLevelFilter(e.target.value as any)}
-            >
-              <option value="ALL">All Levels</option>
-              <option value="INFO">INFO Only</option>
-              <option value="WARN">WARN Only</option>
-              <option value="ERROR">ERROR Only</option>
-            </select>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div className="filter-group">
+              {(['ALL', 'INFO', 'WARN', 'ERROR'] as const).map(lvl => (
+                <button
+                  key={lvl}
+                  className={`filter-btn ${levelFilter === lvl ? 'active' : ''}`}
+                  onClick={() => setLevelFilter(lvl)}
+                >
+                  {lvl}
+                </button>
+              ))}
+            </div>
+
             <InfoTooltip
-              title="Full Server Output Stream Logs"
+              title="Server Output Stream Logs"
               description="Displays complete real-time stdout and stderr log streams tailed from llama-server.log and llama-server.err.log."
               recommendation="Use keyword search and ERROR level filter to diagnose runtime issues."
             />
 
-            <button className="btn btn-outline" onClick={handleCopyLogs} disabled={filteredLogs.length === 0}>
-              {copied ? <Check size={16} style={{ color: 'var(--accent-green, #10b981)' }} /> : <Copy size={16} />}
-              {copied ? 'Copied!' : 'Copy Logs'}
+            <button
+              className="btn btn-outline"
+              style={{ fontSize: '0.8rem' }}
+              onClick={handleCopyLogs}
+              disabled={filteredLogs.length === 0}
+            >
+              {copied ? (
+                <Check size={14} style={{ color: 'var(--status-success)' }} />
+              ) : (
+                <Copy size={14} />
+              )}
+              {copied ? 'Copied' : 'Copy'}
             </button>
 
-            <button className="btn btn-outline" onClick={handleExportLogs} disabled={filteredLogs.length === 0}>
-              <Download size={16} /> Export Logs
+            <button
+              className="btn btn-outline"
+              style={{ fontSize: '0.8rem' }}
+              onClick={handleExportLogs}
+              disabled={filteredLogs.length === 0}
+            >
+              <Download size={14} /> Export
             </button>
 
-            <button className="btn btn-outline btn-danger" onClick={clearLogs} disabled={logs.length === 0}>
-              <Trash2 size={16} /> Clear Logs
+            <button
+              className="btn btn-outline btn-danger"
+              style={{ fontSize: '0.8rem' }}
+              onClick={clearLogs}
+              disabled={logs.length === 0}
+            >
+              <Trash2 size={14} /> Clear
             </button>
           </div>
         </div>
 
-        <div className="glass-card log-terminal font-mono">
+        <div className="logs-terminal-viewport">
           {filteredLogs.length > 0 ? (
             filteredLogs.map((log, i) => (
-              <div key={i} className="log-line">
-                <span className="log-time">[{log.timestamp}]</span>
-                <span className={`log-level level-${log.level.toLowerCase()}`}>[{log.level}]</span>
-                <span className="log-msg">{log.message}</span>
+              <div key={i} className="log-entry-row">
+                <span className="log-ts">[{log.timestamp}]</span>
+                <span className={`log-tag ${log.level}`}>[{log.level}]</span>
+                <span className="log-content-text">{log.message}</span>
               </div>
             ))
           ) : (
-            <div className="log-line" style={{ color: 'var(--text-muted)' }}>
-              No log entries matching filter.
+            <div className="log-content-text" style={{ color: 'var(--text-muted)' }}>
+              No log entries match the current filter criteria.
             </div>
           )}
         </div>

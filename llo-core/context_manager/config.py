@@ -16,6 +16,24 @@ class ContextManagerConfig(BaseModel):
     summarize_with_model: str = Field(default="same", description="Model to use for summarization")
     eviction_interval_sec: int = Field(default=300, description="How often to evict stale sessions (seconds)")
     session_ttl_sec: int = Field(default=86400, description="Session inactivity TTL (seconds)")
+    # Connection pool settings
+    http_max_connections: int = Field(default=100, description="Max concurrent connections in HTTP pool")
+    http_max_keepalive: int = Field(default=20, description="Max keepalive connections in HTTP pool")
+    http_timeout_sec: int = Field(default=600, description="HTTP request timeout in seconds")
+    # Prometheus metrics
+    metrics_enabled: bool = Field(default=True, description="Enable Prometheus metrics endpoint")
+    # TLS settings (for local HTTPS)
+    tls_enabled: bool = Field(default=False, description="Enable TLS/HTTPS for proxy")
+    tls_cert_path: str = Field(default="", description="Path to TLS certificate file (PEM)")
+    tls_key_path: str = Field(default="", description="Path to TLS private key file (PEM)")
+    # Rate limiting
+    rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
+    rate_limit_requests: int = Field(default=100, description="Max requests per window")
+    rate_limit_window_sec: int = Field(default=60, description="Rate limit window in seconds")
+    # Session ID validation
+    session_id_min_length: int = Field(default=8, description="Minimum session ID length")
+    session_id_max_length: int = Field(default=64, description="Maximum session ID length")
+    session_id_allowed_chars: str = Field(default="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_", description="Allowed characters in session ID")
 
 def load_config(config_path: Optional[str] = None) -> ContextManagerConfig:
     """Load ContextManagerConfig from llo-config.json or system appdata path."""

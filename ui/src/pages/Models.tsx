@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { PageShell } from '../components/layout/PageShell';
-import { RefreshCw, FolderOpen, Check, AlertTriangle, Zap, Info, FileCode, Image } from 'lucide-react';
+import {
+  RefreshCw,
+  FolderOpen,
+  Check,
+  AlertTriangle,
+  Zap,
+  Info,
+  FileCode,
+  Image,
+} from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import { useModelsStore, ModelInfo } from '../store/modelsStore';
@@ -72,7 +81,9 @@ export const ModelsPage: React.FC = () => {
         <div className="models-header glass-card card-padding">
           <div>
             <h2>Discovered GGUF Models ({models.length})</h2>
-            <p className="font-mono text-muted">{config?.models_dir || 'Directory not configured'}</p>
+            <p className="font-mono text-muted">
+              {config?.models_dir || 'Directory not configured'}
+            </p>
           </div>
           <div className="models-actions">
             <button className="btn btn-outline" onClick={() => fetchModels(config?.models_dir)}>
@@ -86,43 +97,57 @@ export const ModelsPage: React.FC = () => {
 
         {/* GGUF Header Inspector Modal / Panel */}
         {inspectingModel && ggufDetail && (
-          <div className="glass-card card-padding" style={{ borderLeft: '4px solid var(--accent)' }}>
+          <div
+            className="glass-card card-padding"
+            style={{ borderLeft: '4px solid var(--accent)' }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <FileCode size={20} className="card-icon" />
-                <h3>GGUF Binary Header Details: {ggufDetail.name}</h3>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>
+                  GGUF Header Metadata: {ggufDetail.name}
+                </h3>
               </div>
-              <button className="btn btn-outline" onClick={() => setInspectingModel(null)}>Close</button>
+              <button
+                className="btn btn-outline"
+                style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                onClick={() => setInspectingModel(null)}
+              >
+                Close
+              </button>
             </div>
-            <div className="overview-grid" style={{ marginTop: '12px' }}>
-              <div className="info-row">
-                <span className="info-label">Architecture</span>
-                <span className="info-value font-mono">{ggufDetail.architecture}</span>
+            <div className="inspector-grid">
+              <div className="inspector-card-item">
+                <span className="inspector-card-label">Architecture</span>
+                <span className="inspector-card-val font-mono">{ggufDetail.architecture}</span>
               </div>
-              <div className="info-row">
-                <span className="info-label">Quantization</span>
-                <span className="info-value font-mono">{ggufDetail.quantization}</span>
+              <div className="inspector-card-item">
+                <span className="inspector-card-label">Quantization</span>
+                <span className="inspector-card-val font-mono">{ggufDetail.quantization}</span>
               </div>
-              <div className="info-row">
-                <span className="info-label">Transformer Layers</span>
-                <span className="info-value font-mono">{ggufDetail.blockCount} blocks</span>
+              <div className="inspector-card-item">
+                <span className="inspector-card-label">Transformer Blocks</span>
+                <span className="inspector-card-val font-mono">{ggufDetail.blockCount} layers</span>
               </div>
-              <div className="info-row">
-                <span className="info-label">Native Context Limit</span>
-                <span className="info-value font-mono">{ggufDetail.contextLength.toLocaleString()} tokens</span>
+              <div className="inspector-card-item">
+                <span className="inspector-card-label">Native Context Limit</span>
+                <span className="inspector-card-val font-mono">
+                  {ggufDetail.contextLength.toLocaleString()} tokens
+                </span>
               </div>
-              <div className="info-row">
-                <span className="info-label">KV Cache @ 8K</span>
-                <span className="info-value font-mono">{ggufDetail.kvCacheGbAt8k} GB</span>
+              <div className="inspector-card-item">
+                <span className="inspector-card-label">KV Cache @ 8K</span>
+                <span className="inspector-card-val font-mono">{ggufDetail.kvCacheGbAt8k} GB</span>
               </div>
-              <div className="info-row">
-                <span className="info-label">KV Cache @ 32K</span>
-                <span className="info-value font-mono">{ggufDetail.kvCacheGbAt32k} GB</span>
+              <div className="inspector-card-item">
+                <span className="inspector-card-label">KV Cache @ 32K</span>
+                <span className="inspector-card-val font-mono">{ggufDetail.kvCacheGbAt32k} GB</span>
               </div>
             </div>
           </div>
         )}
 
+        {/* Virtualized Model List */}
         <div className="glass-card table-container">
           <table className="models-table">
             <thead>
@@ -157,7 +182,11 @@ export const ModelsPage: React.FC = () => {
                   <InfoTooltip
                     title="Hardware Safety & Pre-Flight Check"
                     description="Evaluates if your GPU VRAM and System RAM can fit the model weights + KV cache."
-                    recommendation={profile?.vramGb ? `Models under ${profile.vramGb * 0.8} GB will run with 100% GPU offload.` : "CPU mode active."}
+                    recommendation={
+                      profile?.vramGb
+                        ? `Models under ${profile.vramGb * 0.8} GB will run with 100% GPU offload.`
+                        : 'CPU mode active.'
+                    }
                   />
                 </th>
                 <th>Actions</th>
@@ -166,30 +195,72 @@ export const ModelsPage: React.FC = () => {
             <tbody>
               {models.length > 0 ? (
                 (() => {
-                  const baseModels = models.filter((m) => !m.isMmproj);
-                  const mmprojModels = models.filter((m) => m.isMmproj);
+                  const baseModels = models.filter(m => !m.isMmproj);
+                  const mmprojModels = models.filter(m => m.isMmproj);
                   const selectedMmprojPath = config?.mmproj_path || '';
                   const isNoOffload = !!config?.mmproj_no_offload;
 
                   const displayList = baseModels.length > 0 ? baseModels : models;
 
-                  return displayList.map((m, i) => {
+                  return displayList.map((m, index) => {
                     const launchCheck = validateModelLaunch(m, config || ({} as any), profile);
                     const isActive = config?.active_model === m.name;
-                    const isCurrentModelMmprojSelected = isActive && selectedMmprojPath !== '' && selectedMmprojPath !== 'none';
+                    const isCurrentModelMmprojSelected =
+                      isActive && selectedMmprojPath !== '' && selectedMmprojPath !== 'none';
 
                     return (
-                      <tr key={i} style={{ background: isActive ? 'rgba(16, 185, 129, 0.08)' : undefined }}>
-                        <td className="font-semibold">
+                      <tr
+                        key={m.filename || index}
+                        style={{
+                          background: isActive ? 'rgba(16, 185, 129, 0.08)' : undefined,
+                        }}
+                      >
+                        <td
+                          className="font-semibold"
+                          style={{
+                            padding: '10px 12px',
+                            borderBottom: '1px solid var(--border-subtle)',
+                            verticalAlign: 'middle',
+                          }}
+                        >
                           {m.name}
-                          {isActive && <span className="badge badge-success" style={{ marginLeft: '8px' }}>Active</span>}
+                          {isActive && (
+                            <span className="badge badge-success" style={{ marginLeft: '8px' }}>
+                              Active
+                            </span>
+                          )}
                         </td>
-                        <td className="font-mono">{m.fileSizeGb} GB</td>
-                        <td className="font-mono">{m.quantization}</td>
-                        <td>
+                        <td
+                          className="font-mono"
+                          style={{
+                            padding: '10px 12px',
+                            borderBottom: '1px solid var(--border-subtle)',
+                            verticalAlign: 'middle',
+                          }}
+                        >
+                          {m.fileSizeGb} GB
+                        </td>
+                        <td
+                          className="font-mono"
+                          style={{
+                            padding: '10px 12px',
+                            borderBottom: '1px solid var(--border-subtle)',
+                            verticalAlign: 'middle',
+                          }}
+                        >
+                          {m.quantization}
+                        </td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            borderBottom: '1px solid var(--border-subtle)',
+                            verticalAlign: 'middle',
+                          }}
+                        >
                           {m.isMmproj ? (
                             <span className="badge badge-info">
-                              <Image size={12} style={{ marginRight: '4px' }} /> Multimodal Projector
+                              <Image size={12} style={{ marginRight: '4px' }} /> Multimodal
+                              Projector
                             </span>
                           ) : (
                             <span className="template-badge">
@@ -197,18 +268,29 @@ export const ModelsPage: React.FC = () => {
                             </span>
                           )}
                         </td>
-                        <td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            borderBottom: '1px solid var(--border-subtle)',
+                            verticalAlign: 'middle',
+                          }}
+                        >
                           {m.isMmproj ? (
-                            <span className="text-muted font-mono" style={{ fontSize: '0.85rem' }}>N/A (Is Projector)</span>
+                            <span className="text-muted font-mono" style={{ fontSize: '0.85rem' }}>
+                              N/A (Is Projector)
+                            </span>
                           ) : mmprojModels.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                               <select
                                 className="form-input font-mono"
                                 style={{ fontSize: '0.8rem', padding: '2px 6px' }}
                                 value={isActive ? selectedMmprojPath : ''}
-                                onChange={async (e) => {
+                                onChange={async e => {
                                   if (!isActive) {
-                                    updateConfig({ active_model: m.name, mmproj_path: e.target.value });
+                                    updateConfig({
+                                      active_model: m.name,
+                                      mmproj_path: e.target.value,
+                                    });
                                   } else {
                                     updateConfig({ mmproj_path: e.target.value });
                                   }
@@ -223,23 +305,46 @@ export const ModelsPage: React.FC = () => {
                                 ))}
                               </select>
                               {isCurrentModelMmprojSelected && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem' }}>
-                                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    fontSize: '0.75rem',
+                                  }}
+                                >
+                                  <label
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
                                     <input
                                       type="radio"
-                                      name={`offload-${i}`}
+                                      name={`offload-${index}`}
                                       checked={!isNoOffload}
                                       onChange={async () => {
                                         updateConfig({ mmproj_no_offload: false });
                                         await saveConfig();
                                       }}
                                     />
-                                    <span style={{ color: 'var(--accent-green, #10b981)' }}>GPU</span>
+                                    <span style={{ color: 'var(--accent-green, #10b981)' }}>
+                                      GPU
+                                    </span>
                                   </label>
-                                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                                  <label
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
                                     <input
                                       type="radio"
-                                      name={`offload-${i}`}
+                                      name={`offload-${index}`}
                                       checked={isNoOffload}
                                       onChange={async () => {
                                         updateConfig({ mmproj_no_offload: true });
@@ -252,26 +357,52 @@ export const ModelsPage: React.FC = () => {
                               )}
                             </div>
                           ) : (
-                            <span className="text-muted font-mono" style={{ fontSize: '0.85rem' }}>None Available</span>
+                            <span className="text-muted font-mono" style={{ fontSize: '0.85rem' }}>
+                              None Available
+                            </span>
                           )}
                         </td>
-                        <td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            borderBottom: '1px solid var(--border-subtle)',
+                            verticalAlign: 'middle',
+                          }}
+                        >
                           {m.isMmproj ? (
                             <span className="badge badge-info">Vision Adapter</span>
                           ) : (
                             <span className={`badge severity-${launchCheck.severity}`}>
-                              {launchCheck.canLaunch ? <Zap size={12} style={{ marginRight: '4px' }} /> : <AlertTriangle size={12} style={{ marginRight: '4px' }} />}
+                              {launchCheck.canLaunch ? (
+                                <Zap size={12} style={{ marginRight: '4px' }} />
+                              ) : (
+                                <AlertTriangle size={12} style={{ marginRight: '4px' }} />
+                              )}
                               {launchCheck.title}
                             </span>
                           )}
                         </td>
-                        <td>
+                        <td
+                          style={{
+                            padding: '10px 12px',
+                            borderBottom: '1px solid var(--border-subtle)',
+                            verticalAlign: 'middle',
+                          }}
+                        >
                           <div style={{ display: 'flex', gap: '6px' }}>
-                            <button className="btn btn-outline" style={{ padding: '4px 8px' }} onClick={() => handleInspect(m)}>
+                            <button
+                              className="btn btn-outline"
+                              style={{ padding: '4px 8px' }}
+                              onClick={() => handleInspect(m)}
+                            >
                               <Info size={14} /> Inspect
                             </button>
                             {!isActive && !m.isMmproj && (
-                              <button className="btn btn-primary" style={{ padding: '4px 8px' }} onClick={() => handleSelectActiveModel(m)}>
+                              <button
+                                className="btn btn-primary"
+                                style={{ padding: '4px 8px' }}
+                                onClick={() => handleSelectActiveModel(m)}
+                              >
                                 Select
                               </button>
                             )}
@@ -283,8 +414,12 @@ export const ModelsPage: React.FC = () => {
                 })()
               ) : (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
-                    No GGUF models discovered in {config?.models_dir || 'configured directory'}. Click "Browse Folder..." to select your models directory.
+                  <td
+                    colSpan={7}
+                    style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}
+                  >
+                    No GGUF models discovered in {config?.models_dir || 'configured directory'}.
+                    Click "Browse Folder..." to select your models directory.
                   </td>
                 </tr>
               )}

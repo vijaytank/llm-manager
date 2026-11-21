@@ -18,7 +18,27 @@ import { useModelsStore } from './store/modelsStore';
 import './styles/index.css';
 
 export const App: React.FC = () => {
-  const [activePage, setActivePage] = useState<PageId>('overview');
+  const [activePage, setActivePage] = useState<PageId>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('page') as PageId;
+      if (
+        p &&
+        [
+          'overview',
+          'setup',
+          'models',
+          'performance',
+          'integrations',
+          'diagnostics',
+          'logs',
+          'settings',
+        ].includes(p)
+      ) {
+        return p;
+      }
+    }
+    return 'overview';
+  });
   const [collapsed, setCollapsed] = useState(false);
   const { config, fetchConfig } = useConfigStore();
   const { profile, fetchHardware } = useHardwareStore();
@@ -26,7 +46,7 @@ export const App: React.FC = () => {
   const { validate } = useValidationStore();
   const { models } = useModelsStore();
 
-  const activeModel = models.find((m) => m.name === config?.active_model);
+  const activeModel = models.find(m => m.name === config?.active_model);
 
   useEffect(() => {
     fetchConfig();
@@ -34,7 +54,7 @@ export const App: React.FC = () => {
 
     // Synchronize initial server status with backend
     invoke<string>('get_server_status')
-      .then((st) => {
+      .then(st => {
         if (st && (st === 'running' || st === 'starting' || st === 'stopped')) {
           setStatus(st);
         }
@@ -43,21 +63,23 @@ export const App: React.FC = () => {
 
     let cleanupFns: Array<() => void> = [];
     Promise.all([
-      listen<string>('server-status-changed', (event) => {
+      listen<string>('server-status-changed', event => {
         setStatus(event.payload as any);
       }),
-      listen<any>('server-log', (event) => {
+      listen<any>('server-log', event => {
         addLog(event.payload);
       }),
-      listen<string>('navigate-to', (event) => {
+      listen<string>('navigate-to', event => {
         setActivePage(event.payload as PageId);
       }),
-    ]).then((unlistens) => {
-      cleanupFns = unlistens;
-    }).catch((err) => console.warn('Failed to register IPC event listeners:', err));
+    ])
+      .then(unlistens => {
+        cleanupFns = unlistens;
+      })
+      .catch(err => console.warn('Failed to register IPC event listeners:', err));
 
     return () => {
-      cleanupFns.forEach((fn) => fn());
+      cleanupFns.forEach(fn => fn());
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -65,7 +87,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     const syncStatus = () => {
       invoke<string>('get_server_status')
-        .then((st) => {
+        .then(st => {
           if (st && (st === 'running' || st === 'starting' || st === 'stopped')) {
             setStatus(st);
           }
@@ -88,6 +110,9 @@ export const App: React.FC = () => {
   // Smart Routing: First time installation -> Setup Step 1. Returning user -> Overview Dashboard
   useEffect(() => {
     if (config) {
+      const hasExplicitPage =
+        typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('page');
+      if (hasExplicitPage) return;
       const isFirstTime = config.installation_type === 'none' || !config.llama_server_path;
       if (isFirstTime) {
         setActivePage('setup');
@@ -122,7 +147,12 @@ export const App: React.FC = () => {
     <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
       <Sidebar
         activePage={activePage}
-        onSelectPage={setActivePage}
+        onSelectPage={p => {
+          setActivePage(p);
+          if (typeof window !== 'undefined') {
+            window.history.replaceState(null, '', `?page=${p}`);
+          }
+        }}
         collapsed={collapsed}
         onToggleCollapse={() => setCollapsed(!collapsed)}
       />

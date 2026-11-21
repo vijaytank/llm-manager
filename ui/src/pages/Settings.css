@@ -8,11 +8,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
 }
 
 .tab-buttons {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px;
+  border-radius: var(--radius-button);
+  border: 1px solid var(--border-subtle);
 }
 
 .tab-btn {
@@ -20,25 +26,30 @@
   border: none;
   color: var(--text-secondary);
   padding: 8px 16px;
-  border-radius: var(--radius-button);
-  font-size: 0.9rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
 }
 
 .tab-btn.active {
-  background: var(--accent-subtle);
-  color: var(--accent);
-  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #ffffff;
 }
 
 .section-title {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.05rem;
+  font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
 }
 
 .form-grid {
@@ -48,51 +59,56 @@
   margin-bottom: 24px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* Custom Modern Toggle Switch */
+.toggle-switch-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
 }
 
-.form-label {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  font-weight: 500;
+.toggle-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
 }
 
-.form-input {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-button);
-  padding: 10px 12px;
+.toggle-slider {
+  width: 44px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  position: relative;
+  transition: all 0.2s ease;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  top: 3px;
+  left: 3px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.toggle-checkbox:checked + .toggle-slider {
+  background: var(--accent);
+}
+
+.toggle-checkbox:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.toggle-label-text {
+  font-size: 0.9rem;
+  font-weight: 600;
   color: var(--text-primary);
-  outline: none;
-  font-size: 0.875rem;
-}
-.form-input:focus {
-  border-color: var(--accent);
-}
-
-.overrides-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.override-row {
-  display: flex;
-  gap: 10px;
-}
-
-.raw-json-area {
-  width: 100%;
-  height: 450px;
-  background: #0A0C10;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-button);
-  padding: 16px;
-  color: var(--text-primary);
-  outline: none;
-  font-size: 0.85rem;
-  resize: vertical;
 }

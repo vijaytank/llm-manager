@@ -77,7 +77,22 @@ if ($LlamaRepoPath -and (Test-Path $LlamaRepoPath)) {
 # Run Help option diff checker
 . $helpParserScript
 $optionDiff = Update-CachedFlags -ServerPath $LlamaServerPath -CachePath $CacheFile
-$cachedFlags = Get-Content $CacheFile -Raw | ConvertFrom-Json
+$cachedFlags = @()
+if (Test-Path $CacheFile -ErrorAction SilentlyContinue) {
+    try {
+        $cachedFlags = Get-Content $CacheFile -Raw -ErrorAction Stop | ConvertFrom-Json
+    } catch {
+        $localCache = Join-Path $ManagerDir ".cached_flags.json"
+        if (Test-Path $localCache -ErrorAction SilentlyContinue) {
+            try { $cachedFlags = Get-Content $localCache -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json } catch { }
+        }
+    }
+} else {
+    $localCache = Join-Path $ManagerDir ".cached_flags.json"
+    if (Test-Path $localCache -ErrorAction SilentlyContinue) {
+        try { $cachedFlags = Get-Content $localCache -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json } catch { }
+    }
+}
 $allowedLongFlags = @($cachedFlags | ForEach-Object { $_.Long })
 
 Write-Host "`n--- System Script Compatibility Audit ---" -ForegroundColor Cyan

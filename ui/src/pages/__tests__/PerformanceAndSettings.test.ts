@@ -52,11 +52,11 @@ describe('Performance Parameters & Live Logs Management', () => {
     const allLogs = useServerStore.getState().logs;
     expect(allLogs.length).toBe(3);
 
-    const errorLogs = allLogs.filter((l) => l.level === 'ERROR');
+    const errorLogs = allLogs.filter(l => l.level === 'ERROR');
     expect(errorLogs.length).toBe(1);
     expect(errorLogs[0].message).toContain('CUDA Out of Memory');
 
-    const searchResults = allLogs.filter((l) => l.message.toLowerCase().includes('port 8080'));
+    const searchResults = allLogs.filter(l => l.message.toLowerCase().includes('port 8080'));
     expect(searchResults.length).toBe(1);
   });
 

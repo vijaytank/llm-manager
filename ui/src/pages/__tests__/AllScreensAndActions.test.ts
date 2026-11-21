@@ -34,7 +34,16 @@ describe('All App Screens, Tabs, Dropdowns & User Actions', () => {
   });
 
   it('Sidebar Navigation: navigates between all 8 pages seamlessly', () => {
-    const pages = ['overview', 'setup', 'models', 'performance', 'integrations', 'diagnostics', 'logs', 'settings'];
+    const pages = [
+      'overview',
+      'setup',
+      'models',
+      'performance',
+      'integrations',
+      'diagnostics',
+      'logs',
+      'settings',
+    ];
     expect(pages.length).toBe(8);
     expect(pages).toContain('overview');
     expect(pages).toContain('models');
@@ -42,7 +51,11 @@ describe('All App Screens, Tabs, Dropdowns & User Actions', () => {
   });
 
   it('Settings Page Action: switches between Visual Form and Raw JSON Editor tabs with syntax validation', () => {
-    const validJson = JSON.stringify({ installation_type: 'winget', default_context_size: 32768 }, null, 2);
+    const validJson = JSON.stringify(
+      { installation_type: 'winget', default_context_size: 32768 },
+      null,
+      2
+    );
     expect(() => JSON.parse(validJson)).not.toThrow();
 
     const invalidJson = `{ installation_type: "winget", default_context_size: `;
@@ -79,19 +92,25 @@ describe('All App Screens, Tabs, Dropdowns & User Actions', () => {
   });
 
   it('Diagnostics Page Action: updates health report status & script audit metrics', () => {
-    const isServerExecutableConfigured = Boolean(useConfigStore.getState().config?.llama_server_path);
+    const isServerExecutableConfigured = Boolean(
+      useConfigStore.getState().config?.llama_server_path
+    );
     expect(isServerExecutableConfigured).toBe(true);
   });
 
   it('Logs Page Action: filters logs by INFO/WARN/ERROR levels and exports to txt string', () => {
     useServerStore.getState().clearLogs();
-    useServerStore.getState().addLog({ timestamp: '04:00:00', level: 'INFO', message: 'Engine loaded' });
-    useServerStore.getState().addLog({ timestamp: '04:00:01', level: 'ERROR', message: 'Out of VRAM' });
+    useServerStore
+      .getState()
+      .addLog({ timestamp: '04:00:00', level: 'INFO', message: 'Engine loaded' });
+    useServerStore
+      .getState()
+      .addLog({ timestamp: '04:00:01', level: 'ERROR', message: 'Out of VRAM' });
 
     const logs = useServerStore.getState().logs;
     expect(logs.length).toBe(2);
 
-    const logText = logs.map((l) => `[${l.timestamp}] [${l.level}] ${l.message}`).join('\n');
+    const logText = logs.map(l => `[${l.timestamp}] [${l.level}] ${l.message}`).join('\n');
     expect(logText).toContain('[INFO] Engine loaded');
     expect(logText).toContain('[ERROR] Out of VRAM');
   });

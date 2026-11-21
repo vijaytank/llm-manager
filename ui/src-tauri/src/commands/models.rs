@@ -1,8 +1,8 @@
+use crate::commands::gguf::parse_gguf_file;
+use crate::scripts::get_workspace_root;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use crate::scripts::get_workspace_root;
-use crate::commands::gguf::parse_gguf_file;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ModelInfo {
@@ -43,7 +43,13 @@ pub fn scan_models(models_dir_path: Option<String>) -> Result<Vec<ModelInfo>, St
         Some(p) if !p.is_empty() => PathBuf::from(p),
         _ => {
             let config = crate::commands::config::load_config().ok();
-            let cfg_dir = config.and_then(|c| if !c.models_dir.is_empty() { Some(PathBuf::from(c.models_dir)) } else { None });
+            let cfg_dir = config.and_then(|c| {
+                if !c.models_dir.is_empty() {
+                    Some(PathBuf::from(c.models_dir))
+                } else {
+                    None
+                }
+            });
             cfg_dir.unwrap_or_else(|| {
                 if root.join("models").exists() {
                     root.join("models")
@@ -62,8 +68,16 @@ pub fn scan_models(models_dir_path: Option<String>) -> Result<Vec<ModelInfo>, St
     }
 
     for path in gguf_paths {
-        let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
-        let name = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
+        let filename = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let name = path
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
         let lower_fn = filename.to_lowercase();
         let is_mmproj = lower_fn.contains("mmproj") || lower_fn.contains("vision-projector");
 
@@ -97,7 +111,11 @@ pub fn scan_models(models_dir_path: Option<String>) -> Result<Vec<ModelInfo>, St
                 (meta.quantization, meta.context_length, tmpl)
             }
             Err(_) => (
-                if lower_fn.contains("q4_k_m") { "Q4_K_M".to_string() } else { "GGUF".to_string() },
+                if lower_fn.contains("q4_k_m") {
+                    "Q4_K_M".to_string()
+                } else {
+                    "GGUF".to_string()
+                },
                 32768,
                 "built-in (GGUF)".to_string(),
             ),
@@ -113,9 +131,17 @@ pub fn scan_models(models_dir_path: Option<String>) -> Result<Vec<ModelInfo>, St
             file_size_gb,
             quantization: quant,
             template: tmpl,
-            template_match_method: if is_mmproj { "mmproj-projector".to_string() } else { "binary-header".to_string() },
+            template_match_method: if is_mmproj {
+                "mmproj-projector".to_string()
+            } else {
+                "binary-header".to_string()
+            },
             calculated_context: ctx,
-            status: if is_mmproj { "Multimodal Projector".to_string() } else { "Ready".to_string() },
+            status: if is_mmproj {
+                "Multimodal Projector".to_string()
+            } else {
+                "Ready".to_string()
+            },
             is_mmproj,
         });
     }
