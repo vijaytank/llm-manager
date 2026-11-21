@@ -44,9 +44,9 @@ $ConfigFile = [System.IO.Path]::GetFullPath($ConfigFile)
 if ([string]::IsNullOrWhiteSpace($PresetFile))   { $PresetFile   = Join-Path (Split-Path -Parent $ConfigFile) "models-preset.ini" }
 $PresetFile = [System.IO.Path]::GetFullPath($PresetFile)
 
-if ([string]::IsNullOrWhiteSpace($ModelsDir))    { $ModelsDir    = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\models")) }
-if ([string]::IsNullOrWhiteSpace($TemplatesDir)) { $TemplatesDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\templates")) }
-if ([string]::IsNullOrWhiteSpace($GrammarsDir))  { $GrammarsDir  = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\grammars")) }
+if ([string]::IsNullOrWhiteSpace($ModelsDir))    { $ModelsDir    = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "models")) }
+if ([string]::IsNullOrWhiteSpace($TemplatesDir)) { $TemplatesDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "templates")) }
+if ([string]::IsNullOrWhiteSpace($GrammarsDir))  { $GrammarsDir  = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "grammars")) }
 
 # ── Model scan cache ──────────────────────────────────────────────────────────
 $modelCacheFile = Join-Path $env:TEMP "llo-model-scan-cache.json"

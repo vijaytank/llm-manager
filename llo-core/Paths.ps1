@@ -25,9 +25,11 @@ function Get-LLMManagerConfigPath {
     $userDir = Get-LLMManagerUserDataDir
     if ($userDir) {
         $appDataConfig = Join-Path $userDir "llo-config.json"
-        if (Test-Path $appDataConfig) {
-            return $appDataConfig
-        }
+        try {
+            if (Test-Path $appDataConfig -ErrorAction SilentlyContinue) {
+                return $appDataConfig
+            }
+        } catch { }
     }
     if (-not [string]::IsNullOrWhiteSpace($ManagerDir)) {
         return Join-Path $ManagerDir "llo-config.json"

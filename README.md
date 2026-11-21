@@ -108,7 +108,7 @@ npm run build          # TypeScript type checking (tsc) + Vite production build
 cd src-tauri
 cargo clippy           # Static analysis and lint checks
 cargo test             # 12 Rust unit tests (GGUF parser, models, server)
-npm run tauri build --release  # Packages full desktop installer (NSIS .exe / .dmg / .AppImage)
+npm run tauri build    # Packages full desktop installer (NSIS .exe / .dmg / .AppImage)
 ```
 
 ---

@@ -227,15 +227,18 @@ jobs:
         working-directory: ui
         run: npm install -g @tauri-apps/cli
 
-      - name: Build Tauri macOS (DMG + AppImage)
+      - name: Add Apple Silicon and Intel targets
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: Build Tauri macOS (Universal)
         working-directory: ui
-        run: npm run tauri build -- --target x86_64-apple-darwin
+        run: npm run tauri build -- --target universal-apple-darwin
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tauri-macos-${{ needs.prepare-release.outputs.version }}
-          path: ui/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/
+          path: ui/src-tauri/target/universal-apple-darwin/release/bundle/dmg/
           retention-days: 30
 
   # Build Tauri App (Linux)
@@ -324,7 +327,7 @@ jobs:
             
             ### Downloads
             - **Windows**: `LLM_Manager_${{ needs.prepare-release.outputs.version }}_x64_en-US.msi` (NSIS installer)
-            - **macOS**: `LLM_Manager_${{ needs.prepare-release.outputs.version }}_x64.dmg` (DMG)
+            - **macOS**: `LLM_Manager_${{ needs.prepare-release.outputs.version }}_universal.dmg` (Universal DMG)
             - **Linux**: `LLM_Manager-${{ needs.prepare-release.outputs.version }}_amd64.AppImage` (AppImage)
             
             ### Installation

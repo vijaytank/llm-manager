@@ -18,7 +18,7 @@ if ([string]::IsNullOrWhiteSpace($CacheFile)) {
     $userDir = if (Get-Command "Get-LLMManagerUserDataDir" -ErrorAction SilentlyContinue) {
         Get-LLMManagerUserDataDir
     } else { $null }
-    if ($userDir -and (Test-Path $userDir)) {
+    if ($userDir -and (Test-Path $userDir -ErrorAction SilentlyContinue)) {
         $CacheFile = Join-Path $userDir ".cached_flags.json"
     } else {
         $CacheFile = Join-Path $ManagerDir ".cached_flags.json"
@@ -156,7 +156,7 @@ function Update-CachedFlags {
     $currentFlags = try { Get-LlamaServerFlags -ServerPath $ServerPath } catch { @() }
     if ($currentFlags.Count -eq 0) {
         Write-Host "Warning: No flags parsed from llama-server --help (binary missing or unreadable)." -ForegroundColor Yellow
-        if (Test-Path $CachePath) {
+        if (Test-Path $CachePath -ErrorAction SilentlyContinue) {
             Write-Host "Preserving existing cached flags at $CachePath." -ForegroundColor Cyan
         }
         return [pscustomobject]@{
@@ -172,7 +172,7 @@ function Update-CachedFlags {
         TotalCurrent = $currentFlags.Count
     }
 
-    if (Test-Path $CachePath) {
+    if (Test-Path $CachePath -ErrorAction SilentlyContinue) {
         try {
             $cachedFlags = Get-Content $CachePath -Raw | ConvertFrom-Json
             
