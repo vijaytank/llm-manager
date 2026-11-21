@@ -612,6 +612,23 @@ $usedAliases = @{}
 $cachedEntries = Get-CachedModelScan
 if ($cachedEntries) {
     $modelEntries = $cachedEntries
+
+    # Re-apply config.overrides.ctx_size (or default_context_size) override to cached entries
+    # so that user changes to context size take effect immediately without waiting for cache expiry
+    if ($config.overrides -and $config.overrides.ContainsKey("ctx_size") -and [int]$config.overrides["ctx_size"] -gt 0) {
+        $overrideCtxSize = [int]$config.overrides["ctx_size"]
+        foreach ($entry in $modelEntries) {
+            $entry.CtxSize = $overrideCtxSize
+        }
+        Write-Host "  [override] Applied config.overrides.ctx_size = $overrideCtxSize to cached entries" -ForegroundColor DarkYellow
+    } elseif ($config.overrides -and $config.overrides.ContainsKey("default_context_size") -and [int]$config.overrides["default_context_size"] -gt 0) {
+        $overrideCtxSize = [int]$config.overrides["default_context_size"]
+        foreach ($entry in $modelEntries) {
+            $entry.CtxSize = $overrideCtxSize
+        }
+        Write-Host "  [override] Applied config.overrides.default_context_size = $overrideCtxSize to cached entries" -ForegroundColor DarkYellow
+    }
+
     Write-Host "Found $($modelEntries.Count) local GGUF model(s) (from cache):" -ForegroundColor Cyan
     foreach ($m in $modelEntries) {
         Write-Host "  - $($m.Alias) ($([math]::Round($m.SizeMB/1024, 2)) GB)  ->  ctx=$($m.CtxSize) tokens"
