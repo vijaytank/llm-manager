@@ -1,43 +1,60 @@
-:root, [data-theme="dark"] {
+:root,
+[data-theme='dark'] {
   /* Font Scaling */
   --font-scale: 1;
 
-  /* Color Palette — White & Blue Theme */
-  --bg-primary: #0B0F19;
-  --bg-surface: #141B2D;
-  --bg-elevated: #1F293D;
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-accent: rgba(59, 130, 246, 0.35);
+  /* Premium Modern Charcoal & Electric Blue Palette */
+  --bg-primary: #0a0d14;
+  --bg-surface: #10141f;
+  --bg-card: #151a28;
+  --bg-card-hover: #1a2133;
+  --bg-elevated: #1f273d;
+  --bg-input: #0d1017;
 
-  /* Primary Accent: Electric Royal Blue & Pure White */
-  --accent: #3B82F6;
-  --accent-hover: #2563EB;
-  --accent-subtle: rgba(59, 130, 246, 0.15);
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.14);
+  --border-accent: rgba(59, 130, 246, 0.4);
+
+  /* Primary Accent: Electric Royal Blue & Gradient */
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --accent-active: #2563eb;
+  --accent-subtle: rgba(59, 130, 246, 0.12);
+  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  --accent-glow: 0 0 20px rgba(59, 130, 246, 0.3);
 
   /* Typography */
-  --text-primary: #FFFFFF;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-dim: #475569;
 
-  /* Status Colors */
-  --status-success: #3B82F6;
-  --status-warning: #F59E0B;
-  --status-error: #EF4444;
-  --status-info: #60A5FA;
+  /* Semantic Status Colors */
+  --status-success: #10b981;
+  --status-success-bg: rgba(16, 185, 129, 0.12);
+  --status-warning: #f59e0b;
+  --status-warning-bg: rgba(245, 158, 11, 0.12);
+  --status-error: #ef4444;
+  --status-error-bg: rgba(239, 68, 68, 0.12);
+  --status-info: #38bdf8;
+  --status-info-bg: rgba(56, 189, 248, 0.12);
 
   /* Card & Button Radii */
-  --radius-card: 12px;
+  --radius-card: 14px;
   --radius-button: 8px;
+  --radius-input: 8px;
   --radius-pill: 9999px;
 
-  /* Fonts */
-  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  /* Typography Families */
+  --font-ui: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
 
   /* Shadows & Glassmorphism */
-  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-  --glass-bg: rgba(20, 27, 45, 0.85);
-  --backdrop-blur: blur(12px);
+  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-card-hover: 0 8px 30px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(59, 130, 246, 0.3);
+  --glass-bg: rgba(21, 26, 40, 0.85);
+  --backdrop-blur: blur(16px);
 }
 
 html {

@@ -206,6 +206,11 @@
       "type": "file"
     },
     {
+      "id": "ui/src/lib/mockTauri.ts",
+      "label": "mockTauri.ts",
+      "type": "file"
+    },
+    {
       "id": "droid-wiki/reference/data-models.md",
       "label": "data-models.md",
       "type": "file"
@@ -553,11 +558,6 @@
     {
       "id": "@eslint/js",
       "label": "js",
-      "type": "stub"
-    },
-    {
-      "id": "@tanstack/react-virtual",
-      "label": "react-virtual",
       "type": "stub"
     },
     {
@@ -4189,6 +4189,11 @@
       "id": "ui/src/lib/validation.ts::validateModelLaunch",
       "label": "validation.ts::validateModelLaunch",
       "type": "symbol"
+    },
+    {
+      "id": "ui/src/lib/mockTauri.ts::setupMockTauriIfNeeded",
+      "label": "mockTauri.ts::setupMockTauriIfNeeded",
+      "type": "symbol"
     }
   ],
   "edges": [
@@ -5742,6 +5747,12 @@
     },
     {
       "source": "ui/src/main.tsx",
+      "target": "ui/src/lib/mockTauri.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/main.tsx",
       "target": "react",
       "type": "import",
       "weight": 0.8
@@ -7243,6 +7254,12 @@
     {
       "source": "llo-core/context_manager/tests/test_compress_content.py",
       "target": "llo-core/context_manager/tests/test_compress_content.py::check_paths",
+      "type": "contains",
+      "weight": 1.0
+    },
+    {
+      "source": "ui/src/lib/mockTauri.ts",
+      "target": "ui/src/lib/mockTauri.ts::setupMockTauriIfNeeded",
       "type": "contains",
       "weight": 1.0
     },
@@ -8772,6 +8789,18 @@
     },
     {
       "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "ui/src/store/configStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
+      "target": "ui/src/store/hardwareStore.ts",
+      "type": "import",
+      "weight": 0.8
+    },
+    {
+      "source": "ui/src/pages/Diagnostics.tsx",
       "target": "./Diagnostics.css",
       "type": "import",
       "weight": 0.8
@@ -8797,12 +8826,6 @@
     {
       "source": "ui/src/pages/Overview.tsx",
       "target": "ui/src/components/ImpactBanner.tsx",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Overview.tsx",
-      "target": "ui/src/components/InfoTooltip.tsx",
       "type": "import",
       "weight": 0.8
     },
@@ -13453,12 +13476,6 @@
     {
       "source": "ui/src/pages/Models.tsx",
       "target": "./Models.css",
-      "type": "import",
-      "weight": 0.8
-    },
-    {
-      "source": "ui/src/pages/Models.tsx",
-      "target": "@tanstack/react-virtual",
       "type": "import",
       "weight": 0.8
     },

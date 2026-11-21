@@ -14,7 +14,39 @@
   overflow-x: auto;
 }
 
-/* Live Preview Card */
+/* Custom Styled Range Sliders */
+input[type='range'] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  outline: none;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
+  border: 2px solid #ffffff;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+input[type='range']::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.9);
+}
+
+/* Live Memory Preview Card */
 .preview-metric {
   display: flex;
   flex-direction: column;
@@ -22,14 +54,16 @@
 }
 
 .metric-label {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  font-size: 0.72rem;
+  color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
+  font-weight: 600;
 }
 
 .metric-value {
   font-size: 1rem;
+  font-weight: 600;
 }
 
 .preview-bar {
@@ -38,7 +72,7 @@
 }
 
 .preview-bar.ok .preview-bar-fill {
-  background: var(--accent-green, #10b981) !important;
+  background: var(--status-success) !important;
 }
 
 .preview-bar.warn .preview-bar-fill {
@@ -50,39 +84,42 @@
   justify-content: space-between;
   font-size: 0.8rem;
   margin-bottom: 6px;
+  color: var(--text-secondary);
 }
 
 .preview-bar-track {
   height: 8px;
-  background: var(--bg-surface);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
   overflow: hidden;
 }
 
 .preview-bar-fill {
   height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease, background 0.3s ease;
+  border-radius: 999px;
+  transition:
+    width 0.3s ease,
+    background 0.3s ease;
 }
 
 .preview-status {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  padding: 10px 16px;
   border-radius: 8px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .preview-status.ok {
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--accent-green, #10b981);
+  background: var(--status-success-bg);
+  color: var(--status-success);
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .preview-status.warn {
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--status-error-bg);
   color: var(--status-error);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }

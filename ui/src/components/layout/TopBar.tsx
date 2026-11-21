@@ -133,29 +133,40 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
       <div className="topbar-left">
         <h1 className="page-title">{title}</h1>
         <div className="status-indicator">
-          {status === 'running' && <span className="badge badge-success">● Running</span>}
-          {status === 'stopped' && <span className="badge badge-error">● Stopped</span>}
-          {status === 'starting' && <span className="badge badge-warning">● Starting...</span>}
-          <span className="port-label">:{port}</span>
+          <div className={`status-pill-badge status-${status}`}>
+            <span
+              className={`status-dot ${status === 'running' ? 'pulse' : ''}`}
+              style={{
+                background:
+                  status === 'running'
+                    ? 'var(--status-success)'
+                    : status === 'starting'
+                      ? 'var(--status-warning)'
+                      : 'var(--text-dim)',
+              }}
+            />
+            <span className="status-text">{status.toUpperCase()}</span>
+            <span className="status-port">:{port}</span>
+          </div>
         </div>
 
         {isConfigDirty && (
           <div className="topbar-dirty-banner">
-            <span className="dirty-text">⚠️ Settings changed!</span>
+            <span className="dirty-text">⚠️ Changes Pending</span>
             <button
               className="btn btn-warning btn-sm"
               onClick={handleRestart}
               disabled={restarting}
             >
-              <RefreshCw size={13} className={restarting ? 'spin' : ''} />{' '}
-              {restarting ? 'Restarting...' : 'Restart Server'}
+              <RefreshCw size={12} className={restarting ? 'spin' : ''} />{' '}
+              {restarting ? 'Restarting...' : 'Restart Engine'}
             </button>
           </div>
         )}
       </div>
 
       <div className="topbar-actions">
-        {/* Font scale controls */}
+        {/* Scale zoom controls */}
         <div className="font-scale-controls">
           <button
             className="btn-icon"
@@ -163,7 +174,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
             onClick={() => handleFontChange(-0.05)}
             disabled={fontScale <= 0.8}
           >
-            <ZoomOut size={15} />
+            <ZoomOut size={14} />
           </button>
           <span className="font-scale-label">{Math.round(fontScale * 100)}%</span>
           <button
@@ -172,7 +183,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
             onClick={() => handleFontChange(0.05)}
             disabled={fontScale >= 1.25}
           >
-            <ZoomIn size={15} />
+            <ZoomIn size={14} />
           </button>
         </div>
 
@@ -183,7 +194,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
             title="Theme Selection"
             onClick={() => setShowThemeMenu(!showThemeMenu)}
           >
-            <Palette size={16} />
+            <Palette size={15} />
           </button>
           {showThemeMenu && (
             <div className="theme-menu glass-card">
@@ -196,24 +207,25 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
                   setShowThemeMenu(false);
                 }}
               >
-                🌙 Dark (Default)
+                🌙 Modern Dark (Default)
               </button>
             </div>
           )}
         </div>
 
+        <button className="btn btn-outline" onClick={handleHealth}>
+          <Activity size={15} /> Run Health Check
+        </button>
+
         {status === 'stopped' ? (
           <button className="btn btn-primary" onClick={handleStart}>
-            <Play size={16} /> Start Server
+            <Play size={15} /> Start Server
           </button>
         ) : (
-          <button className="btn btn-outline btn-danger" onClick={handleStop}>
-            <Square size={16} /> Stop
+          <button className="btn btn-danger" onClick={handleStop}>
+            <Square size={15} /> Stop Server
           </button>
         )}
-        <button className="btn btn-outline" onClick={handleHealth}>
-          <Activity size={16} /> Run Health Check
-        </button>
       </div>
     </header>
   );

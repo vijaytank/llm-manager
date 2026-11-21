@@ -106,17 +106,27 @@ export const SettingsPage: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            {saveSuccess && <span className="badge badge-success"><Check size={14} /> Saved</span>}
-            <button className="btn btn-primary" onClick={activeTab === 'visual' ? handleSaveVisual : handleSaveJson}>
+            {saveSuccess && (
+              <span className="badge badge-success">
+                <Check size={14} /> Saved
+              </span>
+            )}
+            <button
+              className="btn btn-primary"
+              onClick={activeTab === 'visual' ? handleSaveVisual : handleSaveJson}
+            >
               <Save size={16} /> Save Changes
             </button>
           </div>
         </div>
 
         {activeTab === 'visual' ? (
-          <div className="glass-card card-padding" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div
+            className="glass-card card-padding"
+            style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+          >
             <h2>System Path Configurations</h2>
-            
+
             <div className="form-group">
               <label className="form-label">
                 llama-server.exe Executable Path
@@ -131,7 +141,7 @@ export const SettingsPage: React.FC = () => {
                   type="text"
                   className="form-input font-mono"
                   value={config?.llama_server_path || ''}
-                  onChange={(e) => updateConfig({ llama_server_path: e.target.value })}
+                  onChange={e => updateConfig({ llama_server_path: e.target.value })}
                 />
                 <button className="btn btn-outline" onClick={handleBrowseServerBinary}>
                   <FolderOpen size={16} /> Browse...
@@ -153,7 +163,7 @@ export const SettingsPage: React.FC = () => {
                   type="text"
                   className="form-input font-mono"
                   value={config?.models_dir || ''}
-                  onChange={(e) => updateConfig({ models_dir: e.target.value })}
+                  onChange={e => updateConfig({ models_dir: e.target.value })}
                 />
                 <button className="btn btn-outline" onClick={handleBrowseModelsDir}>
                   <FolderOpen size={16} /> Browse Folder...
@@ -174,11 +184,11 @@ export const SettingsPage: React.FC = () => {
                 type="number"
                 className="form-input font-mono"
                 value={config?.overrides?.ctx_size ?? config?.default_context_size ?? 32768}
-                onChange={(e) => {
+                onChange={e => {
                   const val = Number(e.target.value);
                   updateConfig({
                     default_context_size: val,
-                    overrides: { ...(config?.overrides || {}), ctx_size: val }
+                    overrides: { ...(config?.overrides || {}), ctx_size: val },
                   });
                 }}
               />
@@ -195,26 +205,31 @@ export const SettingsPage: React.FC = () => {
               />
             </h2>
 
-            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <input
-                type="checkbox"
-                id="cm-enabled"
-                checked={config?.context_manager?.enabled ?? false}
-                onChange={(e) => updateConfig({
-                  context_manager: {
-                    enabled: e.target.checked,
-                    warn_threshold: config?.context_manager?.warn_threshold ?? 0.70,
-                    keep_turns: config?.context_manager?.keep_turns ?? 6,
-                    proxy_port: config?.context_manager?.proxy_port ?? 8090,
-                    ctx_limit: config?.context_manager?.ctx_limit ?? 0,
-                    tokenizer_repo: config?.context_manager?.tokenizer_repo ?? '',
-                    summary_max_tokens: config?.context_manager?.summary_max_tokens ?? 768,
-                    summarize_with_model: config?.context_manager?.summarize_with_model ?? 'same'
+            <div className="form-group" style={{ margin: '8px 0' }}>
+              <label className="toggle-switch-wrapper">
+                <input
+                  type="checkbox"
+                  className="toggle-checkbox"
+                  id="cm-enabled"
+                  checked={config?.context_manager?.enabled ?? false}
+                  onChange={e =>
+                    updateConfig({
+                      context_manager: {
+                        enabled: e.target.checked,
+                        warn_threshold: config?.context_manager?.warn_threshold ?? 0.7,
+                        keep_turns: config?.context_manager?.keep_turns ?? 6,
+                        proxy_port: config?.context_manager?.proxy_port ?? 8090,
+                        ctx_limit: config?.context_manager?.ctx_limit ?? 0,
+                        tokenizer_repo: config?.context_manager?.tokenizer_repo ?? '',
+                        summary_max_tokens: config?.context_manager?.summary_max_tokens ?? 768,
+                        summarize_with_model:
+                          config?.context_manager?.summarize_with_model ?? 'same',
+                      },
+                    })
                   }
-                })}
-              />
-              <label htmlFor="cm-enabled" style={{ cursor: 'pointer', fontWeight: 600 }}>
-                Enable Context Manager Proxy
+                />
+                <span className="toggle-slider"></span>
+                <span className="toggle-label-text">Enable Context Manager Proxy</span>
               </label>
             </div>
 
@@ -234,13 +249,15 @@ export const SettingsPage: React.FC = () => {
                     min="0.4"
                     max="0.95"
                     className="form-input font-mono"
-                    value={config?.context_manager?.warn_threshold ?? 0.70}
-                    onChange={(e) => updateConfig({
-                      context_manager: {
-                        ...config.context_manager!,
-                        warn_threshold: Number(e.target.value)
-                      }
-                    })}
+                    value={config?.context_manager?.warn_threshold ?? 0.7}
+                    onChange={e =>
+                      updateConfig({
+                        context_manager: {
+                          ...config.context_manager!,
+                          warn_threshold: Number(e.target.value),
+                        },
+                      })
+                    }
                   />
                 </div>
 
@@ -258,12 +275,14 @@ export const SettingsPage: React.FC = () => {
                     max="20"
                     className="form-input font-mono"
                     value={config?.context_manager?.keep_turns ?? 6}
-                    onChange={(e) => updateConfig({
-                      context_manager: {
-                        ...config.context_manager!,
-                        keep_turns: Number(e.target.value)
-                      }
-                    })}
+                    onChange={e =>
+                      updateConfig({
+                        context_manager: {
+                          ...config.context_manager!,
+                          keep_turns: Number(e.target.value),
+                        },
+                      })
+                    }
                   />
                 </div>
 
@@ -273,12 +292,14 @@ export const SettingsPage: React.FC = () => {
                     type="number"
                     className="form-input font-mono"
                     value={config?.context_manager?.proxy_port ?? 8090}
-                    onChange={(e) => updateConfig({
-                      context_manager: {
-                        ...config.context_manager!,
-                        proxy_port: Number(e.target.value)
-                      }
-                    })}
+                    onChange={e =>
+                      updateConfig({
+                        context_manager: {
+                          ...config.context_manager!,
+                          proxy_port: Number(e.target.value),
+                        },
+                      })
+                    }
                   />
                 </div>
 
@@ -295,12 +316,14 @@ export const SettingsPage: React.FC = () => {
                     placeholder="Auto-detected from model alias"
                     className="form-input font-mono"
                     value={config?.context_manager?.tokenizer_repo ?? ''}
-                    onChange={(e) => updateConfig({
-                      context_manager: {
-                        ...config.context_manager!,
-                        tokenizer_repo: e.target.value
-                      }
-                    })}
+                    onChange={e =>
+                      updateConfig({
+                        context_manager: {
+                          ...config.context_manager!,
+                          tokenizer_repo: e.target.value,
+                        },
+                      })
+                    }
                   />
                 </div>
               </div>
@@ -308,7 +331,14 @@ export const SettingsPage: React.FC = () => {
           </div>
         ) : (
           <div className="glass-card card-padding">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '12px',
+              }}
+            >
               <h2 style={{ marginBottom: 0 }}>Raw Configuration JSON</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {isValid ? (
@@ -324,16 +354,27 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             {errors.length > 0 && (
-              <div className="impact-banner severity-danger" style={{ marginBottom: '12px', maxHeight: '150px', overflow: 'auto' }}>
+              <div
+                className="impact-banner severity-danger"
+                style={{ marginBottom: '12px', maxHeight: '150px', overflow: 'auto' }}
+              >
                 <AlertTriangle size={16} /> JSON Schema Validation Errors:
                 <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', fontSize: '0.85rem' }}>
                   {errors.slice(0, 10).map((err, idx) => (
                     <li key={idx} style={{ marginBottom: '4px', color: 'var(--text-secondary)' }}>
                       Line {err.line}, Col {err.column}: {err.message}
-                      {err.instancePath && <code style={{ marginLeft: '8px', fontSize: '0.8em' }}>{err.instancePath}</code>}
+                      {err.instancePath && (
+                        <code style={{ marginLeft: '8px', fontSize: '0.8em' }}>
+                          {err.instancePath}
+                        </code>
+                      )}
                     </li>
                   ))}
-                  {errors.length > 10 && <li style={{ color: 'var(--text-muted)' }}>... and {errors.length - 10} more</li>}
+                  {errors.length > 10 && (
+                    <li style={{ color: 'var(--text-muted)' }}>
+                      ... and {errors.length - 10} more
+                    </li>
+                  )}
                 </ul>
               </div>
             )}
@@ -345,7 +386,7 @@ export const SettingsPage: React.FC = () => {
                 rows={22}
                 style={{ width: '100%', resize: 'vertical' }}
                 value={jsonText}
-                onChange={(e) => {
+                onChange={e => {
                   setJsonText(e.target.value);
                 }}
                 aria-invalid={!isValid}
@@ -365,7 +406,7 @@ export const SettingsPage: React.FC = () => {
                     zIndex: 10,
                   }}
                 >
-                  {errors.map((err) => (
+                  {errors.map(err => (
                     <div
                       key={`${err.line}-${err.column}`}
                       style={{

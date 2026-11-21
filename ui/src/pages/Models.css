@@ -8,6 +8,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.models-header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
 }
 
 .models-actions {
@@ -19,33 +28,41 @@
   overflow-x: auto;
   width: 100%;
   max-width: 100%;
-  border-radius: 8px;
+  border-radius: var(--radius-card);
 }
 
 .models-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
 }
 
 .models-table th {
-  padding: 10px 12px;
-  background: var(--bg-surface);
+  padding: 12px 14px;
+  background: rgba(16, 20, 31, 0.9);
   color: var(--text-secondary);
+  font-size: 0.75rem;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
 }
 
 .models-table td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border-subtle);
   vertical-align: middle;
+  color: var(--text-primary);
 }
 
-.models-table tr:hover {
-  background: var(--bg-elevated);
+.models-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.models-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
 }
 
 .font-semibold {
@@ -61,11 +78,49 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--status-success);
+  color: var(--status-info);
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  background: var(--status-info-bg);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
 }
 
 .template-badge.warning {
   color: var(--status-warning);
+  background: var(--status-warning-bg);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+/* GGUF Inspector Grid */
+.inspector-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.inspector-card-item {
+  background: rgba(13, 16, 23, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inspector-card-label {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.inspector-card-val {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }

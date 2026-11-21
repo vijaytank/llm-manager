@@ -5,14 +5,14 @@
 ## 🏆 High-Impact Files
 These files have the highest centrality (PageRank) and are critical to the system architecture.
 
-- [ui/src/store/configStore.ts](file:///E:/Projects/llm-manager/ui/src/store/configStore.ts) (Score: 0.4444)
-- [ui/src/store/serverStore.ts](file:///E:/Projects/llm-manager/ui/src/store/serverStore.ts) (Score: 0.3819)
-- [ui/src/store/hardwareStore.ts](file:///E:/Projects/llm-manager/ui/src/store/hardwareStore.ts) (Score: 0.3219)
-- [ui/src/store/modelsStore.ts](file:///E:/Projects/llm-manager/ui/src/store/modelsStore.ts) (Score: 0.2173)
-- [ui/src/lib/validation.ts](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts) (Score: 0.1988)
-- [ui/src/components/layout/TopBar.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/TopBar.tsx) (Score: 0.1888)
-- [ui/src/components/InfoTooltip.tsx](file:///E:/Projects/llm-manager/ui/src/components/InfoTooltip.tsx) (Score: 0.1788)
-- [ui/src/components/layout/PageShell.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/PageShell.tsx) (Score: 0.1788)
+- [ui/src/store/configStore.ts](file:///E:/Projects/llm-manager/ui/src/store/configStore.ts) (Score: 0.4562)
+- [ui/src/store/serverStore.ts](file:///E:/Projects/llm-manager/ui/src/store/serverStore.ts) (Score: 0.3852)
+- [ui/src/store/hardwareStore.ts](file:///E:/Projects/llm-manager/ui/src/store/hardwareStore.ts) (Score: 0.3337)
+- [ui/src/store/modelsStore.ts](file:///E:/Projects/llm-manager/ui/src/store/modelsStore.ts) (Score: 0.2182)
+- [ui/src/lib/validation.ts](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts) (Score: 0.2001)
+- [ui/src/components/layout/TopBar.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/TopBar.tsx) (Score: 0.1881)
+- [ui/src/components/layout/PageShell.tsx](file:///E:/Projects/llm-manager/ui/src/components/layout/PageShell.tsx) (Score: 0.1761)
+- [ui/src/components/InfoTooltip.tsx](file:///E:/Projects/llm-manager/ui/src/components/InfoTooltip.tsx) (Score: 0.1688)
 - [llo-core/context_manager/context_engine.py](file:///E:/Projects/llm-manager/llo-core/context_manager/context_engine.py) (Score: 0.1646)
 - [llo-core/context_manager/proxy.py](file:///E:/Projects/llm-manager/llo-core/context_manager/proxy.py) (Score: 0.1337)
 
@@ -25,7 +25,7 @@ These class and function abstractions are the key logical hubs of the system.
 - [TokenizerCache](file:///E:/Projects/llm-manager/llo-core/context_manager/tokenizer_cache.py#L26-L99) (class in `llo-core/context_manager/tokenizer_cache.py` · Score: 0.6191)
 - [get_repo_for_alias](file:///E:/Projects/llm-manager/llo-core/context_manager/tokenizer_cache.py#L35-L47) (method in `llo-core/context_manager/tokenizer_cache.py` · Score: 0.5039)
 - [extract_session_id](file:///E:/Projects/llm-manager/llo-core/context_manager/proxy.py#L270-L290) (function in `llo-core/context_manager/proxy.py` · Score: 0.4864)
-- [estimateBlockCount](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts#L26-L32) (function in `ui/src/lib/validation.ts` · Score: 0.3949)
+- [estimateBlockCount](file:///E:/Projects/llm-manager/ui/src/lib/validation.ts#L26-L32) (function in `ui/src/lib/validation.ts` · Score: 0.3954)
 - [get_tokenizer](file:///E:/Projects/llm-manager/llo-core/context_manager/tokenizer_cache.py#L49-L83) (method in `llo-core/context_manager/tokenizer_cache.py` · Score: 0.3851)
 - [count_tokens](file:///E:/Projects/llm-manager/llo-core/context_manager/tokenizer_cache.py#L85-L99) (method in `llo-core/context_manager/tokenizer_cache.py` · Score: 0.3418)
 - [record_summarization](file:///E:/Projects/llm-manager/llo-core/context_manager/proxy.py#L48-L50) (method in `llo-core/context_manager/proxy.py` · Score: 0.3391)
@@ -35,19 +35,19 @@ The following clusters represent tightly-coupled functional modules detected in 
 
 ### Module 1: ui Cluster
 - **Size**: 13 nodes
-- **Key Files**: ui/src/store/__tests__/modelsStore.test.ts, ui/src/pages/Setup.tsx, ui/src/store/hardwareStore.ts, ui/src/pages/__tests__/OverviewFlow.test.ts, ui/src/store/__tests__/hardwareStore.test.ts...
+- **Key Files**: ui/src/store/__tests__/modelsStore.test.ts, ui/src/pages/__tests__/SetupFlow.test.ts, ui/src/pages/Setup.tsx, ui/src/store/hardwareStore.ts, ui/src/pages/__tests__/OverviewFlow.test.ts...
 
-### Module 2: llo-core Cluster
+### Module 2: ui Cluster
+- **Size**: 13 nodes
+- **Key Files**: ui/src/pages/Integrations.tsx, ui/src/components/InfoTooltip.tsx, ui/src/pages/Settings.tsx, ui/src/hooks/useJsonSchemaValidation.ts, ui/src/App.tsx...
+
+### Module 3: llo-core Cluster
 - **Size**: 12 nodes
 - **Key Files**: llo-core/context_manager/tests/test_needs_compression.py, llo-core/context_manager/tests/test_proxy_http_roundtrip.py, llo-core/context_manager/tests/test_tokenizer_aliases.py, llo-core/context_manager/tests/test_token_counting.py, llo-core/context_manager/tests/test_compress.py...
 
-### Module 3: ui Cluster
-- **Size**: 11 nodes
-- **Key Files**: ui/src/pages/Integrations.tsx, ui/src/components/InfoTooltip.tsx, ui/src/pages/Settings.tsx, ui/src/hooks/useJsonSchemaValidation.ts, ui/src/App.tsx...
-
 ### Module 4: ui Cluster
-- **Size**: 10 nodes
-- **Key Files**: ui/src/store/configStore.ts, ui/src/pages/__tests__/SetupFlow.test.ts, ui/src/components/layout/__tests__/TopBar.test.ts, ui/src/components/layout/TopBar.tsx, ui/src/pages/__tests__/PerformanceAndSettings.test.ts...
+- **Size**: 9 nodes
+- **Key Files**: ui/src/store/configStore.ts, ui/src/components/layout/__tests__/TopBar.test.ts, ui/src/components/layout/TopBar.tsx, ui/src/pages/__tests__/PerformanceAndSettings.test.ts, ui/src/store/__tests__/configStore.test.ts...
 
 ### Module 5: llo-core Cluster
 - **Size**: 2 nodes
