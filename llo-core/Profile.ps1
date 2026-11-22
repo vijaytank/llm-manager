@@ -52,7 +52,7 @@ function Save-CachedProfile {
     try {
         $Profile | ConvertTo-Json -Depth 5 | Set-Content -Path $cacheFile -Encoding UTF8
     } catch {
-        if (-not $Json) { Write-Host "[WARNING] Failed to save hardware cache: $($_.Exception.Message)" -ForegroundColor Yellow }
+        [Console]::Error.WriteLine("[WARNING] Failed to save hardware cache: $($_.Exception.Message)")
     }
 }
 
@@ -168,6 +168,14 @@ function Get-SystemHardwareProfile {
         if (-not $nvidiaSmi) {
             $found = Get-Command "nvidia-smi.exe" -ErrorAction SilentlyContinue
             if ($found) { $nvidiaSmi = $found.Source }
+        }
+        if (-not $nvidiaSmi) {
+            if (Test-Path "HKLM:\SOFTWARE\NVIDIA Corporation\Global\NVSMI") {
+                $regPath = (Get-ItemProperty "HKLM:\SOFTWARE\NVIDIA Corporation\Global\NVSMI" -ErrorAction SilentlyContinue).Path
+                if ($regPath -and (Test-Path (Join-Path $regPath "nvidia-smi.exe"))) {
+                    $nvidiaSmi = Join-Path $regPath "nvidia-smi.exe"
+                }
+            }
         }
     } else {
         # macOS / Linux: nvidia-smi lives in standard Unix paths

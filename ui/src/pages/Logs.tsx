@@ -63,11 +63,22 @@ export const LogsPage: React.FC = () => {
         filters: [{ name: 'Log Files (*.log)', extensions: ['log', 'txt'] }],
         defaultPath: defaultName,
       });
-      if (selected && typeof selected === 'string') {
-        filename = selected.split(/[/\\\\]/).pop() || defaultName;
+      if (selected === null) {
+        // User explicitly cancelled the native save dialog; do not trigger download
+        return;
+      }
+      if (typeof selected === 'string' && selected.trim().length > 0) {
+        // Extract base filename supporting both Windows (\) and Unix (/) paths
+        const base = selected.split(/[/\\]/).pop() || defaultName;
+        // Sanitize to prevent illegal filename characters on Windows and Unix
+        filename = base.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
       }
     } catch (e) {
       console.warn('Native save dialog cancelled or error:', e);
+    }
+
+    if (!filename.endsWith('.log') && !filename.endsWith('.txt')) {
+      filename += '.log';
     }
 
     // Trigger DOM file download (works cleanly in Tauri WebView and Browsers)

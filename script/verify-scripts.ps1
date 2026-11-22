@@ -4,7 +4,8 @@
 param(
     [string]$LlamaRepoPath = "",
     [string]$LlamaServerPath = "",
-    [string]$ConfigFile = ""
+    [string]$ConfigFile = "",
+    [string]$ExcludeFile = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -52,8 +53,8 @@ if ([string]::IsNullOrWhiteSpace($LlamaRepoPath)) {
 }
 
 # 1. Load Core Diffs and Status
-$gitDiffScript = Join-Path $ManagerDir "llo-core\GitDiff.ps1"
-$helpParserScript = Join-Path $ManagerDir "llo-core\ParseHelp.ps1"
+$gitDiffScript = Join-Path $ManagerDir "llo-core/GitDiff.ps1"
+$helpParserScript = Join-Path $ManagerDir "llo-core/ParseHelp.ps1"
 
 if (-not (Test-Path $gitDiffScript) -or -not (Test-Path $helpParserScript)) {
     throw "Core scripts GitDiff.ps1 or ParseHelp.ps1 not found in llo-core/"
@@ -119,7 +120,7 @@ if ($optionDiff.Removed.Count -gt 0) {
 # 4. Scan PowerShell scripts in manager folders for invalid flags
 $scriptsDir = Join-Path $ManagerDir "script"
 $scriptsToScan = Get-ChildItem -Path $scriptsDir -Filter *.ps1 -File
-$siblingScriptDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\script"))
+$siblingScriptDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "../script"))
 if (Test-Path $siblingScriptDir) {
     $scriptsToScan += Get-ChildItem -Path $siblingScriptDir -Filter *.ps1 -File -ErrorAction SilentlyContinue
 }
@@ -134,19 +135,39 @@ foreach ($s in $scriptsToScan) {
     $flagsFound = [regex]::Matches($content, '--[a-zA-Z0-9][a-zA-Z0-9-]*') | ForEach-Object { $_.Value } | Select-Object -Unique
     
     # Exclude known non-llama-server arguments: git, nvidia-smi, and markdown/comment tokens
-    $excludeList = @(
-        # git flags used in GitDiff.ps1
-        "--query-gpu", "--format", "--oneline", "--no-merges", "--show-current",
-        "--pretty", "--abbrev-commit", "--since", "--follow",
-        # nvidia-smi query args
-        "--nounits", "--csv", "--noheader",
-        # uv / python package runner flags
-        "--quiet", "--directory", "--host", "--port", "--python",
-        # PowerShell / general CLI flags that may appear in scripts
-        "--help", "--version", "--verbose", "--debug", "--dry-run",
-        # markdown table separators (--- inside table rows) — not real flags
-        "---"
-    )
+    # Dynamically load from external verify-exclude.json when present to prevent list from becoming stale
+    $excludeList = @()
+    if ([string]::IsNullOrWhiteSpace($ExcludeFile)) {
+        $candidateExclude = Join-Path $ManagerDir "script/verify-exclude.json"
+        if (Test-Path $candidateExclude) {
+            $ExcludeFile = $candidateExclude
+        }
+    }
+    if ($ExcludeFile -and (Test-Path $ExcludeFile)) {
+        try {
+            $jsonExclude = Get-Content $ExcludeFile -Raw -ErrorAction Stop | ConvertFrom-Json
+            if ($jsonExclude.excludes) {
+                $excludeList = @($jsonExclude.excludes)
+            }
+        } catch {
+            Write-Host "[WARNING] Failed to load exclude file $($ExcludeFile): $($_.Exception.Message). Falling back to built-in defaults." -ForegroundColor Yellow
+        }
+    }
+    if ($excludeList.Count -eq 0) {
+        $excludeList = @(
+            # git flags used in GitDiff.ps1
+            "--query-gpu", "--format", "--oneline", "--no-merges", "--show-current",
+            "--pretty", "--abbrev-commit", "--since", "--follow",
+            # nvidia-smi query args
+            "--nounits", "--csv", "--noheader",
+            # uv / python package runner flags
+            "--quiet", "--directory", "--host", "--port", "--python",
+            # PowerShell / general CLI flags that may appear in scripts
+            "--help", "--version", "--verbose", "--debug", "--dry-run",
+            # markdown table separators (--- inside table rows) — not real flags
+            "---"
+        )
+    }
     
     $incompatibles = New-Object System.Collections.Generic.List[string]
 
@@ -175,7 +196,7 @@ if (-not (Test-Path $DocsDir)) {
     New-Item -ItemType Directory -Force -Path $DocsDir | Out-Null
 }
 
-$hardwareScript = Join-Path $ManagerDir "llo-core\Profile.ps1"
+$hardwareScript = Join-Path $ManagerDir "llo-core/Profile.ps1"
 $hw = try {
     . $hardwareScript
     Get-SystemHardwareProfile

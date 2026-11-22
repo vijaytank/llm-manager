@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PageShell } from '../components/layout/PageShell';
 import { Cpu, HardDrive, Sliders, Zap, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useHardwareStore } from '../store/hardwareStore';
@@ -16,13 +16,36 @@ export const PerformancePage: React.FC = () => {
   const cores = profile?.physicalCores || 4;
 
   // Live preview state
-  const [previewCtx, setPreviewCtx] = useState(config?.overrides?.ctx_size ?? config?.default_context_size ?? 32768);
-  const [previewCacheK, setPreviewCacheK] = useState(config?.overrides?.cache_type_k ?? config?.cache_type_k ?? 'f16');
-  const [previewCacheV, setPreviewCacheV] = useState(config?.overrides?.cache_type_v ?? config?.cache_type_v ?? 'f16');
-  const [previewFlashAttn, setPreviewFlashAttn] = useState(config?.overrides?.flash_attn ?? config?.flash_attn ?? 'on');
-  const [previewParallel, setPreviewParallel] = useState(config?.overrides?.parallel ?? config?.parallel_slots ?? 1);
-  const [previewUbatch, setPreviewUbatch] = useState(config?.overrides?.ubatch_size ?? config?.ubatch_size ?? 512);
+  const [previewCtx, setPreviewCtx] = useState(
+    config?.overrides?.ctx_size ?? config?.default_context_size ?? 32768
+  );
+  const [previewCacheK, setPreviewCacheK] = useState(
+    config?.overrides?.cache_type_k ?? config?.cache_type_k ?? 'f16'
+  );
+  const [previewCacheV, setPreviewCacheV] = useState(
+    config?.overrides?.cache_type_v ?? config?.cache_type_v ?? 'f16'
+  );
+  const [previewFlashAttn, setPreviewFlashAttn] = useState(
+    config?.overrides?.flash_attn ?? config?.flash_attn ?? 'on'
+  );
+  const [previewParallel, setPreviewParallel] = useState(
+    config?.overrides?.parallel ?? config?.parallel_slots ?? 1
+  );
+  const [previewUbatch, setPreviewUbatch] = useState(
+    config?.overrides?.ubatch_size ?? config?.ubatch_size ?? 512
+  );
   const [previewModelSize, setPreviewModelSize] = useState(4.5);
+
+  useEffect(() => {
+    if (config) {
+      setPreviewCtx(config.overrides?.ctx_size ?? config.default_context_size ?? 32768);
+      setPreviewCacheK(config.overrides?.cache_type_k ?? config.cache_type_k ?? 'f16');
+      setPreviewCacheV(config.overrides?.cache_type_v ?? config.cache_type_v ?? 'f16');
+      setPreviewFlashAttn(config.overrides?.flash_attn ?? config.flash_attn ?? 'on');
+      setPreviewParallel(config.overrides?.parallel ?? config.parallel_slots ?? 1);
+      setPreviewUbatch(config.overrides?.ubatch_size ?? config.ubatch_size ?? 512);
+    }
+  }, [config]);
 
   // Live memory calculations
   const liveKvGb = useMemo(() => {
@@ -36,7 +59,10 @@ export const PerformancePage: React.FC = () => {
     );
   }, [previewCtx, previewModelSize, previewCacheK, previewCacheV, previewParallel, isCpuOnly]);
 
-  const liveTotalGb = useMemo(() => previewModelSize + liveKvGb + 0.5, [previewModelSize, liveKvGb]);
+  const liveTotalGb = useMemo(
+    () => previewModelSize + liveKvGb + 0.5,
+    [previewModelSize, liveKvGb]
+  );
   const liveVramUsage = vramGb > 0 ? (liveTotalGb / vramGb) * 100 : 0;
   const liveRamUsage = (liveTotalGb / (profile?.totalRamGb || 16)) * 100;
   const fitsVram = vramGb > 0 ? liveTotalGb <= vramGb * 0.9 : true;
@@ -54,7 +80,11 @@ export const PerformancePage: React.FC = () => {
                 <InfoTooltip
                   title="Hardware Profile"
                   description="Detected hardware capabilities used by LLM Manager to compute adaptive VRAM budgets and thread allocations."
-                  recommendation={isCpuOnly ? "Running in CPU mode. Quantized models (Q4_K_M) are recommended." : `Dedicated GPU with ${vramGb} GB VRAM detected. GPU offloading is active.`}
+                  recommendation={
+                    isCpuOnly
+                      ? 'Running in CPU mode. Quantized models (Q4_K_M) are recommended.'
+                      : `Dedicated GPU with ${vramGb} GB VRAM detected. GPU offloading is active.`
+                  }
                   impact="Governs memory ceiling and compute offloading."
                 />
               </h3>
@@ -78,7 +108,10 @@ export const PerformancePage: React.FC = () => {
           </div>
 
           {/* Live Preview Card */}
-          <div className="glass-card card-padding" style={{ borderLeft: '4px solid var(--accent)' }}>
+          <div
+            className="glass-card card-padding"
+            style={{ borderLeft: '4px solid var(--accent)' }}
+          >
             <div className="card-header">
               <Zap className="card-icon" size={20} />
               <h3>
@@ -91,7 +124,14 @@ export const PerformancePage: React.FC = () => {
                 />
               </h3>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '12px' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '16px',
+                marginTop: '12px',
+              }}
+            >
               <div className="preview-metric">
                 <div className="metric-label">Model Size</div>
                 <div className="metric-value font-mono">{previewModelSize.toFixed(1)} GB</div>
@@ -101,7 +141,7 @@ export const PerformancePage: React.FC = () => {
                   max="70"
                   step="0.5"
                   value={previewModelSize}
-                  onChange={(e) => setPreviewModelSize(Number(e.target.value))}
+                  onChange={e => setPreviewModelSize(Number(e.target.value))}
                   style={{ width: '100%', marginTop: '8px' }}
                 />
               </div>
@@ -112,7 +152,7 @@ export const PerformancePage: React.FC = () => {
                   className="form-input font-mono"
                   style={{ width: '100%', marginTop: '8px' }}
                   value={previewCtx}
-                  onChange={(e) => setPreviewCtx(Number(e.target.value))}
+                  onChange={e => setPreviewCtx(Number(e.target.value))}
                 >
                   <option value={8192}>8,192</option>
                   <option value={16384}>16,384</option>
@@ -128,7 +168,10 @@ export const PerformancePage: React.FC = () => {
                   className="form-input font-mono"
                   style={{ width: '100%', marginTop: '8px' }}
                   value={previewCacheK}
-                  onChange={(e) => { setPreviewCacheK(e.target.value); setPreviewCacheV(e.target.value); }}
+                  onChange={e => {
+                    setPreviewCacheK(e.target.value);
+                    setPreviewCacheV(e.target.value);
+                  }}
                 >
                   <option value="f16">f16 (Full)</option>
                   <option value="q8_0">q8_0 (8-bit ⭐)</option>
@@ -142,7 +185,7 @@ export const PerformancePage: React.FC = () => {
                   className="form-input font-mono"
                   style={{ width: '100%', marginTop: '8px' }}
                   value={previewParallel}
-                  onChange={(e) => setPreviewParallel(Number(e.target.value))}
+                  onChange={e => setPreviewParallel(Number(e.target.value))}
                 >
                   <option value={1}>1 (Max Speed)</option>
                   <option value={2}>2</option>
@@ -156,7 +199,7 @@ export const PerformancePage: React.FC = () => {
                   className="form-input font-mono"
                   style={{ width: '100%', marginTop: '8px' }}
                   value={previewFlashAttn}
-                  onChange={(e) => setPreviewFlashAttn(e.target.value)}
+                  onChange={e => setPreviewFlashAttn(e.target.value)}
                 >
                   <option value="on">on (Active ⭐)</option>
                   <option value="off">off (Disabled)</option>
@@ -170,7 +213,7 @@ export const PerformancePage: React.FC = () => {
                   className="form-input font-mono"
                   style={{ width: '100%', marginTop: '8px' }}
                   value={previewUbatch}
-                  onChange={(e) => setPreviewUbatch(Number(e.target.value))}
+                  onChange={e => setPreviewUbatch(Number(e.target.value))}
                 >
                   <option value={128}>128</option>
                   <option value={256}>256</option>
@@ -181,33 +224,61 @@ export const PerformancePage: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ marginTop: '16px', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px' }}>
-              <h4 style={{ margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div
+              style={{
+                marginTop: '16px',
+                padding: '12px',
+                background: 'var(--bg-surface)',
+                borderRadius: '8px',
+              }}
+            >
+              <h4
+                style={{ margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
                 <span className="font-mono">Estimated Memory Usage:</span>
               </h4>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
                 <div className={`preview-bar ${fitsVram ? 'ok' : 'warn'}`}>
                   <div className="preview-bar-label">
                     <span>VRAM Usage</span>
-                    <span className="font-mono">{vramGb > 0 ? `${liveTotalGb.toFixed(2)} / ${vramGb} GB (${liveVramUsage.toFixed(0)}%)` : 'N/A (CPU Mode)'}</span>
+                    <span className="font-mono">
+                      {vramGb > 0
+                        ? `${liveTotalGb.toFixed(2)} / ${vramGb} GB (${liveVramUsage.toFixed(0)}%)`
+                        : 'N/A (CPU Mode)'}
+                    </span>
                   </div>
                   <div className="preview-bar-track">
-                    <div className="preview-bar-fill" style={{ width: `${Math.min(liveVramUsage, 100)}%`, background: fitsVram ? 'var(--accent-green, #10b981)' : 'var(--status-error)' }}></div>
+                    <div
+                      className="preview-bar-fill"
+                      style={{
+                        width: `${Math.min(liveVramUsage, 100)}%`,
+                        background: fitsVram ? 'var(--status-success)' : 'var(--status-error)',
+                      }}
+                    ></div>
                   </div>
                 </div>
                 <div className={`preview-bar ${fitsRam ? 'ok' : 'warn'}`}>
                   <div className="preview-bar-label">
                     <span>System RAM Usage</span>
-                    <span className="font-mono">{liveTotalGb.toFixed(2)} / ${profile?.totalRamGb || 16} GB (${liveRamUsage.toFixed(0)}%)</span>
+                    <span className="font-mono">
+                      {liveTotalGb.toFixed(2)} / ${profile?.totalRamGb || 16} GB ($
+                      {liveRamUsage.toFixed(0)}%)
+                    </span>
                   </div>
                   <div className="preview-bar-track">
-                    <div className="preview-bar-fill" style={{ width: `${Math.min(liveRamUsage, 100)}%`, background: fitsRam ? 'var(--accent-green, #10b981)' : 'var(--status-error)' }}></div>
+                    <div
+                      className="preview-bar-fill"
+                      style={{
+                        width: `${Math.min(liveRamUsage, 100)}%`,
+                        background: fitsRam ? 'var(--status-success)' : 'var(--status-error)',
+                      }}
+                    ></div>
                   </div>
                 </div>
                 <div className={`preview-status ${fitsVram && fitsRam ? 'ok' : 'warn'}`}>
                   {fitsVram && fitsRam ? (
                     <>
-                      <CheckCircle size={20} style={{ color: 'var(--accent-green, #10b981)' }} />
+                      <CheckCircle size={20} style={{ color: 'var(--status-success)' }} />
                       <span>Fits in memory ✓</span>
                     </>
                   ) : (
@@ -232,7 +303,11 @@ export const PerformancePage: React.FC = () => {
                 <InfoTooltip
                   title="KV Cache Precision (--cache-type-k / --cache-type-v)"
                   description="Quantization format for the Key/Value context memory cache stored during inference."
-                  recommendation={vramGb > 0 && vramGb <= 12 ? "q8_0 is recommended on your system to cut VRAM usage by 50% without quality loss." : "f16 provides maximum floating-point precision."}
+                  recommendation={
+                    vramGb > 0 && vramGb <= 12
+                      ? 'q8_0 is recommended on your system to cut VRAM usage by 50% without quality loss.'
+                      : 'f16 provides maximum floating-point precision.'
+                  }
                   impact="f16 = High VRAM (~4GB @ 32k). q8_0 = 50% VRAM Savings (~2GB @ 32k). q4_0 = 75% VRAM Savings."
                 />
               </span>
@@ -240,9 +315,15 @@ export const PerformancePage: React.FC = () => {
                 className="form-input font-mono"
                 style={{ width: '220px', padding: '4px 8px', fontSize: '0.85rem' }}
                 value={config?.overrides?.cache_type_k ?? config?.cache_type_k ?? 'f16'}
-                onChange={async (e) => {
+                onChange={async e => {
                   const val = e.target.value;
-                  updateConfig({ overrides: { ...(config?.overrides || {}), cache_type_k: val, cache_type_v: val } });
+                  updateConfig({
+                    overrides: {
+                      ...(config?.overrides || {}),
+                      cache_type_k: val,
+                      cache_type_v: val,
+                    },
+                  });
                   await saveConfig();
                 }}
               >
@@ -265,8 +346,10 @@ export const PerformancePage: React.FC = () => {
                 className="form-input font-mono"
                 style={{ width: '150px', padding: '4px 8px', fontSize: '0.85rem' }}
                 value={config?.overrides?.flash_attn ?? config?.flash_attn ?? 'on'}
-                onChange={async (e) => {
-                  updateConfig({ overrides: { ...(config?.overrides || {}), flash_attn: e.target.value } });
+                onChange={async e => {
+                  updateConfig({
+                    overrides: { ...(config?.overrides || {}), flash_attn: e.target.value },
+                  });
                   await saveConfig();
                 }}
               >
@@ -281,7 +364,11 @@ export const PerformancePage: React.FC = () => {
                 <InfoTooltip
                   title="Context Window (-c / --ctx-size)"
                   description="Maximum number of tokens (prompt + response + history) the model can hold in memory simultaneously."
-                  recommendation={vramGb > 0 && vramGb <= 8 ? "32,768 tokens with q8_0 KV cache is optimal for your 8 GB GPU." : "65,536 tokens for long documents."}
+                  recommendation={
+                    vramGb > 0 && vramGb <= 8
+                      ? '32,768 tokens with q8_0 KV cache is optimal for your 8 GB GPU.'
+                      : '65,536 tokens for long documents.'
+                  }
                   impact="Larger context sizes increase KV cache memory consumption proportionally."
                 />
               </span>
@@ -289,11 +376,11 @@ export const PerformancePage: React.FC = () => {
                 className="form-input font-mono"
                 style={{ width: '150px', padding: '4px 8px', fontSize: '0.85rem' }}
                 value={config?.overrides?.ctx_size ?? config?.default_context_size ?? 32768}
-                onChange={async (e) => {
+                onChange={async e => {
                   const val = Number(e.target.value);
                   updateConfig({
                     default_context_size: val,
-                    overrides: { ...(config?.overrides || {}), ctx_size: val }
+                    overrides: { ...(config?.overrides || {}), ctx_size: val },
                   });
                   await saveConfig();
                 }}
@@ -311,7 +398,11 @@ export const PerformancePage: React.FC = () => {
                 <InfoTooltip
                   title="Memory Locking (--mlock)"
                   description="Locks model weights into physical RAM to prevent Windows OS from swapping pages to virtual disk memory."
-                  recommendation={(profile?.totalRamGb || 16) >= 32 ? "Enabled (Recommended when physical RAM >= 32 GB)." : "Disabled (prevents RAM pressure)." }
+                  recommendation={
+                    (profile?.totalRamGb || 16) >= 32
+                      ? 'Enabled (Recommended when physical RAM >= 32 GB).'
+                      : 'Disabled (prevents RAM pressure).'
+                  }
                   impact="Eliminates page-fault stutters, but consumes dedicated un-swappable system RAM."
                 />
               </span>
@@ -319,7 +410,7 @@ export const PerformancePage: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={config?.mlock || false}
-                  onChange={async (e) => {
+                  onChange={async e => {
                     updateConfig({ mlock: e.target.checked });
                     await saveConfig();
                   }}
@@ -341,7 +432,7 @@ export const PerformancePage: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={config?.cache_prompt !== false}
-                  onChange={async (e) => {
+                  onChange={async e => {
                     updateConfig({ cache_prompt: e.target.checked });
                     await saveConfig();
                   }}
@@ -371,15 +462,19 @@ export const PerformancePage: React.FC = () => {
                   />
                 </div>
                 <div className="param-value font-mono">
-                  {(config?.overrides?.parallel ?? config?.parallel_slots ?? 1) === 1 ? '1 Slot (Single User - Max Speed ⭐)' : `${config?.overrides?.parallel ?? config?.parallel_slots ?? 1} Slots`}
+                  {(config?.overrides?.parallel ?? config?.parallel_slots ?? 1) === 1
+                    ? '1 Slot (Single User - Max Speed ⭐)'
+                    : `${config?.overrides?.parallel ?? config?.parallel_slots ?? 1} Slots`}
                 </div>
               </div>
               <select
                 className="form-input font-mono"
                 style={{ width: '150px' }}
                 value={config?.overrides?.parallel ?? config?.parallel_slots ?? 1}
-                onChange={async (e) => {
-                  updateConfig({ overrides: { ...(config?.overrides || {}), parallel: Number(e.target.value) } });
+                onChange={async e => {
+                  updateConfig({
+                    overrides: { ...(config?.overrides || {}), parallel: Number(e.target.value) },
+                  });
                   await saveConfig();
                 }}
               >
@@ -396,7 +491,11 @@ export const PerformancePage: React.FC = () => {
                   <InfoTooltip
                     title="Micro-Batch Size (-ub / --ubatch-size)"
                     description="Physical batch size for prompt evaluation. Larger values increase GPU tensor core utilization."
-                    recommendation={vramGb >= 8 ? "512 or 1024 is optimal for your GPU." : "256 for lower VRAM cards."}
+                    recommendation={
+                      vramGb >= 8
+                        ? '512 or 1024 is optimal for your GPU.'
+                        : '256 for lower VRAM cards.'
+                    }
                     impact="Higher values increase prompt processing speed (tokens/sec) but require slight temporary VRAM."
                   />
                 </div>
@@ -408,8 +507,13 @@ export const PerformancePage: React.FC = () => {
                 className="form-input font-mono"
                 style={{ width: '130px' }}
                 value={config?.overrides?.ubatch_size || config?.ubatch_size || 512}
-                onChange={async (e) => {
-                  updateConfig({ overrides: { ...(config?.overrides || {}), ubatch_size: Number(e.target.value) } });
+                onChange={async e => {
+                  updateConfig({
+                    overrides: {
+                      ...(config?.overrides || {}),
+                      ubatch_size: Number(e.target.value),
+                    },
+                  });
                   await saveConfig();
                 }}
               >
@@ -433,14 +537,15 @@ export const PerformancePage: React.FC = () => {
                   />
                 </div>
                 <div className="param-value font-mono">
-                  {config?.threads || 0} ({config?.threads === 0 ? 'Auto: P-cores' : `${config?.threads} threads`})
+                  {config?.threads || 0} (
+                  {config?.threads === 0 ? 'Auto: P-cores' : `${config?.threads} threads`})
                 </div>
               </div>
               <select
                 className="form-input font-mono"
                 style={{ width: '120px' }}
                 value={config?.threads ?? 0}
-                onChange={async (e) => {
+                onChange={async e => {
                   updateConfig({ threads: Number(e.target.value) });
                   await saveConfig();
                 }}
@@ -465,14 +570,18 @@ export const PerformancePage: React.FC = () => {
                   />
                 </div>
                 <div className="param-value font-mono">
-                  {config?.prio === 2 ? 'High (2)' : config?.prio === 1 ? 'Medium (1)' : 'Normal (0)'}
+                  {config?.prio === 2
+                    ? 'High (2)'
+                    : config?.prio === 1
+                      ? 'Medium (1)'
+                      : 'Normal (0)'}
                 </div>
               </div>
               <select
                 className="form-input font-mono"
                 style={{ width: '120px' }}
                 value={config?.prio || 0}
-                onChange={async (e) => {
+                onChange={async e => {
                   updateConfig({ prio: Number(e.target.value) });
                   await saveConfig();
                 }}
@@ -501,7 +610,7 @@ export const PerformancePage: React.FC = () => {
                 className="form-input font-mono"
                 style={{ width: '140px' }}
                 value={config?.spec_type || 'none'}
-                onChange={async (e) => {
+                onChange={async e => {
                   updateConfig({ spec_type: e.target.value });
                   await saveConfig();
                 }}
@@ -529,7 +638,7 @@ export const PerformancePage: React.FC = () => {
                 className="form-input font-mono"
                 style={{ width: '120px' }}
                 value={config?.reasoning || 'auto'}
-                onChange={async (e) => {
+                onChange={async e => {
                   updateConfig({ reasoning: e.target.value });
                   await saveConfig();
                 }}

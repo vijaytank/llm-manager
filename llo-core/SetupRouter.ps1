@@ -44,7 +44,18 @@ $ConfigFile = [System.IO.Path]::GetFullPath($ConfigFile)
 if ([string]::IsNullOrWhiteSpace($PresetFile))   { $PresetFile   = Join-Path (Split-Path -Parent $ConfigFile) "models-preset.ini" }
 $PresetFile = [System.IO.Path]::GetFullPath($PresetFile)
 
-if ([string]::IsNullOrWhiteSpace($ModelsDir))    { $ModelsDir    = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "models")) }
+if ([string]::IsNullOrWhiteSpace($ModelsDir)) {
+    $parentModels = Join-Path (Split-Path -Parent $ManagerDir) "models"
+    $localModels  = Join-Path $ManagerDir "models"
+    if (Test-Path $parentModels) {
+        $ModelsDir = [System.IO.Path]::GetFullPath($parentModels)
+        if (-not (Test-Path $localModels)) {
+            Write-Host "  [NOTICE] Using models from parent directory: $ModelsDir. Recommended models path is $localModels."
+        }
+    } else {
+        $ModelsDir = [System.IO.Path]::GetFullPath($localModels)
+    }
+}
 if ([string]::IsNullOrWhiteSpace($TemplatesDir)) { $TemplatesDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "templates")) }
 if ([string]::IsNullOrWhiteSpace($GrammarsDir))  { $GrammarsDir  = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "grammars")) }
 
@@ -60,12 +71,12 @@ function Get-CachedModelScan {
         $cachedTime = [datetime]::ParseExact($cache.Timestamp, "yyyy-MM-dd HH:mm:ss", $null)
         $ageHours = (Get-Date) - $cachedTime | ForEach-Object { $_.TotalHours }
         if ($ageHours -lt $modelCacheTtlHours) {
-            # Verify files haven't changed by checking mtime
+            # Verify files haven't changed by checking mtime and size
             $allMatch = $true
             foreach ($entry in $cache.Entries) {
                 if (-not (Test-Path $entry.Path)) { $allMatch = $false; break }
                 $fileInfo = Get-Item $entry.Path
-                if ($fileInfo.LastWriteTime -ne [datetime]::ParseExact($entry.LastWriteTime, "yyyy-MM-dd HH:mm:ss", $null)) {
+                if ($fileInfo.LastWriteTime -ne [datetime]::ParseExact($entry.LastWriteTime, "yyyy-MM-dd HH:mm:ss", $null) -or ($entry.Length -and $fileInfo.Length -ne $entry.Length)) {
                     $allMatch = $false; break
                 }
             }
@@ -681,6 +692,7 @@ if ($cachedEntries) {
             TemplateFile = $templatePath
             CtxSize      = $ctxSize
             LastWriteTime = (Get-Item $gguf.FullName).LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+            Length       = $gguf.Length
         })
     }
     

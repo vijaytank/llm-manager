@@ -91,11 +91,15 @@ fn skip_gguf_value<R: Read>(r: &mut R, val_type: u32) -> Result<(), String> {
             let mut b = [0u8; 8];
             r.read_exact(&mut b).map_err(|e| e.to_string())?;
         }
-        _ => {
-            // Unknown/future GGUF value type — skip 8 bytes as best-effort
-            // and continue parsing rather than aborting the KV loop.
-            let mut b = [0u8; 8];
-            r.read_exact(&mut b).map_err(|e| e.to_string())?;
+        unknown_type => {
+            eprintln!(
+                "[GGUF] Unsupported or unknown metadata value type: {}. Cannot determine byte length safely; stopping KV scan gracefully.",
+                unknown_type
+            );
+            return Err(format!(
+                "Unsupported or unknown GGUF metadata value type: {}. Cannot determine byte length safely.",
+                unknown_type
+            ));
         }
     }
     Ok(())

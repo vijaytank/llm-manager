@@ -13,12 +13,19 @@ static IS_STARTING: AtomicBool = AtomicBool::new(false);
 static ACTIVE_PORT: std::sync::atomic::AtomicU16 = std::sync::atomic::AtomicU16::new(8080);
 static LOG_TAIL_TASKS: std::sync::Mutex<Vec<tokio::task::JoinHandle<()>>> =
     std::sync::Mutex::new(Vec::new());
+static LIFECYCLE_MUTEX: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-fn abort_log_tailers() {
-    if let Ok(mut tasks) = LOG_TAIL_TASKS.lock() {
-        for h in tasks.drain(..) {
-            h.abort();
+async fn abort_log_tailers() {
+    let handles = {
+        if let Ok(mut tasks) = LOG_TAIL_TASKS.lock() {
+            tasks.drain(..).collect::<Vec<_>>()
+        } else {
+            Vec::new()
         }
+    };
+    for h in handles {
+        h.abort();
+        let _ = h.await;
     }
 }
 
@@ -136,6 +143,7 @@ async fn emit_log_file_lines(app: AppHandle, path: PathBuf, default_level: &'sta
                 "message": format!("Failed to watch {} log file: {}", file_label, err),
             }),
         );
+        let _ = watcher.unwatch(&path_clone);
         // Fall back to polling
         return emit_log_file_lines_polling(app, path, default_level).await;
     }
@@ -365,6 +373,8 @@ async fn emit_log_file_lines_polling(app: AppHandle, path: PathBuf, default_leve
 
 #[tauri::command]
 pub async fn start_server(app: AppHandle, port: Option<u16>) -> Result<String, String> {
+    let _guard = LIFECYCLE_MUTEX.lock().await;
+
     if IS_RUNNING.load(Ordering::SeqCst)
         || IS_STARTING
             .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
@@ -375,7 +385,7 @@ pub async fn start_server(app: AppHandle, port: Option<u16>) -> Result<String, S
 
     let p = port.unwrap_or(8080);
     ACTIVE_PORT.store(p, Ordering::SeqCst);
-    abort_log_tailers();
+    abort_log_tailers().await;
 
     let _ = app.emit("server-status-changed", "starting");
     let _ = app.emit(
@@ -475,6 +485,8 @@ pub async fn start_server(app: AppHandle, port: Option<u16>) -> Result<String, S
 
 #[tauri::command]
 pub async fn stop_server(app: AppHandle) -> Result<String, String> {
+    let _guard = LIFECYCLE_MUTEX.lock().await;
+
     // Prevent double-stop if already stopped
     if !IS_RUNNING.load(Ordering::SeqCst) && !IS_STARTING.load(Ordering::SeqCst) {
         return Ok("Server already stopped".to_string());
@@ -482,7 +494,7 @@ pub async fn stop_server(app: AppHandle) -> Result<String, String> {
 
     IS_RUNNING.store(false, Ordering::SeqCst);
     IS_STARTING.store(false, Ordering::SeqCst);
-    abort_log_tailers();
+    abort_log_tailers().await;
 
     let _ = app.emit("server-status-changed", "stopping");
     let _ = app.emit(

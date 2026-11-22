@@ -69,7 +69,32 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
     }
   };
 
+  const isStepValid = (stepNum: number): boolean => {
+    switch (stepNum) {
+      case 1:
+        return Boolean(config?.llama_server_path && config.llama_server_path.trim().length > 0);
+      case 2:
+        return Boolean(config?.models_dir && config.models_dir.trim().length > 0);
+      case 3:
+      case 4:
+        return true;
+      case 5:
+        return isStepValid(1) && isStepValid(2);
+      default:
+        return false;
+    }
+  };
+
+  const canNavigateTo = (targetStep: number): boolean => {
+    if (targetStep <= step) return true;
+    for (let s = 1; s < targetStep; s++) {
+      if (!isStepValid(s)) return false;
+    }
+    return true;
+  };
+
   const handleFinishSetup = async () => {
+    if (!isStepValid(5)) return;
     updateConfig({ installation_type: 'winget' });
     await saveConfig();
     if (onComplete) {
@@ -83,14 +108,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
         {/* Stepper Header */}
         <div className="stepper glass-card">
           {steps.map(s => {
-            const isDone = s.num < step;
+            const isDone = s.num < step && isStepValid(s.num);
             const isCurrent = s.num === step;
+            const canNav = canNavigateTo(s.num);
             return (
               <div
                 key={s.num}
                 className={`step-item ${isDone ? 'done' : ''} ${isCurrent ? 'current' : ''}`}
-                onClick={() => isDone && setStep(s.num)}
-                style={{ cursor: isDone ? 'pointer' : 'default' }}
+                onClick={() => canNav && setStep(s.num)}
+                style={{ cursor: canNav ? 'pointer' : 'not-allowed', opacity: canNav ? 1 : 0.6 }}
               >
                 <div className="step-circle">{isDone ? <Check size={14} /> : s.num}</div>
                 <span className="step-title">{s.title}</span>
@@ -274,7 +300,11 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
               <button className="btn btn-outline" onClick={() => setStep(1)}>
                 <ArrowLeft size={16} /> Back
               </button>
-              <button className="btn btn-primary" onClick={() => setStep(3)}>
+              <button
+                className="btn btn-primary"
+                disabled={!isStepValid(2)}
+                onClick={() => setStep(3)}
+              >
                 Next: Performance Tuning <ArrowRight size={16} />
               </button>
             </div>
@@ -526,7 +556,11 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
               <button className="btn btn-outline" onClick={() => setStep(4)}>
                 <ArrowLeft size={16} /> Back
               </button>
-              <button className="btn btn-primary" onClick={handleFinishSetup}>
+              <button
+                className="btn btn-primary"
+                disabled={!isStepValid(5)}
+                onClick={handleFinishSetup}
+              >
                 <Play size={16} /> Complete Setup & Launch Dashboard
               </button>
             </div>

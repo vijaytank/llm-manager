@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 
 from .tokenizer_cache import TokenizerCache
+from .preset_reader import read_preset_ctx_limit, is_known_local_model
 
 SUMMARIZER_SYSTEM_PROMPT = """
 You are a precise technical summarizer for multi-turn developer conversations.
@@ -83,6 +84,8 @@ class SessionState:
     last_compress_hash: str = ""
     last_accessed: float = field(default_factory=time.time)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    summarization_failed: bool = False
+    summarization_failed_at: Optional[float] = None
 
 class ContextEngine:
     def __init__(
@@ -225,7 +228,9 @@ class ContextEngine:
         return total_projected >= threshold
 
     def _compute_hash(self, session_id: str, to_summarize: List[Dict[str, Any]]) -> str:
-        raw = f"{session_id}:{len(to_summarize)}:" + json.dumps(to_summarize, sort_keys=True)
+        raw = f"{session_id}:{len(to_summarize)}:" + json.dumps(
+            to_summarize, sort_keys=True, separators=(',', ':'), default=str
+        )
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
     async def _request_summary(
@@ -256,7 +261,7 @@ class ContextEngine:
         # Don't pass external cloud model aliases to local llama-server
         if self.summarize_with_model and self.summarize_with_model != "same":
             payload["model"] = self.summarize_with_model
-        elif model_alias and not (model_alias.startswith("claude-") or model_alias.startswith("gpt-")):
+        elif model_alias and is_known_local_model(model_alias):
             payload["model"] = model_alias
 
         url = f"{self.llama_server_url}/v1/chat/completions"
@@ -337,6 +342,15 @@ class ContextEngine:
             max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
             return self._clamp_message_tokens(session.messages, max_allowed, model_alias)
 
+        # Auto-recovery for previous summarization failure:
+        # If 60-second cooldown has elapsed, clear failure flag to allow retry
+        if session.summarization_failed:
+            time_since_failure = time.time() - (session.summarization_failed_at or 0.0)
+            if time_since_failure >= 60.0:
+                session.summarization_failed = False
+                session.summarization_failed_at = None
+                session.last_compress_hash = ""
+
         # Idempotency check on delta turns
         current_hash = self._compute_hash(session.session_id, delta_turns)
         if current_hash == session.last_compress_hash and session.messages:
@@ -379,7 +393,8 @@ class ContextEngine:
 
         # Truncate conversation_text to a safe input budget before sending to summarizer.
         # Keep the most recent context; prepend a notice about omitted earlier turns.
-        max_input_chars = self.summary_max_tokens * 4 * 4  # ~4x output budget, ~4 chars/token
+        model_ctx = ctx_limit if ctx_limit > 0 else read_preset_ctx_limit(model_alias=model_alias)
+        max_input_chars = max(self.summary_max_tokens * 16, int(model_ctx * 0.75 * 4))
         if len(conversation_text) > max_input_chars:
             conversation_text = (
                 "[Earlier turns omitted due to length]\n\n"
@@ -401,12 +416,19 @@ class ContextEngine:
                     pass  # Don't let callback errors break compression
         except RuntimeError as e:
             print(f"[ContextEngine] Summarization failed, falling back to message clamping without session corruption: {e}")
+            session.last_compress_hash = current_hash
+            session.summarization_failed = True
+            session.summarization_failed_at = time.time()
             max_allowed = int((ctx_limit if ctx_limit > 0 else 32768) * 0.85)
-            return self._clamp_message_tokens(messages, max_allowed, model_alias)
+            clamped = self._clamp_message_tokens(messages, max_allowed, model_alias)
+            session.messages = clamped
+            return clamped
 
         session.summary_block = new_summary
         session.summary_up_to_turn = split_idx
         session.last_compress_hash = current_hash
+        session.summarization_failed = False
+        session.summarization_failed_at = None
 
         if system_prompts:
             sys_contents = [str(m.get("content", "")) for m in system_prompts if m.get("content")]
@@ -439,6 +461,11 @@ class ContextEngine:
         clamped = []
         for msg in messages:
             c_msg = dict(msg)
+            # Refuse to clamp messages containing tool calls or tool role
+            if c_msg.get("tool_calls") or c_msg.get("role") == "tool":
+                clamped.append(c_msg)
+                continue
+
             content = c_msg.get("content")
             if isinstance(content, str) and len(content) > 500:
                 current_tokens = self.tokenizer_cache.count_tokens(content, model_alias)
@@ -449,13 +476,34 @@ class ContextEngine:
                         new_len = max(200, len(content) - chars_to_remove)
                         c_msg["content"] = content[:new_len] + "\n\n[... Truncated by Context Manager to fit context limit ...]"
                         excess_tokens -= max(0, current_tokens - max(1, new_len // 4))
+            elif isinstance(content, list):
+                # Handle structured content blocks
+                new_blocks = []
+                for b in content:
+                    if isinstance(b, dict) and b.get("type") == "text" and isinstance(b.get("text"), str) and len(b.get("text")) > 500:
+                        b_text = b["text"]
+                        cur_toks = self.tokenizer_cache.count_tokens(b_text, model_alias)
+                        if cur_toks > 0 and excess_tokens > 0:
+                            share = cur_toks / max(total, 1)
+                            chars_to_remove = int(share * excess_tokens * 4)
+                            if chars_to_remove > 0:
+                                new_len = max(200, len(b_text) - chars_to_remove)
+                                b = dict(b)
+                                b["text"] = b_text[:new_len] + "\n\n[... Truncated by Context Manager ...]"
+                                excess_tokens -= max(0, cur_toks - max(1, new_len // 4))
+                    new_blocks.append(b)
+                c_msg["content"] = new_blocks
             clamped.append(c_msg)
 
         # Safety verification check: if still exceeding limit after proportional pass, cut largest message
         total_after = self.count_tokens_messages(clamped, model_alias)
         if total_after > max_allowed_tokens:
+            candidates = [
+                m for m in clamped
+                if m.get("role") != "system" and not m.get("tool_calls") and m.get("role") != "tool"
+            ]
             largest = max(
-                (m for m in clamped if m.get("role") != "system"),
+                candidates,
                 key=lambda m: len(str(m.get("content", ""))),
                 default=None
             )
@@ -471,16 +519,36 @@ class ContextEngine:
     def _save_checkpoint_to_disk(self, session: SessionState, messages_snapshot: Optional[List[Dict[str, Any]]] = None):
         try:
             filepath = self._get_checkpoint_path(session.session_id)
+            source_messages = messages_snapshot if messages_snapshot is not None else session.messages
+            
+            # Cap saved messages: preserve system/summary and keep last N turns
+            sys_msgs = [m for m in source_messages if m.get("role") == "system"]
+            non_sys_msgs = [m for m in source_messages if m.get("role") != "system"]
+            capped_non_sys = non_sys_msgs[-(self.keep_turns * 2):] if len(non_sys_msgs) > (self.keep_turns * 2) else non_sys_msgs
+            capped_messages = sys_msgs + capped_non_sys
+
             data = {
                 "session_id": session.session_id,
                 "summary_block": session.summary_block,
                 "summary_up_to_turn": session.summary_up_to_turn,
                 "last_compress_hash": session.last_compress_hash,
                 "message_count": len(session.messages),
-                "messages": messages_snapshot if messages_snapshot is not None else session.messages
+                "messages": capped_messages
             }
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
+
+            # Rotation: keep max 10 checkpoint files
+            cp_dir = os.path.dirname(filepath)
+            if os.path.isdir(cp_dir):
+                files = [os.path.join(cp_dir, f) for f in os.listdir(cp_dir) if f.endswith(".json")]
+                if len(files) > 10:
+                    files.sort(key=os.path.getmtime)
+                    for old_file in files[:-10]:
+                        try:
+                            os.remove(old_file)
+                        except OSError:
+                            pass
         except Exception as e:
             print(f"[ContextEngine] Failed to save checkpoint to disk: {e}")
 

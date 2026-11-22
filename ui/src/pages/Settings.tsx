@@ -14,8 +14,13 @@ export const SettingsPage: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // JSON Schema validation
-  const { errors, isValid, validate } = useJsonSchemaValidation(jsonText);
+  const { errors, isValid, validate, resetErrors } = useJsonSchemaValidation(jsonText);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Reset validation errors on tab switch
+  useEffect(() => {
+    resetErrors();
+  }, [activeTab, resetErrors]);
 
   // Sync jsonText with config when visual tab changes
   useEffect(() => {
@@ -253,7 +258,6 @@ export const SettingsPage: React.FC = () => {
                     onChange={e =>
                       updateConfig({
                         context_manager: {
-                          ...config.context_manager!,
                           warn_threshold: Number(e.target.value),
                         },
                       })
@@ -278,7 +282,6 @@ export const SettingsPage: React.FC = () => {
                     onChange={e =>
                       updateConfig({
                         context_manager: {
-                          ...config.context_manager!,
                           keep_turns: Number(e.target.value),
                         },
                       })
@@ -295,7 +298,6 @@ export const SettingsPage: React.FC = () => {
                     onChange={e =>
                       updateConfig({
                         context_manager: {
-                          ...config.context_manager!,
                           proxy_port: Number(e.target.value),
                         },
                       })
@@ -319,7 +321,6 @@ export const SettingsPage: React.FC = () => {
                     onChange={e =>
                       updateConfig({
                         context_manager: {
-                          ...config.context_manager!,
                           tokenizer_repo: e.target.value,
                         },
                       })

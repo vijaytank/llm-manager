@@ -5,6 +5,7 @@ import uuid
 import time
 import httpx
 import ssl
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse
@@ -12,6 +13,8 @@ from typing import Optional, Dict, Any, List
 from collections import defaultdict
 from threading import Lock
 import re
+
+logger = logging.getLogger("context_manager.proxy")
 
 from .config import load_config, ContextManagerConfig
 from .preset_reader import read_preset_ctx_limit
@@ -157,10 +160,19 @@ class RateLimiter:
         self.window_sec = window_sec
         self._lock = Lock()
         self.requests: Dict[str, List[float]] = defaultdict(list)
-    
+        self._check_counter: int = 0
+
     def is_allowed(self, client_id: str) -> bool:
         now = time.time()
         with self._lock:
+            self._check_counter += 1
+            if self._check_counter >= 1000:
+                self._check_counter = 0
+                cutoff_all = now - self.window_sec
+                dead_keys = [k for k, timestamps in self.requests.items() if not timestamps or timestamps[-1] <= cutoff_all]
+                for k in dead_keys:
+                    del self.requests[k]
+
             # Remove old requests outside the window
             cutoff = now - self.window_sec
             self.requests[client_id] = [t for t in self.requests[client_id] if t > cutoff]
@@ -237,9 +249,21 @@ async def lifespan(app: FastAPI):
         try:
             ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
             ssl_context.load_cert_chain(cfg.tls_cert_path, cfg.tls_key_path)
-            print(f"[ContextManager] TLS enabled with cert: {cfg.tls_cert_path}")
+            logger.info(f"TLS enabled with cert: {cfg.tls_cert_path}")
+            try:
+                cert_dict = ssl._ssl._test_decode_cert(cfg.tls_cert_path)
+                not_after_str = cert_dict.get("notAfter")
+                if not_after_str:
+                    expire_ts = ssl.cert_time_to_seconds(not_after_str)
+                    days_left = (expire_ts - time.time()) / 86400.0
+                    if days_left < 30.0:
+                        logger.warning(
+                            f"TLS certificate {cfg.tls_cert_path} expires in {days_left:.1f} days (expires {not_after_str})"
+                        )
+            except Exception as cert_err:
+                logger.debug(f"Could not parse TLS cert expiration: {cert_err}")
         except Exception as e:
-            print(f"[ContextManager] Warning: Failed to load TLS cert: {e}")
+            logger.warning(f"Failed to load TLS cert: {e}")
             ssl_context = None
     
     app.state.ssl_context = ssl_context
@@ -286,8 +310,15 @@ def extract_session_id(request: Request, body: Dict[str, Any]) -> str:
     if req_id and req_id.strip():
         return f"session_{req_id.strip()}"
 
-    # 4. Fallback: Generate a unique random session ID to prevent collisions under NAT
-    return f"session_{uuid.uuid4().hex[:16]}"
+    # 4. Fallback: Stable fallback based on client IP + User-Agent with warning log
+    client_ip = request.client.host if getattr(request, "client", None) else "127.0.0.1"
+    ua = request.headers.get("user-agent", "")
+    stable_raw = f"{client_ip}:{ua}"
+    stable_hash = hashlib.sha256(stable_raw.encode("utf-8")).hexdigest()[:16]
+    logger.warning(
+        f"Missing session ID in request headers or body. Falling back to client-derived session ID: session_{stable_hash}"
+    )
+    return f"session_{stable_hash}"
 
 @app.get("/health")
 async def health_check(request: Request):
@@ -347,22 +378,29 @@ def convert_anthropic_tool_choice_to_openai(tool_choice: Any) -> Any:
     return None
 
 def normalize_system_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    system_contents = []
+    system_messages = []
     non_system_messages = []
     
     for msg in messages:
         if not isinstance(msg, dict):
             continue
         if msg.get("role") == "system":
-            content = msg.get("content", "")
-            if content:
-                system_contents.append(str(content))
+            system_messages.append(msg)
         else:
             non_system_messages.append(msg)
             
-    if system_contents:
-        combined_system = {"role": "system", "content": "\n\n".join(system_contents)}
-        return [combined_system] + non_system_messages
+    if system_messages:
+        compressed_history = [m for m in system_messages if m.get("name") == "compressed_history"]
+        standard_systems = [m for m in system_messages if m.get("name") != "compressed_history"]
+        
+        result = []
+        if standard_systems:
+            combined_content = "\n\n".join(str(m.get("content", "")) for m in standard_systems if m.get("content"))
+            combined_system = {"role": "system", "content": combined_content}
+            result.append(combined_system)
+        for ch in compressed_history:
+            result.append(ch)
+        return result + non_system_messages
     return non_system_messages
 
 def convert_anthropic_to_openai_messages(anthropic_body: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -419,9 +457,16 @@ def convert_anthropic_to_openai_messages(anthropic_body: Dict[str, Any]) -> List
                         res_id = block.get("tool_use_id", "")
                         res_content = block.get("content", "")
                         if isinstance(res_content, list):
-                            res_content = "\n".join([
-                                b.get("text", "") for b in res_content if isinstance(b, dict) and b.get("type") == "text"
-                            ])
+                            parts = []
+                            for b in res_content:
+                                if isinstance(b, str):
+                                    parts.append(b)
+                                elif isinstance(b, dict):
+                                    if b.get("type") == "text":
+                                        parts.append(b.get("text", ""))
+                                    else:
+                                        parts.append(json.dumps(b))
+                            res_content = "\n".join(parts)
                         tool_results.append({
                             "role": "tool",
                             "tool_call_id": res_id,
@@ -524,9 +569,17 @@ def convert_openai_to_anthropic_response(
         from .tokenizer_cache import TokenizerCache
         _tc = TokenizerCache()
         if input_tokens == 0 and messages:
-            # Character heuristic: ~4 chars per token across all messages
-            raw_text = " ".join(str(m.get("content", "")) for m in messages)
-            input_tokens = max(1, len(raw_text) // 4)
+            tot = 0
+            for m in messages:
+                c = m.get("content", "")
+                if isinstance(c, str):
+                    tot += _tc.count_tokens(c, model)
+                elif isinstance(c, list):
+                    for b in c:
+                        if isinstance(b, dict) and b.get("type") == "text":
+                            tot += _tc.count_tokens(b.get("text", ""), model)
+            tot += len(messages) * 4
+            input_tokens = max(1, tot)
         if output_tokens == 0:
             output_tokens = _tc.count_tokens(text_content, model)
 
@@ -546,6 +599,64 @@ def convert_openai_to_anthropic_response(
             "output_tokens": max(1, output_tokens)
         }
     }
+
+async def parse_sse_events(response: httpx.Response):
+    """Parses SSE stream according to HTML5 SSE specification.
+    Handles multi-line data, event, id, retry, and comment lines.
+    Yields dicts with {'event': str, 'data': str, 'id': Optional[str], 'retry': Optional[int]}
+    """
+    buffer_data = []
+    current_event = None
+    current_id = None
+    current_retry = None
+
+    async for line in response.aiter_lines():
+        line = line.rstrip("\r\n")
+        if not line:
+            if buffer_data:
+                data_str = "\n".join(buffer_data)
+                yield {
+                    "event": current_event or "message",
+                    "data": data_str,
+                    "id": current_id,
+                    "retry": current_retry,
+                }
+                buffer_data = []
+                current_event = None
+                current_id = None
+                current_retry = None
+            continue
+
+        if line.startswith(":"):
+            continue
+
+        if ":" in line:
+            field, _, val = line.partition(":")
+            if val.startswith(" "):
+                val = val[1:]
+        else:
+            field = line
+            val = ""
+
+        if field == "data":
+            buffer_data.append(val)
+        elif field == "event":
+            current_event = val
+        elif field == "id":
+            current_id = val
+        elif field == "retry":
+            try:
+                current_retry = int(val)
+            except ValueError:
+                pass
+
+    if buffer_data:
+        yield {
+            "event": current_event or "message",
+            "data": "\n".join(buffer_data),
+            "id": current_id,
+            "retry": current_retry,
+        }
 
 async def forward_stream_anthropic(
     response: httpx.Response,
@@ -574,101 +685,99 @@ async def forward_stream_anthropic(
     try:
         yield f"event: message_start\ndata: {json.dumps({'type': 'message_start', 'message': {'id': msg_id, 'type': 'message', 'role': 'assistant', 'content': [], 'model': model, 'stop_reason': None, 'stop_sequence': None, 'usage': {'input_tokens': input_tokens, 'output_tokens': 1}}})}\n\n".encode("utf-8")
 
-        async for line_bytes in response.aiter_lines():
-            if not line_bytes:
+        async for sse_event in parse_sse_events(response):
+            data_str = sse_event.get("data", "")
+            if not data_str:
                 continue
-            line = line_bytes.strip()
-            if line.startswith("data:"):
-                data_str = line[5:].strip()
-                if data_str == "[DONE]":
-                    break
-                try:
-                    chunk_json = json.loads(data_str)
-                except (json.JSONDecodeError, ValueError):
-                    continue  # malformed SSE data line — skip
-                try:
-                    choices = chunk_json.get("choices", [])
-                    if choices:
-                        choice0 = choices[0]
-                        delta = choice0.get("delta", {})
-                        finish_reason = choice0.get("finish_reason")
+            if data_str == "[DONE]":
+                break
+            try:
+                chunk_json = json.loads(data_str)
+            except (json.JSONDecodeError, ValueError):
+                continue  # malformed SSE data line — skip
+            try:
+                choices = chunk_json.get("choices", [])
+                if choices:
+                    choice0 = choices[0]
+                    delta = choice0.get("delta", {})
+                    finish_reason = choice0.get("finish_reason")
 
-                        if finish_reason:
-                            if finish_reason in ("tool_calls", "function_call"):
-                                final_stop_reason = "tool_use"
-                            elif finish_reason == "length":
-                                final_stop_reason = "max_tokens"
+                    if finish_reason:
+                        if finish_reason in ("tool_calls", "function_call"):
+                            final_stop_reason = "tool_use"
+                        elif finish_reason == "length":
+                            final_stop_reason = "max_tokens"
 
-                        # 1. Text content delta
-                        content_piece = delta.get("content")
-                        if content_piece:
-                            output_token_count += eng.tokenizer_cache.count_tokens(content_piece, model) if eng is not None else max(1, len(content_piece) // 4)
-                            if current_block_type != "text":
+                    # 1. Text content delta
+                    content_piece = delta.get("content")
+                    if content_piece:
+                        output_token_count += eng.tokenizer_cache.count_tokens(content_piece, model) if eng is not None else max(1, len(content_piece) // 4)
+                        if current_block_type != "text":
+                            if current_block_type is not None:
+                                yield f"event: content_block_stop\ndata: {json.dumps({'type': 'content_block_stop', 'index': current_block_index})}\n\n".encode("utf-8")
+                            current_block_index = next_block_index
+                            next_block_index += 1
+                            current_block_type = "text"
+                            has_emitted_any_block = True
+                            yield f"event: content_block_start\ndata: {json.dumps({'type': 'content_block_start', 'index': current_block_index, 'content_block': {'type': 'text', 'text': ''}})}\n\n".encode("utf-8")
+
+                        delta_evt = {
+                            "type": "content_block_delta",
+                            "index": current_block_index,
+                            "delta": {
+                                "type": "text_delta",
+                                "text": content_piece
+                            }
+                        }
+                        yield f"event: content_block_delta\ndata: {json.dumps(delta_evt)}\n\n".encode("utf-8")
+
+                    # 2. Tool calls delta
+                    tool_calls = delta.get("tool_calls")
+                    if tool_calls and isinstance(tool_calls, list):
+                        final_stop_reason = "tool_use"
+                        for tc in tool_calls:
+                            tc_idx = tc.get("index", 0)
+                            fn_data = tc.get("function", {})
+                            tc_id = tc.get("id")
+                            fn_name = fn_data.get("name")
+                            fn_args = fn_data.get("arguments")
+
+                            if tc_idx not in active_tool_calls:
                                 if current_block_type is not None:
                                     yield f"event: content_block_stop\ndata: {json.dumps({'type': 'content_block_stop', 'index': current_block_index})}\n\n".encode("utf-8")
-                                current_block_index = next_block_index
+
+                                anthropic_idx = next_block_index
                                 next_block_index += 1
-                                current_block_type = "text"
-                                has_emitted_any_block = True
-                                yield f"event: content_block_start\ndata: {json.dumps({'type': 'content_block_start', 'index': current_block_index, 'content_block': {'type': 'text', 'text': ''}})}\n\n".encode("utf-8")
-
-                            delta_evt = {
-                                "type": "content_block_delta",
-                                "index": current_block_index,
-                                "delta": {
-                                    "type": "text_delta",
-                                    "text": content_piece
+                                tool_id = tc_id or f"toolu_{uuid.uuid4().hex[:16]}"
+                                tool_name = fn_name or "tool"
+                                
+                                active_tool_calls[tc_idx] = {
+                                    "id": tool_id,
+                                    "name": tool_name,
+                                    "anthropic_index": anthropic_idx
                                 }
-                            }
-                            yield f"event: content_block_delta\ndata: {json.dumps(delta_evt)}\n\n".encode("utf-8")
+                                current_block_index = anthropic_idx
+                                current_block_type = "tool_use"
+                                has_emitted_any_block = True
 
-                        # 2. Tool calls delta
-                        tool_calls = delta.get("tool_calls")
-                        if tool_calls and isinstance(tool_calls, list):
-                            final_stop_reason = "tool_use"
-                            for tc in tool_calls:
-                                tc_idx = tc.get("index", 0)
-                                fn_data = tc.get("function", {})
-                                tc_id = tc.get("id")
-                                fn_name = fn_data.get("name")
-                                fn_args = fn_data.get("arguments")
+                                yield f"event: content_block_start\ndata: {json.dumps({'type': 'content_block_start', 'index': anthropic_idx, 'content_block': {'type': 'tool_use', 'id': tool_id, 'name': tool_name, 'input': {}}})}\n\n".encode("utf-8")
 
-                                if tc_idx not in active_tool_calls:
-                                    if current_block_type is not None:
-                                        yield f"event: content_block_stop\ndata: {json.dumps({'type': 'content_block_stop', 'index': current_block_index})}\n\n".encode("utf-8")
-
-                                    anthropic_idx = next_block_index
-                                    next_block_index += 1
-                                    tool_id = tc_id or f"toolu_{uuid.uuid4().hex[:16]}"
-                                    tool_name = fn_name or "tool"
-                                    
-                                    active_tool_calls[tc_idx] = {
-                                        "id": tool_id,
-                                        "name": tool_name,
-                                        "anthropic_index": anthropic_idx
+                            info = active_tool_calls[tc_idx]
+                            if fn_args:
+                                tok_count = eng.tokenizer_cache.count_tokens(fn_args, model) if eng is not None else max(1, len(fn_args) // 4)
+                                output_token_count += tok_count
+                                delta_evt = {
+                                    "type": "content_block_delta",
+                                    "index": info["anthropic_index"],
+                                    "delta": {
+                                        "type": "input_json_delta",
+                                        "partial_json": fn_args
                                     }
-                                    current_block_index = anthropic_idx
-                                    current_block_type = "tool_use"
-                                    has_emitted_any_block = True
-
-                                    yield f"event: content_block_start\ndata: {json.dumps({'type': 'content_block_start', 'index': anthropic_idx, 'content_block': {'type': 'tool_use', 'id': tool_id, 'name': tool_name, 'input': {}}})}\n\n".encode("utf-8")
-
-                                info = active_tool_calls[tc_idx]
-                                if fn_args:
-                                    tok_count = eng.tokenizer_cache.count_tokens(fn_args, model) if eng is not None else max(1, len(fn_args) // 4)
-                                    output_token_count += tok_count
-                                    delta_evt = {
-                                        "type": "content_block_delta",
-                                        "index": info["anthropic_index"],
-                                        "delta": {
-                                            "type": "input_json_delta",
-                                            "partial_json": fn_args
-                                        }
-                                    }
-                                    yield f"event: content_block_delta\ndata: {json.dumps(delta_evt)}\n\n".encode("utf-8")
-                except Exception as e:
-                    print(f"[proxy] Error processing stream chunk: {e}")
-                    break
+                                }
+                                yield f"event: content_block_delta\ndata: {json.dumps(delta_evt)}\n\n".encode("utf-8")
+            except Exception as e:
+                print(f"[proxy] Error processing stream chunk: {e}")
+                break
 
         if not has_emitted_any_block:
             yield f"event: content_block_start\ndata: {json.dumps({'type': 'content_block_start', 'index': 0, 'content_block': {'type': 'text', 'text': ''}})}\n\n".encode("utf-8")

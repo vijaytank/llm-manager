@@ -291,7 +291,9 @@ $config.llama_repo_path = $llamaRepoPath
 
 # Step 2: Resolve GGUF Models Path
 Write-Host "`nStep 2: Configuring GGUF Models Directory..." -ForegroundColor Cyan
-$detectedModelsDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\models"))
+$parentModels = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "..\models"))
+$localModels  = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "models"))
+$detectedModelsDir = if (Test-Path $parentModels) { $parentModels } elseif (Test-Path $localModels) { $localModels } else { $localModels }
 $defaultModelsInput = if ($config.models_dir) { $config.models_dir } elseif (Test-Path $detectedModelsDir) { $detectedModelsDir } else { "" }
 
 $modelsDir = ""

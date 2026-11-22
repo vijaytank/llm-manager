@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { Info, X } from 'lucide-react';
 import './InfoTooltip.css';
@@ -21,42 +21,48 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const calculateCoords = () => {
+  const updatePosition = useCallback(() => {
     if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    const tooltipWidth = 300;
-    const tooltipHeight = 220; // Estimated height for clamping
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const tooltipRect = cardRef.current?.getBoundingClientRect();
+    const tooltipWidth = tooltipRect?.width || 300;
+    const tooltipHeight = tooltipRect?.height || 220;
 
-    let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+    let left = triggerRect.left + triggerRect.width / 2 - tooltipWidth / 2;
     // Clamp horizontal positioning inside visible viewport
     left = Math.max(16, Math.min(left, window.innerWidth - tooltipWidth - 16));
 
-    let top = rect.top - tooltipHeight - 8;
-    if (rect.top < tooltipHeight + 24) {
+    let top = triggerRect.top - tooltipHeight - 8;
+    if (triggerRect.top < tooltipHeight + 24) {
       // Not enough space above, position below trigger
-      top = rect.bottom + 8;
+      top = triggerRect.bottom + 8;
     }
     // Clamp vertical positioning inside visible viewport
     top = Math.max(16, Math.min(top, window.innerHeight - tooltipHeight - 16));
 
     setCoords({ top, left });
-  };
+  }, []);
 
   const handleOpen = () => {
-    calculateCoords();
     setOpen(true);
   };
 
+  useLayoutEffect(() => {
+    if (open) {
+      updatePosition();
+    }
+  }, [open, updatePosition]);
+
   useEffect(() => {
     if (!open) return;
-    const handleScrollOrResize = () => calculateCoords();
+    const handleScrollOrResize = () => updatePosition();
     window.addEventListener('scroll', handleScrollOrResize, true);
     window.addEventListener('resize', handleScrollOrResize);
     return () => {
       window.removeEventListener('scroll', handleScrollOrResize, true);
       window.removeEventListener('resize', handleScrollOrResize);
     };
-  }, [open]);
+  }, [open, updatePosition]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

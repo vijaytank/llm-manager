@@ -14,6 +14,38 @@ interface HealthReportLike {
   totalCount?: number;
 }
 
+export type HealthCheckResult =
+  | { type: 'success'; passedCount: number; totalCount: number }
+  | { type: 'partial'; passedCount: number; totalCount: number }
+  | { type: 'error'; message: string };
+
+export function parseHealthCheckResult(
+  report?: HealthReportLike | null,
+  error?: unknown
+): HealthCheckResult {
+  if (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : ((error as { message?: string } | undefined)?.message ?? 'Unknown error');
+    return { type: 'error', message };
+  }
+
+  if (!report || typeof report !== 'object') {
+    return { type: 'error', message: 'Invalid or missing health report' };
+  }
+
+  const passed = typeof report.passedCount === 'number' ? report.passedCount : 0;
+  const total = typeof report.totalCount === 'number' ? report.totalCount : 0;
+
+  if (total > 0 && passed === total) {
+    return { type: 'success', passedCount: passed, totalCount: total };
+  }
+  return { type: 'partial', passedCount: passed, totalCount: total };
+}
+
 export const buildHealthLogEntry = (report?: HealthReportLike | null, error?: unknown) => {
   if (error) {
     const message =
@@ -46,13 +78,20 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
   const [showThemeMenu, setShowThemeMenu] = useState(false);
 
   const [fontScale, setFontScale] = useState<number>(() => {
-    const saved = localStorage.getItem('llm_manager_font_scale');
-    return saved ? parseFloat(saved) : 1.0;
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('llm_manager_font_scale');
+      return saved ? parseFloat(saved) : 1.0;
+    }
+    return 1.0;
   });
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-scale', fontScale.toString());
-    localStorage.setItem('llm_manager_font_scale', fontScale.toString());
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty('--font-scale', fontScale.toString());
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('llm_manager_font_scale', fontScale.toString());
+    }
   }, [fontScale]);
 
   useEffect(() => {

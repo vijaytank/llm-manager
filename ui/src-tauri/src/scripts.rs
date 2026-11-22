@@ -51,26 +51,21 @@ pub fn get_workspace_root() -> PathBuf {
     // 2. Check current_exe location & parent directories (Release build / Installed binary)
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
-            let candidates = vec![
-                exe_dir.to_path_buf(),
-                exe_dir.join("resources"),
-                exe_dir.join("_up_").join("_up_"),
-                exe_dir.join("resources").join("_up_").join("_up_"),
-            ];
-
-            for cand in &candidates {
-                if cand.join("llo-core").exists() || cand.join("script").exists() {
-                    return cand.clone();
-                }
-            }
-
-            if let Some(parent) = exe_dir.parent() {
-                let parent_candidates = vec![
-                    parent.to_path_buf(),
-                    parent.join("resources"),
-                    parent.join("_up_").join("_up_"),
+            // Traverse exe_dir and up to 4 ancestors to check standard Tauri v2 resource paths
+            for ancestor in exe_dir.ancestors().take(4) {
+                let candidates = [
+                    ancestor.to_path_buf(),
+                    ancestor.join("resources"),
+                    ancestor.join("Resources"),
+                    ancestor.join("../Resources"),
+                    ancestor.join("../lib"),
+                    ancestor.join("../share"),
+                    // Legacy Tauri relative bundling paths preserved as last-resort fallbacks
+                    ancestor.join("_up_").join("_up_"),
+                    ancestor.join("resources").join("_up_").join("_up_"),
                 ];
-                for cand in &parent_candidates {
+
+                for cand in &candidates {
                     if cand.join("llo-core").exists() || cand.join("script").exists() {
                         return cand.clone();
                     }
@@ -147,6 +142,11 @@ pub fn run_powershell_script(script_relative_path: &str, args: &[&str]) -> Resul
 
     #[cfg(target_os = "windows")]
     {
+        // ExecutionPolicy Bypass is required here because the packaged desktop application
+        // executes internal PowerShell backend scripts bundled with the application without requiring
+        // the user to globally alter their machine-wide or user-wide PowerShell execution policy.
+        // For production environments with strict enterprise AppLocker/Device Guard policies,
+        // scripts should be code-signed with a trusted corporate certificate to permit RemoteSigned.
         command
             .arg("-ExecutionPolicy")
             .arg("Bypass")

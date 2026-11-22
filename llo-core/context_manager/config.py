@@ -1,8 +1,11 @@
 import json
 import os
+import logging
 from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger("context_manager.config")
 
 class ContextManagerConfig(BaseModel):
     enabled: bool = Field(default=False, description="Enable or disable context manager proxy")
@@ -66,6 +69,9 @@ def load_config(config_path: Optional[str] = None) -> ContextManagerConfig:
                 cm_data = data.get("context_manager", {})
                 return ContextManagerConfig(**cm_data)
         except Exception as e:
-            print(f"[ContextManager] Warning: failed to parse config at {config_path}: {e}")
+            err_msg = f"[ContextManager] Error: failed to parse config at {config_path}: {e}"
+            logger.error(err_msg)
+            if os.getenv("LLM_ENV") == "production" or os.getenv("ENVIRONMENT") == "production":
+                raise RuntimeError(err_msg)
 
     return ContextManagerConfig()

@@ -266,7 +266,12 @@ pub fn load_config() -> Result<AppConfig, String> {
         ];
 
         if let Some(bundled_path) = bundled_candidates.into_iter().find(|p| p.exists()) {
-            let _ = fs::copy(&bundled_path, &user_config_path);
+            if let Err(e) = fs::copy(&bundled_path, &user_config_path) {
+                eprintln!(
+                    "Warning: Failed to copy bundled config from {:?} to {:?}: {}",
+                    bundled_path, user_config_path, e
+                );
+            }
         }
     }
 

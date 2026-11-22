@@ -24,7 +24,7 @@ $userAppDir = if (Get-Command "Get-LLMManagerUserDataDir" -ErrorAction SilentlyC
     if ($env:APPDATA) {
         Join-Path $env:APPDATA "LLM Manager"
     } elseif ($env:USERPROFILE) {
-        Join-Path $env:USERPROFILE ".config\LLM Manager"
+        Join-Path $env:USERPROFILE ".config/LLM Manager"
     } elseif ($env:HOME) {
         Join-Path $env:HOME ".config/LLM Manager"
     } else { $null }
@@ -42,7 +42,7 @@ if ($userAppDir) {
     }
 }
 
-if ($env:OS -match "Windows" -or $IsWindows) {
+if ($IsWindows) {
     # Windows: find all llama-server.exe processes
     $running = @(Get-CimInstance Win32_Process | Where-Object {
         $_.Name -eq "llama-server.exe"

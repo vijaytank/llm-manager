@@ -61,47 +61,81 @@ export interface AppConfig {
   active_template?: string;
 }
 
+export type DeepPartial<T> = {
+  [P in keyof T]?: NonNullable<T[P]> extends any[]
+    ? NonNullable<T[P]>
+    : NonNullable<T[P]> extends object
+      ? DeepPartial<NonNullable<T[P]>>
+      : T[P];
+};
+
 interface ConfigState {
   config: AppConfig | null;
   loading: boolean;
   error: string | null;
   fetchConfig: () => Promise<void>;
-  updateConfig: (partial: Partial<AppConfig>) => void;
+  updateConfig: (partial: DeepPartial<AppConfig>) => void;
   saveConfig: () => Promise<void>;
 }
 
-export const useConfigStore = create<ConfigState>((set, get) => ({
-  config: null,
-  loading: false,
-  error: null,
+function isObject(item: any): item is Record<string, any> {
+  return item !== null && typeof item === 'object' && !Array.isArray(item);
+}
 
-  fetchConfig: async () => {
-    set({ loading: true, error: null });
-    try {
-      const config = await invoke<AppConfig>('load_config');
-      set({ config, loading: false });
-    } catch (err: any) {
-      set({ error: err.toString(), loading: false });
+export function deepMergeConfig<T extends Record<string, any>>(
+  target: T,
+  source: DeepPartial<T> | Partial<T>
+): T {
+  const output: any = { ...target };
+  for (const key of Object.keys(source)) {
+    const sourceVal = (source as any)[key];
+    const targetVal = (target as any)[key];
+    if (isObject(sourceVal) && isObject(targetVal)) {
+      output[key] = deepMergeConfig(targetVal, sourceVal);
+    } else if (sourceVal !== undefined) {
+      output[key] = sourceVal;
     }
-  },
+  }
+  return output as T;
+}
 
-  updateConfig: (partial) => {
-    const current = get().config || ({} as AppConfig);
-    set({ config: { ...current, ...partial } });
-  },
+export const useConfigStore = create<ConfigState>((set, get, api) => {
+  if (api) {
+    api.getInitialState = () => api.getState();
+  }
+  return {
+    config: null,
+    loading: false,
+    error: null,
 
-  saveConfig: async () => {
-    const current = get().config;
-    if (!current) return;
-    set({ loading: true, error: null });
-    try {
-      await invoke('save_config', { config: current });
-      set({ loading: false });
-      if (useServerStore.getState().status === 'running') {
-        useServerStore.getState().setPendingRestart(true);
+    fetchConfig: async () => {
+      set({ loading: true, error: null });
+      try {
+        const config = await invoke<AppConfig>('load_config');
+        set({ config, loading: false });
+      } catch (err: any) {
+        set({ error: err.toString(), loading: false });
       }
-    } catch (err: any) {
-      set({ error: err.toString(), loading: false });
-    }
-  },
-}));
+    },
+
+    updateConfig: partial => {
+      const current = get().config || ({} as AppConfig);
+      set({ config: deepMergeConfig(current, partial) });
+    },
+
+    saveConfig: async () => {
+      const current = get().config;
+      if (!current) return;
+      set({ loading: true, error: null });
+      try {
+        await invoke('save_config', { config: current });
+        set({ loading: false });
+        if (useServerStore.getState().status === 'running') {
+          useServerStore.getState().setPendingRestart(true);
+        }
+      } catch (err: any) {
+        set({ error: err.toString(), loading: false });
+      }
+    },
+  };
+});

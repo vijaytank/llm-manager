@@ -49,6 +49,27 @@ pub struct SystemHardwareProfile {
     pub gpu: GpuInfo,
 }
 
+fn rotate_and_write_log(log_path: &std::path::Path, content: &str) {
+    const MAX_SIZE: u64 = 10 * 1024 * 1024; // 10MB
+    const MAX_BACKUPS: usize = 5;
+
+    if let Ok(meta) = std::fs::metadata(log_path) {
+        if meta.len() >= MAX_SIZE {
+            for i in (1..MAX_BACKUPS).rev() {
+                let from = log_path.with_extension(format!("log.{}", i));
+                let to = log_path.with_extension(format!("log.{}", i + 1));
+                if from.exists() {
+                    let _ = std::fs::rename(from, to);
+                }
+            }
+            let first_backup = log_path.with_extension("log.1");
+            let _ = std::fs::rename(log_path, first_backup);
+        }
+    }
+
+    let _ = std::fs::write(log_path, content);
+}
+
 #[tauri::command]
 pub fn detect_hardware() -> Result<SystemHardwareProfile, String> {
     let script_res = run_powershell_script("llo-core/Profile.ps1", &["-Json"])?;
@@ -56,9 +77,9 @@ pub fn detect_hardware() -> Result<SystemHardwareProfile, String> {
 
     match serde_json::from_str::<SystemHardwareProfile>(&script_res) {
         Ok(profile) => {
-            let _ = std::fs::write(
+            rotate_and_write_log(
                 &log_path,
-                format!(
+                &format!(
                     "--- HARDWARE PROBE SUCCESS ---\n{}\n",
                     serde_json::to_string_pretty(&profile).unwrap_or_default()
                 ),
@@ -66,9 +87,9 @@ pub fn detect_hardware() -> Result<SystemHardwareProfile, String> {
             Ok(profile)
         }
         Err(e) => {
-            let _ = std::fs::write(
+            rotate_and_write_log(
                 &log_path,
-                format!(
+                &format!(
                     "--- HARDWARE PROBE SERDE ERROR ---\nError: {}\nRaw script_res:\n{}\n",
                     e, script_res
                 ),

@@ -77,16 +77,16 @@ $uvExe = Get-Command "uv" -ErrorAction SilentlyContinue | Select-Object -ExpandP
 if (-not $uvExe) {
     $uvCandidates = @(
         (Join-Path $ManagerDir "uv.exe"),
-        (Join-Path $ManagerDir "resources\uv.exe"),
+        (Join-Path $ManagerDir "resources/uv.exe"),
         (Join-Path (Split-Path -Parent $ManagerDir) "uv.exe"),
-        "$env:USERPROFILE\.cargo\bin\uv.exe",
-        "$env:LOCALAPPDATA\uv\bin\uv.exe",
-        "$env:USERPROFILE\.local\bin\uv.exe",
-        "$env:USERPROFILE\.local\bin\uv",
-        "$env:ProgramFiles\uv\uv.exe",
-        "C:\tools\uv\uv.exe",
-        "D:\tools\uv\uv.exe"
+        "$env:USERPROFILE/.cargo/bin/uv.exe",
+        "$env:LOCALAPPDATA/uv/bin/uv.exe",
+        "$env:USERPROFILE/.local/bin/uv.exe",
+        "$env:USERPROFILE/.local/bin/uv",
+        "$env:ProgramFiles/uv/uv.exe"
     )
+    if ($env:ProgramData) { $uvCandidates += (Join-Path $env:ProgramData "chocolatey/bin/uv.exe") }
+    if ($env:SystemDrive) { $uvCandidates += "$env:SystemDrive/tools/uv/uv.exe" }
     foreach ($c in $uvCandidates) {
         if ($c -and (Test-Path $c)) { $uvExe = $c; break }
     }
@@ -100,16 +100,16 @@ if (-not $pyExe) {
 if (-not $pyExe) {
     $pyPatterns = @(
         (Join-Path $ManagerDir "python.exe"),
-        (Join-Path $ManagerDir "resources\python.exe"),
+        (Join-Path $ManagerDir "resources/python.exe"),
         (Join-Path (Split-Path -Parent $ManagerDir) "python.exe"),
-        "$env:LOCALAPPDATA\Programs\Python\Python*\python.exe",
-        "$env:ProgramFiles\Python*\python.exe",
-        "${env:ProgramFiles(x86)}\Python*\python.exe",
-        "C:\Python*\python.exe",
-        "D:\Python*\python.exe",
-        "D:\tools\Python*\python.exe",
-        "D:\tools\*\python.exe"
+        "$env:LOCALAPPDATA/Programs/Python/Python*/python.exe",
+        "$env:ProgramFiles/Python*/python.exe",
+        "${env:ProgramFiles(x86)}/Python*/python.exe"
     )
+    if ($env:SystemDrive) {
+        $pyPatterns += "$env:SystemDrive/Python*/python.exe"
+        $pyPatterns += "$env:SystemDrive/tools/Python*/python.exe"
+    }
     foreach ($pat in $pyPatterns) {
         $found = Get-Item $pat -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
         if ($found -and (Test-Path $found)) {
@@ -154,14 +154,14 @@ if (-not $uvExe -and -not $pyExe) {
 
 # 3. Virtual Environment Setup
 $cmCandidates = @(
-    (Join-Path $ManagerDir "llo-core\context_manager"),
-    (Join-Path $ManagerDir "resources\llo-core\context_manager"),
-    (Join-Path (Split-Path -Parent $ManagerDir) "llo-core\context_manager"),
-    (Join-Path (Split-Path -Parent $ManagerDir) "resources\llo-core\context_manager"),
-    (Join-Path $ScriptDir "..\llo-core\context_manager"),
-    (Join-Path $ScriptDir "..\resources\llo-core\context_manager"),
-    (Join-Path (Split-Path -Parent (Split-Path -Parent $ScriptDir)) "llo-core\context_manager"),
-    (Join-Path (Split-Path -Parent (Split-Path -Parent $ScriptDir)) "resources\llo-core\context_manager")
+    (Join-Path $ManagerDir "llo-core/context_manager"),
+    (Join-Path $ManagerDir "resources/llo-core/context_manager"),
+    (Join-Path (Split-Path -Parent $ManagerDir) "llo-core/context_manager"),
+    (Join-Path (Split-Path -Parent $ManagerDir) "resources/llo-core/context_manager"),
+    (Join-Path $ScriptDir "../llo-core/context_manager"),
+    (Join-Path $ScriptDir "../resources/llo-core/context_manager"),
+    (Join-Path (Split-Path -Parent (Split-Path -Parent $ScriptDir)) "llo-core/context_manager"),
+    (Join-Path (Split-Path -Parent (Split-Path -Parent $ScriptDir)) "resources/llo-core/context_manager")
 )
 
 $cmDir = $null
@@ -173,7 +173,7 @@ foreach ($cand in $cmCandidates) {
 }
 
 if (-not $cmDir) {
-    Write-Host "[ContextManager] ERROR: Could not locate 'llo-core\context_manager' directory." -ForegroundColor Red
+    Write-Host "[ContextManager] ERROR: Could not locate 'llo-core/context_manager' directory." -ForegroundColor Red
     exit 1
 }
 
@@ -183,7 +183,7 @@ $userAppDir = if (Get-Command "Get-LLMManagerUserDataDir" -ErrorAction SilentlyC
     if ($env:APPDATA) {
         Join-Path $env:APPDATA "LLM Manager"
     } elseif ($env:USERPROFILE) {
-        Join-Path $env:USERPROFILE ".config\LLM Manager"
+        Join-Path $env:USERPROFILE ".config/LLM Manager"
     } else { $ManagerDir }
 }
 
@@ -198,7 +198,7 @@ Write-Host "  LLM MANAGER CONTEXT PROXY" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "  Port : $proxyPort" -ForegroundColor White
 
-$venvPy = if ($env:OS -match "Windows") { Join-Path $venvDir "Scripts\python.exe" } else { Join-Path $venvDir "bin/python" }
+$venvPy = if ($IsWindows) { Join-Path $venvDir "Scripts/python.exe" } else { Join-Path $venvDir "bin/python" }
 $useVenv = $false
 
 if ($uvExe) {
@@ -303,7 +303,7 @@ if ($Foreground) {
     Write-Host "Launching Context Manager proxy in background (port $proxyPort)..." -ForegroundColor Cyan
     $launchedPid = $null
 
-    if ($env:OS -match "Windows" -or $IsWindows) {
+    if ($IsWindows) {
         $cmdLine = "cmd.exe /c `"`"$activePy`" -m uvicorn context_manager.proxy:app --host 0.0.0.0 --port $proxyPort > `"$cmLog`" 2> `"$cmErrLog`"`""
         try {
             $res = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmdLine; CurrentDirectory = $lloCoreDir }

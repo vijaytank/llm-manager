@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PageShell } from '../components/layout/PageShell';
 import {
   Cpu,
@@ -72,17 +72,27 @@ export const OverviewPage: React.FC = () => {
   }, [status]);
 
   const [selectedModelFilename, setSelectedModelFilename] = useState<string>('');
+  const prevModelCountRef = useRef(0);
+  const prevActiveModelRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (models.length > 0) {
-      const active = models.find(m => m.name === config?.active_model);
+    if (models.length === 0) return;
+    const activeModelName = config?.active_model;
+    const modelCountChanged = prevModelCountRef.current !== models.length;
+    const activeChanged = prevActiveModelRef.current !== activeModelName;
+
+    if (!selectedModelFilename || modelCountChanged || activeChanged) {
+      const active = models.find(m => m.name === activeModelName);
       if (active && active.filename !== selectedModelFilename) {
         setSelectedModelFilename(active.filename);
       } else if (!selectedModelFilename) {
         setSelectedModelFilename(models[0].filename);
       }
     }
-  }, [models, config?.active_model]);
+
+    prevModelCountRef.current = models.length;
+    prevActiveModelRef.current = activeModelName;
+  }, [models, config?.active_model, selectedModelFilename]);
 
   const baseModels = models.filter(m => !m.isMmproj);
   const mmprojModels = models.filter(m => m.isMmproj);
@@ -103,25 +113,44 @@ export const OverviewPage: React.FC = () => {
         await saveConfig();
       }
       await invoke('start_server', { port });
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error('Failed to start server:', e);
+      useServerStore.getState().addLog({
+        timestamp: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+        level: 'ERROR',
+        message: `Failed to start server: ${e?.message || e}`,
+      });
     }
   };
 
   const handleStop = async () => {
     try {
       await invoke('stop_server');
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error('Failed to stop server:', e);
+      useServerStore.getState().addLog({
+        timestamp: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+        level: 'ERROR',
+        message: `Failed to stop server: ${e?.message || e}`,
+      });
     }
   };
 
   const handleAutoTuneAndLaunch = async () => {
     if (launchCheck.autoTuneConfig && config) {
-      const tuned = launchCheck.autoTuneConfig(config);
-      updateConfig(tuned);
-      await saveConfig();
-      await invoke('start_server', { port });
+      try {
+        const tuned = launchCheck.autoTuneConfig(config);
+        updateConfig(tuned);
+        await saveConfig();
+        await invoke('start_server', { port });
+      } catch (e: any) {
+        console.error('Failed to auto-tune and launch:', e);
+        useServerStore.getState().addLog({
+          timestamp: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+          level: 'ERROR',
+          message: `Failed to auto-tune and launch server: ${e?.message || e}`,
+        });
+      }
     }
   };
 

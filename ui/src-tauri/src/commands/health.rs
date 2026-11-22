@@ -63,13 +63,10 @@ pub fn parse_health_output(script_output: &str) -> HealthReport {
 pub fn run_health_check() -> Result<HealthReport, String> {
     let config_file = crate::scripts::get_user_data_dir().join("llo-config.json");
     let config_file_str = config_file.to_string_lossy().to_string();
-    let script_output = match run_powershell_script(
+    let script_output = run_powershell_script(
         "script/test-health.ps1",
         &["-ConfigFile", &config_file_str, "-Json"],
-    ) {
-        Ok(out) => out,
-        Err(e) => e,
-    };
+    )?;
 
     Ok(parse_health_output(&script_output))
 }
@@ -78,13 +75,10 @@ pub fn run_health_check() -> Result<HealthReport, String> {
 pub fn audit_scripts() -> Result<String, String> {
     let config_file = crate::scripts::get_user_data_dir().join("llo-config.json");
     let config_file_str = config_file.to_string_lossy().to_string();
-    let output = match run_powershell_script(
+    let output = run_powershell_script(
         "script/verify-scripts.ps1",
         &["-ConfigFile", &config_file_str],
-    ) {
-        Ok(out) => out,
-        Err(e) => format!("Audit completed with notes:\n{}", e),
-    };
+    )?;
     Ok(output)
 }
 

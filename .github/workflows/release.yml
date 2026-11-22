@@ -73,11 +73,8 @@ jobs:
       - name: Generate changelog
         id: changelog
         run: |
-          # Install conventional-changelog-cli
-          npm install -g conventional-changelog-cli
-          
-          # Generate changelog for this version
-          CHANGELOG=$(conventional-changelog -p angular -i CHANGELOG.md -s -r 0 2>/dev/null || echo "")
+          # Generate changelog for this version using npx
+          CHANGELOG=$(npx --yes conventional-changelog-cli@latest -p angular -i CHANGELOG.md -s -r 0 2>/dev/null || echo "")
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -90,7 +87,7 @@ jobs:
       - name: Update Cargo.toml version
         working-directory: ui/src-tauri
         run: |
-          sed -i "s/^version = \".*\"/version = \"${{ steps.version.outputs.version }}\"/" Cargo.toml
+          node -e 'const fs = require("fs"); let c = fs.readFileSync("Cargo.toml", "utf8"); c = c.replace(/(\[package\][\s\S]*?^version\s*=\s*)"[^"]+"/m, `$1"${process.argv[1]}"`); fs.writeFileSync("Cargo.toml", c);' "${{ steps.version.outputs.version }}"
 
       - name: Commit version bump
         if: github.event_name == 'workflow_dispatch'
@@ -99,7 +96,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add ui/package.json ui/src-tauri/Cargo.toml
           git commit -m "chore(release): ${{ steps.version.outputs.tag_name }}"
-          git push
+          git push origin HEAD:${{ github.ref_name }}
 
   # Build Frontend
   build-frontend:
@@ -134,126 +131,43 @@ jobs:
           path: ui/dist/
           retention-days: 30
 
-  # Build Tauri App (Windows)
-  build-tauri-windows:
-    name: Build Tauri Windows
+  # Build Tauri App (Matrix across Windows, macOS, Linux)
+  build-tauri:
+    name: Build Tauri (${{ matrix.platform.name }})
     needs: [prepare-release, build-frontend]
-    runs-on: windows-latest
+    runs-on: ${{ matrix.platform.os }}
     timeout-minutes: 30
+    strategy:
+      # fail-fast: false is intentional: allows all 3 OS platforms (Windows, macOS, Linux) to complete
+      # independently and upload diagnostic artifacts even if one fails. The downstream create-release
+      # job strictly depends on all matrix jobs via `needs: [prepare-release, build-tauri]`,
+      # ensuring no partial release is published if any platform fails.
+      fail-fast: false
+      matrix:
+        platform:
+          - name: Windows
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: tauri-windows
+            bundle-path: ui/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/
+          - name: macOS
+            os: macos-latest
+            target: universal-apple-darwin
+            artifact: tauri-macos
+            bundle-path: ui/src-tauri/target/universal-apple-darwin/release/bundle/dmg/
+          - name: Linux
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: tauri-linux
+            bundle-path: ui/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Download frontend dist
-        uses: actions/download-artifact@v4
-        with:
-          name: ui-dist-${{ needs.prepare-release.outputs.version }}
-          path: ui/dist
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: ui/src-tauri -> target
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: ui/package-lock.json
-
-      - name: Install frontend dependencies
-        working-directory: ui
-        run: npm ci
-
-      - name: Install Tauri CLI
-        working-directory: ui
-        run: npm install -g @tauri-apps/cli
-
-      - name: Build Tauri Windows (NSIS)
-        working-directory: ui
-        run: npm run tauri build -- --target x86_64-pc-windows-msvc
-
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-windows-${{ needs.prepare-release.outputs.version }}
-          path: ui/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/
-          retention-days: 30
-
-  # Build Tauri App (macOS)
-  build-tauri-macos:
-    name: Build Tauri macOS
-    needs: [prepare-release, build-frontend]
-    runs-on: macos-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download frontend dist
-        uses: actions/download-artifact@v4
-        with:
-          name: ui-dist-${{ needs.prepare-release.outputs.version }}
-          path: ui/dist
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: ui/src-tauri -> target
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: ui/package-lock.json
-
-      - name: Install frontend dependencies
-        working-directory: ui
-        run: npm ci
-
-      - name: Install Tauri CLI
-        working-directory: ui
-        run: npm install -g @tauri-apps/cli
-
-      - name: Add Apple Silicon and Intel targets
-        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
-
-      - name: Build Tauri macOS (Universal)
-        working-directory: ui
-        run: npm run tauri build -- --target universal-apple-darwin
-
-      - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-macos-${{ needs.prepare-release.outputs.version }}
-          path: ui/src-tauri/target/universal-apple-darwin/release/bundle/dmg/
-          retention-days: 30
-
-  # Build Tauri App (Linux)
-  build-tauri-linux:
-    name: Build Tauri Linux
-    needs: [prepare-release, build-frontend]
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install system dependencies
+      - name: Install system dependencies (Linux)
+        if: matrix.platform.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libudev-dev
@@ -267,6 +181,10 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Add Apple Silicon and Intel targets (macOS)
+        if: matrix.platform.os == 'macos-latest'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -287,23 +205,22 @@ jobs:
         working-directory: ui
         run: npm install -g @tauri-apps/cli
 
-      - name: Build Tauri Linux (AppImage)
+      - name: Build Tauri App
         working-directory: ui
-        run: npm run tauri build -- --target x86_64-unknown-linux-gnu
+        run: npm run tauri build -- --target ${{ matrix.platform.target }}
 
-      - name: Upload Linux artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tauri-linux-${{ needs.prepare-release.outputs.version }}
-          path: ui/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/
+          name: ${{ matrix.platform.artifact }}-${{ needs.prepare-release.outputs.version }}
+          path: ${{ matrix.platform.bundle-path }}
           retention-days: 30
 
   # Create GitHub Release
   create-release:
     name: Create GitHub Release
-    needs: [prepare-release, build-tauri-windows, build-tauri-macos, build-tauri-linux]
+    needs: [prepare-release, build-tauri]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -313,10 +230,10 @@ jobs:
           merge-multiple: true
 
       - name: List artifacts
-        run: find artifacts -type f -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage*" | sort
+        run: find artifacts -type f -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage*" -o -name "*.msi" | sort
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@c062e4933a388835f8e5d0a647e30d1d7cc91e60 # v2.2.1
         with:
           tag_name: ${{ needs.prepare-release.outputs.tag_name }}
           name: LLM Manager ${{ needs.prepare-release.outputs.tag_name }}
@@ -325,10 +242,8 @@ jobs:
             
             ${{ needs.prepare-release.outputs.changelog }}
             
-            ### Downloads
-            - **Windows**: `LLM_Manager_${{ needs.prepare-release.outputs.version }}_x64_en-US.msi` (NSIS installer)
-            - **macOS**: `LLM_Manager_${{ needs.prepare-release.outputs.version }}_universal.dmg` (Universal DMG)
-            - **Linux**: `LLM_Manager-${{ needs.prepare-release.outputs.version }}_amd64.AppImage` (AppImage)
+            ### Downloads & Assets
+            Please download the installer appropriate for your platform from the release assets below.
             
             ### Installation
             - **Windows**: Run the `.msi` installer

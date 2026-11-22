@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  validateConfiguration,
-  validateModelLaunch,
-  calculateKvCacheGb,
-  calculateKvCacheGbFixed,
-} from '../validation';
+import { validateConfiguration, validateModelLaunch, calculateKvCacheGb } from '../validation';
 import { AppConfig } from '../../store/configStore';
 import { SystemHardware } from '../../store/hardwareStore';
 import { ModelInfo } from '../../store/modelsStore';
@@ -97,16 +92,6 @@ const mockHugeModel: ModelInfo = {
 };
 
 describe('validation engine & kv cache math', () => {
-  it('calculates mathematically exact KV cache size for various context lengths & precisions (fixed architecture)', () => {
-    // 32 layers, 1024 kvDim, f16 -> 131,072 bytes per token
-    expect(calculateKvCacheGbFixed(8192, 32, 'f16', 'f16')).toBe(1.0);
-    expect(calculateKvCacheGbFixed(32768, 32, 'f16', 'f16')).toBe(4.0);
-    expect(calculateKvCacheGbFixed(65536, 32, 'f16', 'f16')).toBe(8.0);
-
-    // q8_0 precision -> ~2.13 GB at 32K
-    expect(calculateKvCacheGbFixed(32768, 32, 'q8_0', 'q8_0')).toBe(2.13);
-  });
-
   it('calculates dynamic KV cache size based on model size (aligned with PowerShell)', () => {
     // For 4.5 GB model, f16 cache:
     // baseKV = 12.0 * 4.5 = 54 MB per 1K tokens (q8_0 baseline)

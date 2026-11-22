@@ -70,3 +70,47 @@ def read_preset_ctx_limit(preset_path: Optional[str] = None, model_alias: Option
         print(f"[ContextManager] Error reading preset INI file {preset_path}: {e}")
 
     return 65536
+
+
+def get_known_local_models(preset_path: Optional[str] = None) -> list[str]:
+    """Returns list of known local model section names from models-preset.ini."""
+    if not preset_path:
+        appdata = os.getenv("APPDATA")
+        userprofile = os.getenv("USERPROFILE")
+        home = os.getenv("HOME")
+        
+        candidates = []
+        if appdata:
+            candidates.append(Path(appdata) / "LLM Manager" / "models-preset.ini")
+        if userprofile:
+            candidates.append(Path(userprofile) / ".config" / "LLM Manager" / "models-preset.ini")
+        if home:
+            candidates.append(Path(home) / ".config" / "LLM Manager" / "models-preset.ini")
+            
+        workspace_root = Path(__file__).resolve().parent.parent.parent
+        candidates.append(workspace_root / "models-preset.ini")
+
+        for cand in candidates:
+            if cand.is_file():
+                preset_path = str(cand)
+                break
+
+    if not preset_path or not Path(preset_path).is_file():
+        return []
+
+    config = configparser.ConfigParser()
+    try:
+        config.read(preset_path, encoding="utf-8-sig")
+        return [sec for sec in config.sections() if sec not in ("*", "DEFAULT")]
+    except Exception as e:
+        print(f"[ContextManager] Error reading sections from preset INI file {preset_path}: {e}")
+        return []
+
+
+def is_known_local_model(model_alias: str, preset_path: Optional[str] = None) -> bool:
+    """Checks whether model_alias matches a known section in models-preset.ini."""
+    if not model_alias:
+        return False
+    known = get_known_local_models(preset_path)
+    norm_target = model_alias.lower().replace("_", "-")
+    return any(k == model_alias or k.lower().replace("_", "-") == norm_target for k in known)

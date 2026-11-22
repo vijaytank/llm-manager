@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { Sidebar, PageId } from './components/layout/Sidebar';
@@ -46,17 +46,29 @@ export const App: React.FC = () => {
   const { validate } = useValidationStore();
   const { models } = useModelsStore();
 
+  const fetchConfigRef = useRef(fetchConfig);
+  const fetchHardwareRef = useRef(fetchHardware);
+  const setStatusRef = useRef(setStatus);
+  const addLogRef = useRef(addLog);
+
+  useEffect(() => {
+    fetchConfigRef.current = fetchConfig;
+    fetchHardwareRef.current = fetchHardware;
+    setStatusRef.current = setStatus;
+    addLogRef.current = addLog;
+  });
+
   const activeModel = models.find(m => m.name === config?.active_model);
 
   useEffect(() => {
-    fetchConfig();
-    fetchHardware();
+    fetchConfigRef.current();
+    fetchHardwareRef.current();
 
     // Synchronize initial server status with backend
     invoke<string>('get_server_status')
       .then(st => {
         if (st && (st === 'running' || st === 'starting' || st === 'stopped')) {
-          setStatus(st);
+          setStatusRef.current(st);
         }
       })
       .catch(() => {});
@@ -64,10 +76,10 @@ export const App: React.FC = () => {
     let cleanupFns: Array<() => void> = [];
     Promise.all([
       listen<string>('server-status-changed', event => {
-        setStatus(event.payload as any);
+        setStatusRef.current(event.payload as any);
       }),
       listen<any>('server-log', event => {
-        addLog(event.payload);
+        addLogRef.current(event.payload);
       }),
       listen<string>('navigate-to', event => {
         setActivePage(event.payload as PageId);
@@ -81,7 +93,7 @@ export const App: React.FC = () => {
     return () => {
       cleanupFns.forEach(fn => fn());
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Server status synchronization: probes backend socket and transitions immediately without CORS limits
   useEffect(() => {
@@ -100,11 +112,13 @@ export const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [status, setStatus]);
 
-  // Real-time config & hardware safety validation
+  // Real-time config & hardware safety validation (debounced 300ms)
   useEffect(() => {
-    if (config && profile) {
+    if (!config || !profile) return;
+    const timer = setTimeout(() => {
       validate(config, profile, activeModel?.fileSizeGb);
-    }
+    }, 300);
+    return () => clearTimeout(timer);
   }, [config, profile, validate, activeModel?.fileSizeGb]);
 
   // Smart Routing: First time installation -> Setup Step 1. Returning user -> Overview Dashboard

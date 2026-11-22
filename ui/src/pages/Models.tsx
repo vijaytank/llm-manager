@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { PageShell } from '../components/layout/PageShell';
 import {
   RefreshCw,
@@ -31,6 +31,223 @@ interface GgufDetail {
   kvCacheGbAt32k: number;
   kvCacheGbAt64k: number;
 }
+
+interface ModelRowProps {
+  model: ModelInfo;
+  index: number;
+  isActive: boolean;
+  selectedMmprojPath: string;
+  isNoOffload: boolean;
+  mmprojModels: ModelInfo[];
+  launchCheck: ReturnType<typeof validateModelLaunch>;
+  onInspect: (m: ModelInfo) => void;
+  onSelectActiveModel: (m: ModelInfo) => void;
+  onMmprojChange: (m: ModelInfo, path: string) => void;
+  onOffloadChange: (noOffload: boolean) => void;
+}
+
+const ModelRow: React.FC<ModelRowProps> = React.memo(
+  ({
+    model: m,
+    index,
+    isActive,
+    selectedMmprojPath,
+    isNoOffload,
+    mmprojModels,
+    launchCheck,
+    onInspect,
+    onSelectActiveModel,
+    onMmprojChange,
+    onOffloadChange,
+  }) => {
+    const isCurrentModelMmprojSelected =
+      isActive && selectedMmprojPath !== '' && selectedMmprojPath !== 'none';
+
+    return (
+      <tr
+        key={m.filename || index}
+        style={{
+          background: isActive ? 'rgba(16, 185, 129, 0.08)' : undefined,
+        }}
+      >
+        <td
+          className="font-semibold"
+          style={{
+            padding: '10px 12px',
+            borderBottom: '1px solid var(--border-subtle)',
+            verticalAlign: 'middle',
+          }}
+        >
+          {m.name}
+          {isActive && (
+            <span className="badge badge-success" style={{ marginLeft: '8px' }}>
+              Active
+            </span>
+          )}
+        </td>
+        <td
+          className="font-mono"
+          style={{
+            padding: '10px 12px',
+            borderBottom: '1px solid var(--border-subtle)',
+            verticalAlign: 'middle',
+          }}
+        >
+          {m.fileSizeGb} GB
+        </td>
+        <td
+          className="font-mono"
+          style={{
+            padding: '10px 12px',
+            borderBottom: '1px solid var(--border-subtle)',
+            verticalAlign: 'middle',
+          }}
+        >
+          {m.quantization}
+        </td>
+        <td
+          style={{
+            padding: '10px 12px',
+            borderBottom: '1px solid var(--border-subtle)',
+            verticalAlign: 'middle',
+          }}
+        >
+          {m.isMmproj ? (
+            <span className="badge badge-info">
+              <Image size={12} style={{ marginRight: '4px' }} /> Multimodal Projector
+            </span>
+          ) : (
+            <span className="template-badge">
+              <Check size={14} /> {m.template}
+            </span>
+          )}
+        </td>
+        <td
+          style={{
+            padding: '10px 12px',
+            borderBottom: '1px solid var(--border-subtle)',
+            verticalAlign: 'middle',
+          }}
+        >
+          {m.isMmproj ? (
+            <span className="text-muted font-mono" style={{ fontSize: '0.85rem' }}>
+              N/A (Is Projector)
+            </span>
+          ) : mmprojModels.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <select
+                className="form-input font-mono"
+                style={{ fontSize: '0.8rem', padding: '2px 6px' }}
+                value={isActive ? selectedMmprojPath : ''}
+                onChange={e => onMmprojChange(m, e.target.value)}
+              >
+                <option value="">Disabled (Text Only)</option>
+                {mmprojModels.map((proj, idx) => (
+                  <option key={idx} value={proj.path}>
+                    {proj.name} ({proj.fileSizeGb} GB)
+                  </option>
+                ))}
+              </select>
+              {isCurrentModelMmprojSelected && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '0.75rem',
+                  }}
+                >
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name={`offload-${index}`}
+                      checked={!isNoOffload}
+                      onChange={() => onOffloadChange(false)}
+                    />
+                    <span style={{ color: 'var(--status-success)' }}>GPU</span>
+                  </label>
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name={`offload-${index}`}
+                      checked={isNoOffload}
+                      onChange={() => onOffloadChange(true)}
+                    />
+                    <span style={{ color: 'var(--text-muted)' }}>CPU (RAM)</span>
+                  </label>
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-muted font-mono" style={{ fontSize: '0.85rem' }}>
+              None Available
+            </span>
+          )}
+        </td>
+        <td
+          style={{
+            padding: '10px 12px',
+            borderBottom: '1px solid var(--border-subtle)',
+            verticalAlign: 'middle',
+          }}
+        >
+          {m.isMmproj ? (
+            <span className="badge badge-info">Vision Adapter</span>
+          ) : (
+            <span className={`badge severity-${launchCheck.severity}`}>
+              {launchCheck.canLaunch ? (
+                <Zap size={12} style={{ marginRight: '4px' }} />
+              ) : (
+                <AlertTriangle size={12} style={{ marginRight: '4px' }} />
+              )}
+              {launchCheck.title}
+            </span>
+          )}
+        </td>
+        <td
+          style={{
+            padding: '10px 12px',
+            borderBottom: '1px solid var(--border-subtle)',
+            verticalAlign: 'middle',
+          }}
+        >
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              className="btn btn-outline"
+              style={{ padding: '4px 8px' }}
+              onClick={() => onInspect(m)}
+            >
+              <Info size={14} /> Inspect
+            </button>
+            {!isActive && !m.isMmproj && (
+              <button
+                className="btn btn-primary"
+                style={{ padding: '4px 8px' }}
+                onClick={() => onSelectActiveModel(m)}
+              >
+                Select
+              </button>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  }
+);
 
 export const ModelsPage: React.FC = () => {
   const { models, loading, fetchModels } = useModelsStore();
@@ -74,6 +291,26 @@ export const ModelsPage: React.FC = () => {
     updateConfig({ active_model: m.name });
     await saveConfig();
   };
+
+  const handleMmprojChange = useCallback(
+    async (m: ModelInfo, path: string) => {
+      if (config?.active_model !== m.name) {
+        updateConfig({ active_model: m.name, mmproj_path: path });
+      } else {
+        updateConfig({ mmproj_path: path });
+      }
+      await saveConfig();
+    },
+    [config?.active_model, updateConfig, saveConfig]
+  );
+
+  const handleOffloadChange = useCallback(
+    async (noOffload: boolean) => {
+      updateConfig({ mmproj_no_offload: noOffload });
+      await saveConfig();
+    },
+    [updateConfig, saveConfig]
+  );
 
   return (
     <PageShell title="Models & GGUF Inspector">
@@ -205,210 +442,22 @@ export const ModelsPage: React.FC = () => {
                   return displayList.map((m, index) => {
                     const launchCheck = validateModelLaunch(m, config || ({} as any), profile);
                     const isActive = config?.active_model === m.name;
-                    const isCurrentModelMmprojSelected =
-                      isActive && selectedMmprojPath !== '' && selectedMmprojPath !== 'none';
 
                     return (
-                      <tr
+                      <ModelRow
                         key={m.filename || index}
-                        style={{
-                          background: isActive ? 'rgba(16, 185, 129, 0.08)' : undefined,
-                        }}
-                      >
-                        <td
-                          className="font-semibold"
-                          style={{
-                            padding: '10px 12px',
-                            borderBottom: '1px solid var(--border-subtle)',
-                            verticalAlign: 'middle',
-                          }}
-                        >
-                          {m.name}
-                          {isActive && (
-                            <span className="badge badge-success" style={{ marginLeft: '8px' }}>
-                              Active
-                            </span>
-                          )}
-                        </td>
-                        <td
-                          className="font-mono"
-                          style={{
-                            padding: '10px 12px',
-                            borderBottom: '1px solid var(--border-subtle)',
-                            verticalAlign: 'middle',
-                          }}
-                        >
-                          {m.fileSizeGb} GB
-                        </td>
-                        <td
-                          className="font-mono"
-                          style={{
-                            padding: '10px 12px',
-                            borderBottom: '1px solid var(--border-subtle)',
-                            verticalAlign: 'middle',
-                          }}
-                        >
-                          {m.quantization}
-                        </td>
-                        <td
-                          style={{
-                            padding: '10px 12px',
-                            borderBottom: '1px solid var(--border-subtle)',
-                            verticalAlign: 'middle',
-                          }}
-                        >
-                          {m.isMmproj ? (
-                            <span className="badge badge-info">
-                              <Image size={12} style={{ marginRight: '4px' }} /> Multimodal
-                              Projector
-                            </span>
-                          ) : (
-                            <span className="template-badge">
-                              <Check size={14} /> {m.template}
-                            </span>
-                          )}
-                        </td>
-                        <td
-                          style={{
-                            padding: '10px 12px',
-                            borderBottom: '1px solid var(--border-subtle)',
-                            verticalAlign: 'middle',
-                          }}
-                        >
-                          {m.isMmproj ? (
-                            <span className="text-muted font-mono" style={{ fontSize: '0.85rem' }}>
-                              N/A (Is Projector)
-                            </span>
-                          ) : mmprojModels.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <select
-                                className="form-input font-mono"
-                                style={{ fontSize: '0.8rem', padding: '2px 6px' }}
-                                value={isActive ? selectedMmprojPath : ''}
-                                onChange={async e => {
-                                  if (!isActive) {
-                                    updateConfig({
-                                      active_model: m.name,
-                                      mmproj_path: e.target.value,
-                                    });
-                                  } else {
-                                    updateConfig({ mmproj_path: e.target.value });
-                                  }
-                                  await saveConfig();
-                                }}
-                              >
-                                <option value="">Disabled (Text Only)</option>
-                                {mmprojModels.map((proj, idx) => (
-                                  <option key={idx} value={proj.path}>
-                                    {proj.name} ({proj.fileSizeGb} GB)
-                                  </option>
-                                ))}
-                              </select>
-                              {isCurrentModelMmprojSelected && (
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    fontSize: '0.75rem',
-                                  }}
-                                >
-                                  <label
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    <input
-                                      type="radio"
-                                      name={`offload-${index}`}
-                                      checked={!isNoOffload}
-                                      onChange={async () => {
-                                        updateConfig({ mmproj_no_offload: false });
-                                        await saveConfig();
-                                      }}
-                                    />
-                                    <span style={{ color: 'var(--accent-green, #10b981)' }}>
-                                      GPU
-                                    </span>
-                                  </label>
-                                  <label
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    <input
-                                      type="radio"
-                                      name={`offload-${index}`}
-                                      checked={isNoOffload}
-                                      onChange={async () => {
-                                        updateConfig({ mmproj_no_offload: true });
-                                        await saveConfig();
-                                      }}
-                                    />
-                                    <span style={{ color: 'var(--text-muted)' }}>CPU (RAM)</span>
-                                  </label>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted font-mono" style={{ fontSize: '0.85rem' }}>
-                              None Available
-                            </span>
-                          )}
-                        </td>
-                        <td
-                          style={{
-                            padding: '10px 12px',
-                            borderBottom: '1px solid var(--border-subtle)',
-                            verticalAlign: 'middle',
-                          }}
-                        >
-                          {m.isMmproj ? (
-                            <span className="badge badge-info">Vision Adapter</span>
-                          ) : (
-                            <span className={`badge severity-${launchCheck.severity}`}>
-                              {launchCheck.canLaunch ? (
-                                <Zap size={12} style={{ marginRight: '4px' }} />
-                              ) : (
-                                <AlertTriangle size={12} style={{ marginRight: '4px' }} />
-                              )}
-                              {launchCheck.title}
-                            </span>
-                          )}
-                        </td>
-                        <td
-                          style={{
-                            padding: '10px 12px',
-                            borderBottom: '1px solid var(--border-subtle)',
-                            verticalAlign: 'middle',
-                          }}
-                        >
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              className="btn btn-outline"
-                              style={{ padding: '4px 8px' }}
-                              onClick={() => handleInspect(m)}
-                            >
-                              <Info size={14} /> Inspect
-                            </button>
-                            {!isActive && !m.isMmproj && (
-                              <button
-                                className="btn btn-primary"
-                                style={{ padding: '4px 8px' }}
-                                onClick={() => handleSelectActiveModel(m)}
-                              >
-                                Select
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
+                        model={m}
+                        index={index}
+                        isActive={isActive}
+                        selectedMmprojPath={selectedMmprojPath}
+                        isNoOffload={isNoOffload}
+                        mmprojModels={mmprojModels}
+                        launchCheck={launchCheck}
+                        onInspect={handleInspect}
+                        onSelectActiveModel={handleSelectActiveModel}
+                        onMmprojChange={handleMmprojChange}
+                        onOffloadChange={handleOffloadChange}
+                      />
                     );
                   });
                 })()

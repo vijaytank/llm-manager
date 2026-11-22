@@ -62,24 +62,6 @@ export function calculateKvCacheGb(
   return Number(totalGb.toFixed(2));
 }
 
-/// Legacy function for backward compatibility - uses fixed architecture assumptions
-export function calculateKvCacheGbFixed(
-  ctxTokens: number,
-  blockCount: number = 32,
-  cacheTypeK: string = 'f16',
-  cacheTypeV: string = 'f16',
-  parallelSlots: number = 1
-): number {
-  const bytesPerElemK = cacheTypeK === 'q4_0' ? 0.5625 : cacheTypeK === 'q8_0' ? 1.0625 : 2.0;
-  const bytesPerElemV = cacheTypeV === 'q4_0' ? 0.5625 : cacheTypeV === 'q8_0' ? 1.0625 : 2.0;
-
-  const kvDim = 1024;
-  const bytesPerToken = blockCount * kvDim * (bytesPerElemK + bytesPerElemV);
-  const totalBytes = ctxTokens * Math.max(1, parallelSlots) * bytesPerToken;
-
-  return Number((totalBytes / (1024 * 1024 * 1024)).toFixed(2));
-}
-
 export function validateConfiguration(
   config: AppConfig,
   hardware: SystemHardware | null,
@@ -297,6 +279,7 @@ export function validateModelLaunch(
           ...cfg,
           active_model: model.name,
           flash_attn: 'on',
+          default_context_size: safeCtx,
           overrides: {
             ...cfg.overrides,
             ctx_size: safeCtx,

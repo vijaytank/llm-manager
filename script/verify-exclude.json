@@ -1,0 +1,28 @@
+{
+  "description": "Excluded CLI flags and non-llama-server arguments for verify-scripts.ps1 compatibility audit",
+  "excludes": [
+    "--query-gpu",
+    "--format",
+    "--oneline",
+    "--no-merges",
+    "--show-current",
+    "--pretty",
+    "--abbrev-commit",
+    "--since",
+    "--follow",
+    "--nounits",
+    "--csv",
+    "--noheader",
+    "--quiet",
+    "--directory",
+    "--host",
+    "--port",
+    "--python",
+    "--help",
+    "--version",
+    "--verbose",
+    "--debug",
+    "--dry-run",
+    "---"
+  ]
+}
