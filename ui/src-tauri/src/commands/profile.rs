@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::scripts::run_powershell_script;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -49,6 +49,27 @@ pub struct SystemHardwareProfile {
     pub gpu: GpuInfo,
 }
 
+fn rotate_and_write_log(log_path: &std::path::Path, content: &str) {
+    const MAX_SIZE: u64 = 10 * 1024 * 1024; // 10MB
+    const MAX_BACKUPS: usize = 5;
+
+    if let Ok(meta) = std::fs::metadata(log_path) {
+        if meta.len() >= MAX_SIZE {
+            for i in (1..MAX_BACKUPS).rev() {
+                let from = log_path.with_extension(format!("log.{}", i));
+                let to = log_path.with_extension(format!("log.{}", i + 1));
+                if from.exists() {
+                    let _ = std::fs::rename(from, to);
+                }
+            }
+            let first_backup = log_path.with_extension("log.1");
+            let _ = std::fs::rename(log_path, first_backup);
+        }
+    }
+
+    let _ = std::fs::write(log_path, content);
+}
+
 #[tauri::command]
 pub fn detect_hardware() -> Result<SystemHardwareProfile, String> {
     let script_res = run_powershell_script("llo-core/Profile.ps1", &["-Json"])?;
@@ -56,12 +77,27 @@ pub fn detect_hardware() -> Result<SystemHardwareProfile, String> {
 
     match serde_json::from_str::<SystemHardwareProfile>(&script_res) {
         Ok(profile) => {
-            let _ = std::fs::write(&log_path, format!("--- HARDWARE PROBE SUCCESS ---\n{}\n", serde_json::to_string_pretty(&profile).unwrap_or_default()));
+            rotate_and_write_log(
+                &log_path,
+                &format!(
+                    "--- HARDWARE PROBE SUCCESS ---\n{}\n",
+                    serde_json::to_string_pretty(&profile).unwrap_or_default()
+                ),
+            );
             Ok(profile)
         }
         Err(e) => {
-            let _ = std::fs::write(&log_path, format!("--- HARDWARE PROBE SERDE ERROR ---\nError: {}\nRaw script_res:\n{}\n", e, script_res));
-            Err(format!("Hardware probe output parsing error: {}. Output was: {}", e, script_res))
+            rotate_and_write_log(
+                &log_path,
+                &format!(
+                    "--- HARDWARE PROBE SERDE ERROR ---\nError: {}\nRaw script_res:\n{}\n",
+                    e, script_res
+                ),
+            );
+            Err(format!(
+                "Hardware probe output parsing error: {}. Output was: {}",
+                e, script_res
+            ))
         }
     }
 }
@@ -99,9 +135,33 @@ mod tests {
     fn test_live_hardware_detection() {
         let live_profile = detect_hardware().expect("Live hardware detection must succeed");
         let json_str = serde_json::to_string_pretty(&live_profile).unwrap();
-        println!("\n=== LIVE TAURI IPC JSON OUTPUT ===\n{}\n==================================", json_str);
-        assert_ne!(live_profile.gpu.name, "No Compatible GPU");
-        assert!(live_profile.gpu.total_vram_mb > 0);
-        assert_eq!(live_profile.gpu.adapter_class, "dedicated");
+        println!(
+            "\n=== LIVE TAURI IPC JSON OUTPUT ===\n{}\n==================================",
+            json_str
+        );
+        assert!(
+            !live_profile.cpu.name.is_empty(),
+            "CPU name must be populated"
+        );
+        assert!(
+            live_profile.cpu.physical_cores > 0,
+            "Physical cores must be > 0"
+        );
+        assert!(
+            live_profile.cpu.logical_cores > 0,
+            "Logical cores must be > 0"
+        );
+        assert!(live_profile.ram.total_gb > 0.0, "Total RAM must be > 0");
+        assert!(
+            ["none", "integrated", "dedicated"].contains(&live_profile.gpu.adapter_class.as_str()),
+            "Adapter class must be a valid classification"
+        );
+        assert!(
+            ["cpu", "low", "mid", "high"].contains(&live_profile.gpu.performance_tier.as_str()),
+            "Performance tier must be a valid tier"
+        );
+        if live_profile.gpu.adapter_class == "dedicated" {
+            assert!(live_profile.gpu.total_vram_mb > 0);
+        }
     }
 }

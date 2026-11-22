@@ -38,7 +38,7 @@ We enforce the **Conventional Commits** specification. Commit messages must be s
   ```
   Pull requests with failing syntax, broken JSON configurations, or invalid hardware profilers will be automatically blocked.
 * **Cross-Platform Compatibility**: All new code must run on Windows (PowerShell 5.1+), macOS (`pwsh`), and Linux (`pwsh`). Use `$IsWindows`, `$IsMacOS`, `$IsLinux` guards for OS-specific logic. Never add Windows-only APIs (e.g. `Get-CimInstance Win32_*`) without an equivalent macOS/Linux branch.
-* **Target Branch**: Submit all pull requests to the `master` branch (or `main` depending on your repository's primary branch).
+* **Target Branch**: Submit all pull requests to the `develop` branch.
 
 ---
 

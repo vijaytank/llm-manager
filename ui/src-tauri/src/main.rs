@@ -5,12 +5,14 @@ mod commands;
 mod scripts;
 mod tray;
 
-use commands::config::{load_config, save_config, list_templates};
-use commands::profile::detect_hardware;
-use commands::server::{start_server, stop_server, get_server_status, get_active_model_info, launch_claude_terminal};
-use commands::models::scan_models;
-use commands::health::{run_health_check, audit_scripts};
+use commands::config::{list_templates, load_config, save_config};
 use commands::gguf::read_gguf_info;
+use commands::health::{audit_scripts, run_health_check};
+use commands::models::scan_models;
+use commands::profile::detect_hardware;
+use commands::server::{
+    get_active_model_info, get_server_status, launch_claude_terminal, start_server, stop_server,
+};
 
 fn main() {
     tauri::Builder::default()

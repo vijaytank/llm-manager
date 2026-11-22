@@ -2,12 +2,18 @@
 # Shared helper functions for cross-platform AppData, Config, and User data directory resolution.
 
 function Get-LLMManagerAppDataDir {
-    if ($env:APPDATA) {
-        return $env:APPDATA
-    } elseif ($env:USERPROFILE) {
-        return Join-Path $env:USERPROFILE ".config"
-    } elseif ($env:HOME) {
-        return Join-Path $env:HOME ".config"
+    if ($IsWindows) {
+        if ($env:APPDATA) {
+            return $env:APPDATA
+        } elseif ($env:USERPROFILE) {
+            return Join-Path $env:USERPROFILE "AppData/Roaming"
+        }
+    } else {
+        if ($env:XDG_CONFIG_HOME) {
+            return $env:XDG_CONFIG_HOME
+        } elseif ($env:HOME) {
+            return Join-Path $env:HOME ".config"
+        }
     }
     return $null
 }
@@ -25,7 +31,7 @@ function Get-LLMManagerConfigPath {
     $userDir = Get-LLMManagerUserDataDir
     if ($userDir) {
         $appDataConfig = Join-Path $userDir "llo-config.json"
-        if (Test-Path $appDataConfig) {
+        if (Test-Path $appDataConfig -ErrorAction SilentlyContinue) {
             return $appDataConfig
         }
     }

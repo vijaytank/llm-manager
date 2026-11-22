@@ -62,7 +62,8 @@ describe('Setup Wizard Flow & Step Transitions', () => {
     });
 
     const gpuProfile = useHardwareStore.getState().profile;
-    const isGpuMode = gpuProfile?.adapterClass === 'dedicated' && gpuProfile?.performanceTier !== 'cpu';
+    const isGpuMode =
+      gpuProfile?.adapterClass === 'dedicated' && gpuProfile?.performanceTier !== 'cpu';
     expect(isGpuMode).toBe(true);
   });
 

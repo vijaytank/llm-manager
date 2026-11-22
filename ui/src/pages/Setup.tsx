@@ -69,7 +69,32 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
     }
   };
 
+  const isStepValid = (stepNum: number): boolean => {
+    switch (stepNum) {
+      case 1:
+        return Boolean(config?.llama_server_path && config.llama_server_path.trim().length > 0);
+      case 2:
+        return Boolean(config?.models_dir && config.models_dir.trim().length > 0);
+      case 3:
+      case 4:
+        return true;
+      case 5:
+        return isStepValid(1) && isStepValid(2);
+      default:
+        return false;
+    }
+  };
+
+  const canNavigateTo = (targetStep: number): boolean => {
+    if (targetStep <= step) return true;
+    for (let s = 1; s < targetStep; s++) {
+      if (!isStepValid(s)) return false;
+    }
+    return true;
+  };
+
   const handleFinishSetup = async () => {
+    if (!isStepValid(5)) return;
     updateConfig({ installation_type: 'winget' });
     await saveConfig();
     if (onComplete) {
@@ -82,19 +107,18 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
       <div className="setup-container">
         {/* Stepper Header */}
         <div className="stepper glass-card">
-          {steps.map((s) => {
-            const isDone = s.num < step;
+          {steps.map(s => {
+            const isDone = s.num < step && isStepValid(s.num);
             const isCurrent = s.num === step;
+            const canNav = canNavigateTo(s.num);
             return (
               <div
                 key={s.num}
                 className={`step-item ${isDone ? 'done' : ''} ${isCurrent ? 'current' : ''}`}
-                onClick={() => isDone && setStep(s.num)}
-                style={{ cursor: isDone ? 'pointer' : 'default' }}
+                onClick={() => canNav && setStep(s.num)}
+                style={{ cursor: canNav ? 'pointer' : 'not-allowed', opacity: canNav ? 1 : 0.6 }}
               >
-                <div className="step-circle">
-                  {isDone ? <Check size={14} /> : s.num}
-                </div>
+                <div className="step-circle">{isDone ? <Check size={14} /> : s.num}</div>
                 <span className="step-title">{s.title}</span>
               </div>
             );
@@ -111,22 +135,95 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
           <div className="step-content glass-card card-padding">
             <div className="step-header">
               <h2>Step 1: Core Engine Installation</h2>
-              <p className="step-desc">Configure or locate your local llama-server executable binary</p>
+              <p className="step-desc">
+                Configure or locate your local llama-server executable binary
+              </p>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">llama-server.exe Binary Path</label>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <input
-                  type="text"
-                  className="form-input font-mono"
-                  value={config?.llama_server_path || ''}
-                  onChange={(e) => updateConfig({ llama_server_path: e.target.value })}
-                  placeholder="Select path to llama-server.exe..."
-                />
-                <button className="btn btn-outline" onClick={handleBrowseServerBinary}>
-                  <FolderOpen size={16} /> Browse...
-                </button>
+            <div className="setup-split-grid">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">llama-server.exe Binary Path</label>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <input
+                      type="text"
+                      className="form-input font-mono"
+                      value={config?.llama_server_path || ''}
+                      onChange={e => updateConfig({ llama_server_path: e.target.value })}
+                      placeholder="Select path to llama-server.exe..."
+                    />
+                    <button className="btn btn-outline" onClick={handleBrowseServerBinary}>
+                      <FolderOpen size={16} /> Browse...
+                    </button>
+                  </div>
+                </div>
+
+                {config?.llama_server_path && (
+                  <div
+                    className="info-row"
+                    style={{
+                      padding: '10px 14px',
+                      background: 'var(--status-success-bg)',
+                      border: '1px solid rgba(16, 185, 129, 0.25)',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Check size={16} style={{ color: 'var(--status-success)' }} />
+                      <span
+                        style={{
+                          fontSize: '0.85rem',
+                          color: 'var(--status-success)',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Executable Path Configured
+                      </span>
+                    </div>
+                    <span className="badge badge-success">Verified</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.82rem' }}
+                    onClick={() =>
+                      updateConfig({ llama_server_path: 'C:\\llama.cpp\\llama-server.exe' })
+                    }
+                  >
+                    Auto-Detect Standard Path
+                  </button>
+                </div>
+              </div>
+
+              <div className="setup-guide-box">
+                <div className="guide-title">
+                  <Cpu size={16} style={{ color: 'var(--accent)' }} />
+                  <span>Engine Capabilities & Host Architecture</span>
+                </div>
+                <div className="guide-item">
+                  <span>•</span>
+                  <span>
+                    <strong>Processor:</strong> {profile?.cpuName || 'Host Processor'} with{' '}
+                    {profile?.physicalCores || 4} Physical Cores ({profile?.logicalCores || 8}{' '}
+                    Threads).
+                  </span>
+                </div>
+                <div className="guide-item">
+                  <span>•</span>
+                  <span>
+                    <strong>Acceleration:</strong> {profile?.gpuName || 'Graphics Adapter'} (
+                    {profile?.vramGb || 0} GB VRAM) with CUDA/ROCm offload.
+                  </span>
+                </div>
+                <div className="guide-item">
+                  <span>•</span>
+                  <span>
+                    <strong>Requirements:</strong> Supports AVX2 instructions, Flash Attention v2,
+                    and quantized GGUF v3 models.
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -158,7 +255,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
                   type="text"
                   className="form-input font-mono"
                   value={config?.models_dir || ''}
-                  onChange={(e) => {
+                  onChange={e => {
                     updateConfig({ models_dir: e.target.value });
                     fetchModels(e.target.value);
                   }}
@@ -172,11 +269,23 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
 
             <div style={{ marginTop: '16px', fontSize: '0.9rem' }}>
               <strong>Discovered Models ({models.length}):</strong>
-              <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div
+                style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}
+              >
                 {models.map((m, i) => (
-                  <div key={i} className="info-row" style={{ padding: '8px 12px', background: 'var(--bg-elevated)', borderRadius: '4px' }}>
+                  <div
+                    key={i}
+                    className="info-row"
+                    style={{
+                      padding: '8px 12px',
+                      background: 'var(--bg-elevated)',
+                      borderRadius: '4px',
+                    }}
+                  >
                     <span className="font-semibold">{m.name}</span>
-                    <span className="font-mono">{m.fileSizeGb} GB • {m.quantization}</span>
+                    <span className="font-mono">
+                      {m.fileSizeGb} GB • {m.quantization}
+                    </span>
                   </div>
                 ))}
                 {models.length === 0 && (
@@ -191,7 +300,11 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
               <button className="btn btn-outline" onClick={() => setStep(1)}>
                 <ArrowLeft size={16} /> Back
               </button>
-              <button className="btn btn-primary" onClick={() => setStep(3)}>
+              <button
+                className="btn btn-primary"
+                disabled={!isStepValid(2)}
+                onClick={() => setStep(3)}
+              >
                 Next: Performance Tuning <ArrowRight size={16} />
               </button>
             </div>
@@ -201,12 +314,21 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
         {/* STEP 3: Hardware Tuning & Smart Guardian */}
         {step === 3 && (
           <div className="step-content glass-card card-padding">
-            <div className="step-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div
+              className="step-header"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
               <div>
                 <h2>Step 3: Hardware-Adaptive Tuning</h2>
-                <p className="step-desc">Parameters automatically tuned for your detected hardware</p>
+                <p className="step-desc">
+                  Parameters automatically tuned for your detected hardware
+                </p>
               </div>
-              <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '0.8rem' }} onClick={() => fetchHardware()}>
+              <button
+                className="btn btn-outline"
+                style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                onClick={() => fetchHardware()}
+              >
                 <RefreshCw size={14} className={hardwareLoading ? 'spin' : ''} /> Detect Hardware
               </button>
             </div>
@@ -220,7 +342,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
                   {profile?.gpuName || 'GPU'} ({profile?.vramGb || 0} GB VRAM)
                 </div>
                 <div style={{ fontSize: '0.8rem', opacity: 0.9, marginTop: '2px' }}>
-                  Mode: <strong>{isCpuOnly ? '🔴 CPU Only' : `🟢 ${profile?.performanceTier?.toUpperCase()} GPU`}</strong>
+                  Mode:{' '}
+                  <strong>
+                    {isCpuOnly
+                      ? '🔴 CPU Only'
+                      : `🟢 ${profile?.performanceTier?.toUpperCase()} GPU`}
+                  </strong>
                 </div>
               </div>
             </div>
@@ -233,7 +360,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
                     <InfoTooltip
                       title="Flash Attention (--flash-attn)"
                       description="Accelerates model attention calculation and optimizes GPU memory footprint."
-                      recommendation={isCpuOnly ? "Disabled in CPU-only mode." : "Keep enabled for modern GPUs."}
+                      recommendation={
+                        isCpuOnly ? 'Disabled in CPU-only mode.' : 'Keep enabled for modern GPUs.'
+                      }
                       impact="Speeds up prompt processing and saves memory."
                     />
                   </div>
@@ -246,7 +375,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
                     type="checkbox"
                     checked={config?.flash_attn === 'on'}
                     disabled={isCpuOnly}
-                    onChange={(e) => updateConfig({ flash_attn: e.target.checked ? 'on' : 'off' })}
+                    onChange={e => updateConfig({ flash_attn: e.target.checked ? 'on' : 'off' })}
                   />
                   <span className="slider"></span>
                 </label>
@@ -259,19 +388,32 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
                     <InfoTooltip
                       title="KV Cache Precision (--cache-type-k/v)"
                       description="Quantization precision of the context memory buffer."
-                      recommendation={(profile?.vramGb || 0) <= 8 ? "q8_0 is highly recommended on your system to cut VRAM usage by 50%." : "f16 for max precision."}
+                      recommendation={
+                        (profile?.vramGb || 0) <= 8
+                          ? 'q8_0 is highly recommended on your system to cut VRAM usage by 50%.'
+                          : 'f16 for max precision.'
+                      }
                       impact="q8_0 saves 50% VRAM; q4_0 saves 75% VRAM."
                     />
                   </div>
-                  <div className="param-value font-mono">{config?.overrides?.cache_type_k || config?.cache_type_k || 'f16'} (VRAM Tradeoff)</div>
+                  <div className="param-value font-mono">
+                    {config?.overrides?.cache_type_k || config?.cache_type_k || 'f16'} (VRAM
+                    Tradeoff)
+                  </div>
                 </div>
                 <select
                   className="form-input font-mono"
                   style={{ width: '160px', padding: '4px 8px' }}
                   value={config?.overrides?.cache_type_k || config?.cache_type_k || 'f16'}
-                  onChange={(e) => {
+                  onChange={e => {
                     const val = e.target.value;
-                    updateConfig({ overrides: { ...(config?.overrides || {}), cache_type_k: val, cache_type_v: val } });
+                    updateConfig({
+                      overrides: {
+                        ...(config?.overrides || {}),
+                        cache_type_k: val,
+                        cache_type_v: val,
+                      },
+                    });
                   }}
                 >
                   <option value="f16">f16 (Full Precision)</option>
@@ -297,7 +439,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
                   className="form-input font-mono"
                   style={{ width: '140px', padding: '4px 8px' }}
                   value={config?.parallel_slots || 1}
-                  onChange={(e) => updateConfig({ parallel_slots: Number(e.target.value) })}
+                  onChange={e => updateConfig({ parallel_slots: Number(e.target.value) })}
                 >
                   <option value={1}>1 (Max Speed ⭐)</option>
                   <option value={2}>2 (Dual Slots)</option>
@@ -322,7 +464,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
                   className="form-input font-mono"
                   style={{ width: '130px', padding: '4px 8px' }}
                   value={config?.ubatch_size || 512}
-                  onChange={(e) => updateConfig({ ubatch_size: Number(e.target.value) })}
+                  onChange={e => updateConfig({ ubatch_size: Number(e.target.value) })}
                 >
                   <option value={128}>128</option>
                   <option value={256}>256</option>
@@ -352,7 +494,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
             </div>
 
             <div className="param-grid">
-              {['vscode', 'claude-code', 'cursor', 'rest-api'].map((item) => {
+              {['vscode', 'claude-code', 'cursor', 'rest-api'].map(item => {
                 const isSelected = (config?.integrations || []).includes(item);
                 return (
                   <div key={item} className="param-card" style={{ textTransform: 'capitalize' }}>
@@ -363,11 +505,11 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
                     <input
                       type="checkbox"
                       checked={isSelected}
-                      onChange={(e) => {
+                      onChange={e => {
                         const list = config?.integrations || [];
                         const next = e.target.checked
                           ? [...list, item]
-                          : list.filter((i) => i !== item);
+                          : list.filter(i => i !== item);
                         updateConfig({ integrations: next });
                       }}
                     />
@@ -401,7 +543,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
             </div>
             <div className="info-row">
               <span className="info-label">Models Folder</span>
-              <span className="info-value font-mono">{config?.models_dir} ({models.length} models)</span>
+              <span className="info-value font-mono">
+                {config?.models_dir} ({models.length} models)
+              </span>
             </div>
             <div className="info-row">
               <span className="info-label">Context Window</span>
@@ -412,7 +556,11 @@ export const SetupPage: React.FC<SetupPageProps> = ({ onComplete }) => {
               <button className="btn btn-outline" onClick={() => setStep(4)}>
                 <ArrowLeft size={16} /> Back
               </button>
-              <button className="btn btn-primary" onClick={handleFinishSetup}>
+              <button
+                className="btn btn-primary"
+                disabled={!isStepValid(5)}
+                onClick={handleFinishSetup}
+              >
                 <Play size={16} /> Complete Setup & Launch Dashboard
               </button>
             </div>

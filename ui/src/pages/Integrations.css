@@ -9,6 +9,16 @@
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 16px;
+  gap: 12px;
+}
+
+.integration-card-header h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .flex-items-center {
@@ -17,7 +27,7 @@
 }
 
 .gap-10 {
-  gap: 10px;
+  gap: 12px;
 }
 
 .card-sub {
@@ -27,18 +37,27 @@
 }
 
 .card-code-block {
-  background: #0A0C10;
+  background: #080a0f;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-button);
-  padding: 12px;
-  font-size: 0.8rem;
-  color: var(--text-primary);
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-body);
   margin-bottom: 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  line-height: 1.5;
+}
+
+.card-code-block div {
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .card-footer-actions {
   display: flex;
+  align-items: center;
   gap: 10px;
 }

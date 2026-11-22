@@ -84,7 +84,7 @@ if ([string]::IsNullOrWhiteSpace($LlamaDir)) {
 }
 
 # 1. Run SetupRouter.ps1 to calculate optimal settings and scan models
-$setupScript = Join-Path $ManagerDir "llo-core\SetupRouter.ps1"
+$setupScript = Join-Path $ManagerDir "llo-core/SetupRouter.ps1"
 if (-not (Test-Path $setupScript)) {
     throw "SetupRouter.ps1 script not found at: $setupScript"
 }
@@ -193,7 +193,7 @@ $localBase = "http://$HostAddr`:$Port"
 $openaiBase = "$localBase/v1"
 
 # Update static .vscode/settings.json if present to prevent client port mismatches
-$vsCodeSettings = Join-Path $ManagerDir ".vscode\settings.json"
+$vsCodeSettings = Join-Path $ManagerDir ".vscode/settings.json"
 if (Test-Path $vsCodeSettings) {
     try {
         $vsJson = Get-Content $vsCodeSettings -Raw | ConvertFrom-Json

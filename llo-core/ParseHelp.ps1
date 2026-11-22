@@ -17,10 +17,12 @@ if (Test-Path (Join-Path $lloCoreDir "Paths.ps1")) {
 if ([string]::IsNullOrWhiteSpace($CacheFile)) {
     $userDir = if (Get-Command "Get-LLMManagerUserDataDir" -ErrorAction SilentlyContinue) {
         Get-LLMManagerUserDataDir
-    } else { $null }
-    if ($userDir -and (Test-Path $userDir)) {
+    }
+    else { $null }
+    if ($userDir -and (Test-Path $userDir -ErrorAction SilentlyContinue)) {
         $CacheFile = Join-Path $userDir ".cached_flags.json"
-    } else {
+    }
+    else {
         $CacheFile = Join-Path $ManagerDir ".cached_flags.json"
     }
 }
@@ -28,7 +30,8 @@ if ([string]::IsNullOrWhiteSpace($LlamaServerPath)) {
 
     $configFile = if (Get-Command "Get-LLMManagerConfigPath" -ErrorAction SilentlyContinue) {
         Get-LLMManagerConfigPath -ManagerDir $ManagerDir
-    } else {
+    }
+    else {
         Join-Path $ManagerDir "llo-config.json"
     }
     if ($configFile -and (Test-Path $configFile)) {
@@ -37,7 +40,8 @@ if ([string]::IsNullOrWhiteSpace($LlamaServerPath)) {
             if ($config.llama_server_path) {
                 $LlamaServerPath = $config.llama_server_path
             }
-        } catch {}
+        }
+        catch {}
     }
     if ([string]::IsNullOrWhiteSpace($LlamaServerPath)) {
         $LlamaServerPath = "llama-server"
@@ -48,9 +52,15 @@ function Get-LlamaServerFlags {
     param([string]$ServerPath)
 
     if (-not (Test-Path $ServerPath)) {
-        $binaryName = if ($IsWindows) { "llama-server.exe" } else { "llama-server" }
-        Write-Host "[WARNING] $binaryName not found at: $ServerPath. Skipping live help parsing." -ForegroundColor Yellow
-        return @()
+        $found = Get-Command $ServerPath -ErrorAction SilentlyContinue
+        if ($found) {
+            $ServerPath = $found.Source
+        }
+        else {
+            $binaryName = if ($IsWindows) { "llama-server.exe" } else { "llama-server" }
+            Write-Host "[WARNING] $binaryName not found at: $ServerPath. Skipping live help parsing." -ForegroundColor Yellow
+            return @()
+        }
     }
 
     Write-Host "Running $ServerPath --help to extract options..." -ForegroundColor Cyan
@@ -94,7 +104,7 @@ function Get-LlamaServerFlags {
 
             # Extract value token: an ALL-CAPS word/bracket token after the flags section
             $valueToken = $null
-            if ($line -match '(?:--[\w-]+(?:,\s+)?)+\s+([A-Z0-9_\[\]{}/|.*-]{1,40})\s{2,}') {
+            if ($line -match '(?:--[\w-]+(?:,\s+)?)+\s+([A-Z0-9_\[\]{}/|*.-]{1,40})\s{2,}') {
                 $valueToken = $Matches[1].Trim()
             }
 
@@ -120,15 +130,16 @@ function Get-LlamaServerFlags {
             # Register every additional alias as its own entry (allows allow-list lookups by any alias)
             foreach ($alias in ($longAliases | Select-Object -Skip 1)) {
                 $flags.Add([pscustomobject]@{
-                    Short       = $null
-                    Long        = $alias
-                    Aliases     = $longAliases
-                    ValueToken  = $valueToken
-                    Description = "(alias) $desc"
-                    EnvVar      = $envVar
-                })
+                        Short       = $null
+                        Long        = $alias
+                        Aliases     = $longAliases
+                        ValueToken  = $valueToken
+                        Description = "(alias) $desc"
+                        EnvVar      = $envVar
+                    })
             }
-        } else {
+        }
+        else {
             # Continuation description line
             if ($currentFlag -and $line.Trim() -and -not ($line -match '^---')) {
                 $trimmedLine = $line.Trim()
@@ -156,23 +167,23 @@ function Update-CachedFlags {
     $currentFlags = try { Get-LlamaServerFlags -ServerPath $ServerPath } catch { @() }
     if ($currentFlags.Count -eq 0) {
         Write-Host "Warning: No flags parsed from llama-server --help (binary missing or unreadable)." -ForegroundColor Yellow
-        if (Test-Path $CachePath) {
+        if (Test-Path $CachePath -ErrorAction SilentlyContinue) {
             Write-Host "Preserving existing cached flags at $CachePath." -ForegroundColor Cyan
         }
         return [pscustomobject]@{
-            Added = @()
-            Removed = @()
+            Added        = @()
+            Removed      = @()
             TotalCurrent = 0
         }
     }
 
     $diffResult = [pscustomobject]@{
-        Added = @()
-        Removed = @()
+        Added        = @()
+        Removed      = @()
         TotalCurrent = $currentFlags.Count
     }
 
-    if (Test-Path $CachePath) {
+    if (Test-Path $CachePath -ErrorAction SilentlyContinue) {
         try {
             $cachedFlags = Get-Content $CachePath -Raw | ConvertFrom-Json
             
@@ -193,10 +204,12 @@ function Update-CachedFlags {
                     $diffResult.Removed += $flag
                 }
             }
-        } catch {
+        }
+        catch {
             Write-Host "Error reading cached flags file. Overwriting cache..." -ForegroundColor Yellow
         }
-    } else {
+    }
+    else {
         Write-Host "No cached flags found. Initializing cache registry..." -ForegroundColor Cyan
     }
 
@@ -209,7 +222,7 @@ function Update-CachedFlags {
 }
 
 # If run directly
-if ($MyInvocation.InvocationName -eq '.' -or $MyInvocation.InvocationName -eq '&' -or $MyInvocation.MyCommand.Name -eq 'ParseHelp.ps1') {
+if ($MyInvocation.MyCommand.Name -eq 'ParseHelp.ps1' -and $MyInvocation.InvocationName -ne '.') {
     $diff = Update-CachedFlags
     if ($diff) {
         Write-Host "--- Help Parser Diff Results ---" -ForegroundColor Green

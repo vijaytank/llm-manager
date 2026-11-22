@@ -2,20 +2,224 @@ import hashlib
 import json
 import os
 import uuid
+import time
 import httpx
+import ssl
+import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Response
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse
 from typing import Optional, Dict, Any, List
+from collections import defaultdict
+from threading import Lock
+import re
+
+logger = logging.getLogger("context_manager.proxy")
 
 from .config import load_config, ContextManagerConfig
 from .preset_reader import read_preset_ctx_limit
 from .context_engine import ContextEngine
 
+# Simple in-memory metrics storage (for Prometheus exposition)
+class MetricsCollector:
+    def __init__(self):
+        self._lock = Lock()
+        self.requests_total = defaultdict(int)
+        self.requests_duration = defaultdict(list)
+        self.active_sessions = 0
+        self.compressions_total = 0
+        self.summarizations_total = 0
+        self.errors_total = defaultdict(int)
+        self.upstream_requests_total = defaultdict(int)
+        self.upstream_errors_total = defaultdict(int)
+        self.cache_hits = 0
+        self.cache_misses = 0
+    
+    def record_request(self, method: str, path: str, duration: float, status: int):
+        with self._lock:
+            key = f"{method}:{path}"
+            self.requests_total[key] += 1
+            self.requests_duration[key].append(duration)
+            # Keep only last 1000 durations per endpoint
+            if len(self.requests_duration[key]) > 1000:
+                self.requests_duration[key] = self.requests_duration[key][-1000:]
+    
+    def record_compression(self):
+        with self._lock:
+            self.compressions_total += 1
+    
+    def record_summarization(self):
+        with self._lock:
+            self.summarizations_total += 1
+    
+    def record_error(self, error_type: str):
+        with self._lock:
+            self.errors_total[error_type] += 1
+    
+    def record_upstream_request(self, method: str, status: int):
+        with self._lock:
+            key = f"{method}:{status}"
+            self.upstream_requests_total[key] += 1
+    
+    def record_upstream_error(self, error_type: str):
+        with self._lock:
+            self.upstream_errors_total[error_type] += 1
+    
+    def set_active_sessions(self, count: int):
+        with self._lock:
+            self.active_sessions = count
+    
+    def record_cache_hit(self):
+        with self._lock:
+            self.cache_hits += 1
+    
+    def record_cache_miss(self):
+        with self._lock:
+            self.cache_misses += 1
+    
+    def generate_prometheus(self) -> str:
+        with self._lock:
+            lines = [
+                "# HELP llo_proxy_requests_total Total number of HTTP requests",
+                "# TYPE llo_proxy_requests_total counter",
+            ]
+            for key, count in self.requests_total.items():
+                method, path = key.split(":", 1)
+                lines.append(f'llo_proxy_requests_total{{method="{method}",path="{path}"}} {count}')
+            
+            lines.extend([
+                "",
+                "# HELP llo_proxy_request_duration_seconds Request latency in seconds",
+                "# TYPE llo_proxy_request_duration_seconds summary",
+            ])
+            for key, durations in self.requests_duration.items():
+                if durations:
+                    method, path = key.split(":", 1)
+                    count = len(durations)
+                    sum_dur = sum(durations)
+                    lines.append(f'llo_proxy_request_duration_seconds_count{{method="{method}",path="{path}"}} {count}')
+                    lines.append(f'llo_proxy_request_duration_seconds_sum{{method="{method}",path="{path}"}} {sum_dur:.6f}')
+            
+            lines.extend([
+                "",
+                "# HELP llo_proxy_active_sessions Number of active sessions",
+                "# TYPE llo_proxy_active_sessions gauge",
+                f"llo_proxy_active_sessions {self.active_sessions}",
+                "",
+                "# HELP llo_proxy_compressions_total Total number of context compressions",
+                "# TYPE llo_proxy_compressions_total counter",
+                f"llo_proxy_compressions_total {self.compressions_total}",
+                "",
+                "# HELP llo_proxy_summarizations_total Total number of summarization calls",
+                "# TYPE llo_proxy_summarizations_total counter",
+                f"llo_proxy_summarizations_total {self.summarizations_total}",
+                "",
+                "# HELP llo_proxy_errors_total Total number of errors by type",
+                "# TYPE llo_proxy_errors_total counter",
+            ])
+            for error_type, count in self.errors_total.items():
+                lines.append(f'llo_proxy_errors_total{{type="{error_type}"}} {count}')
+            
+            lines.extend([
+                "",
+                "# HELP llo_proxy_upstream_requests_total Total upstream requests",
+                "# TYPE llo_proxy_upstream_requests_total counter",
+            ])
+            for key, count in self.upstream_requests_total.items():
+                method, status = key.split(":", 1)
+                lines.append(f'llo_proxy_upstream_requests_total{{method="{method}",status="{status}"}} {count}')
+            
+            lines.extend([
+                "",
+                "# HELP llo_proxy_upstream_errors_total Total upstream errors",
+                "# TYPE llo_proxy_upstream_errors_total counter",
+            ])
+            for error_type, count in self.upstream_errors_total.items():
+                lines.append(f'llo_proxy_upstream_errors_total{{type="{error_type}"}} {count}')
+            
+            lines.extend([
+                "",
+                "# HELP llo_proxy_cache_hits_total Total cache hits",
+                "# TYPE llo_proxy_cache_hits_total counter",
+                f"llo_proxy_cache_hits_total {self.cache_hits}",
+                "",
+                "# HELP llo_proxy_cache_misses_total Total cache misses",
+                "# TYPE llo_proxy_cache_misses_total counter",
+                f"llo_proxy_cache_misses_total {self.cache_misses}",
+            ])
+            
+            return "\n".join(lines) + "\n"
+
+metrics = MetricsCollector()
+
+
+# Rate Limiter (simple in-memory token bucket per client IP)
+class RateLimiter:
+    def __init__(self, max_requests: int = 100, window_sec: int = 60):
+        self.max_requests = max_requests
+        self.window_sec = window_sec
+        self._lock = Lock()
+        self.requests: Dict[str, List[float]] = defaultdict(list)
+        self._check_counter: int = 0
+
+    def is_allowed(self, client_id: str) -> bool:
+        now = time.time()
+        with self._lock:
+            self._check_counter += 1
+            if self._check_counter >= 1000:
+                self._check_counter = 0
+                cutoff_all = now - self.window_sec
+                dead_keys = [k for k, timestamps in self.requests.items() if not timestamps or timestamps[-1] <= cutoff_all]
+                for k in dead_keys:
+                    del self.requests[k]
+
+            # Remove old requests outside the window
+            cutoff = now - self.window_sec
+            self.requests[client_id] = [t for t in self.requests[client_id] if t > cutoff]
+            
+            if len(self.requests[client_id]) >= self.max_requests:
+                return False
+            
+            self.requests[client_id].append(now)
+            return True
+    
+    def get_remaining(self, client_id: str) -> int:
+        now = time.time()
+        with self._lock:
+            cutoff = now - self.window_sec
+            self.requests[client_id] = [t for t in self.requests[client_id] if t > cutoff]
+            return max(0, self.max_requests - len(self.requests[client_id]))
+
+
+def validate_session_id(session_id: str, cfg: ContextManagerConfig) -> bool:
+    """Validate session ID format and length to prevent fixation attacks."""
+    if not session_id:
+        return False
+    if len(session_id) < cfg.session_id_min_length:
+        return False
+    if len(session_id) > cfg.session_id_max_length:
+        return False
+    # Check allowed characters
+    allowed_pattern = re.compile(f'^[{re.escape(cfg.session_id_allowed_chars)}]+$')
+    if not allowed_pattern.match(session_id):
+        return False
+    return True
+
+
+rate_limiter = RateLimiter()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cfg = load_config()
+    
+    # Update rate limiter with config values
+    rate_limiter.max_requests = cfg.rate_limit_requests
+    rate_limiter.window_sec = cfg.rate_limit_window_sec
+    
+    def on_summarize():
+        metrics.record_summarization()
+    
     eng = ContextEngine(
         warn_threshold=cfg.warn_threshold,
         keep_turns=cfg.keep_turns,
@@ -25,13 +229,45 @@ async def lifespan(app: FastAPI):
         tokenizer_repo_override=cfg.tokenizer_repo,
         eviction_interval_sec=cfg.eviction_interval_sec,
         session_ttl_sec=cfg.session_ttl_sec,
+        on_summarize=on_summarize,
     )
     eng.start_background_tasks()
-    limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
-    http_client = httpx.AsyncClient(limits=limits, timeout=600.0)
+    # Use configurable connection pool limits
+    limits = httpx.Limits(
+        max_connections=cfg.http_max_connections,
+        max_keepalive_connections=cfg.http_max_keepalive
+    )
+    http_client = httpx.AsyncClient(limits=limits, timeout=cfg.http_timeout_sec)
     app.state.config = cfg
     app.state.engine = eng
     app.state.http_client = http_client
+    app.state.metrics = metrics
+    
+    # Create SSL context if TLS enabled
+    ssl_context = None
+    if cfg.tls_enabled and cfg.tls_cert_path and cfg.tls_key_path:
+        try:
+            ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            ssl_context.load_cert_chain(cfg.tls_cert_path, cfg.tls_key_path)
+            logger.info(f"TLS enabled with cert: {cfg.tls_cert_path}")
+            try:
+                cert_dict = ssl._ssl._test_decode_cert(cfg.tls_cert_path)
+                not_after_str = cert_dict.get("notAfter")
+                if not_after_str:
+                    expire_ts = ssl.cert_time_to_seconds(not_after_str)
+                    days_left = (expire_ts - time.time()) / 86400.0
+                    if days_left < 30.0:
+                        logger.warning(
+                            f"TLS certificate {cfg.tls_cert_path} expires in {days_left:.1f} days (expires {not_after_str})"
+                        )
+            except Exception as cert_err:
+                logger.debug(f"Could not parse TLS cert expiration: {cert_err}")
+        except Exception as e:
+            logger.warning(f"Failed to load TLS cert: {e}")
+            ssl_context = None
+    
+    app.state.ssl_context = ssl_context
+    
     try:
         yield
     finally:
@@ -74,8 +310,15 @@ def extract_session_id(request: Request, body: Dict[str, Any]) -> str:
     if req_id and req_id.strip():
         return f"session_{req_id.strip()}"
 
-    # 4. Fallback: Generate a unique random session ID to prevent collisions under NAT
-    return f"session_{uuid.uuid4().hex[:16]}"
+    # 4. Fallback: Stable fallback based on client IP + User-Agent with warning log
+    client_ip = request.client.host if getattr(request, "client", None) else "127.0.0.1"
+    ua = request.headers.get("user-agent", "")
+    stable_raw = f"{client_ip}:{ua}"
+    stable_hash = hashlib.sha256(stable_raw.encode("utf-8")).hexdigest()[:16]
+    logger.warning(
+        f"Missing session ID in request headers or body. Falling back to client-derived session ID: session_{stable_hash}"
+    )
+    return f"session_{stable_hash}"
 
 @app.get("/health")
 async def health_check(request: Request):
@@ -87,6 +330,17 @@ async def health_check(request: Request):
         "warn_threshold": cfg.warn_threshold,
         "keep_turns": cfg.keep_turns
     }
+
+@app.get("/metrics")
+async def metrics_endpoint(request: Request):
+    """Prometheus metrics endpoint"""
+    cfg = get_config(request)
+    if not cfg.metrics_enabled:
+        return PlainTextResponse("# Metrics disabled\n", status_code=404)
+    # Update active sessions count
+    eng = get_engine(request)
+    metrics.set_active_sessions(len(eng.sessions))
+    return PlainTextResponse(metrics.generate_prometheus(), media_type="text/plain; version=0.0.4; charset=utf-8")
 
 def convert_anthropic_tools_to_openai(anthropic_tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     openai_tools = []
@@ -124,22 +378,29 @@ def convert_anthropic_tool_choice_to_openai(tool_choice: Any) -> Any:
     return None
 
 def normalize_system_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    system_contents = []
+    system_messages = []
     non_system_messages = []
     
     for msg in messages:
         if not isinstance(msg, dict):
             continue
         if msg.get("role") == "system":
-            content = msg.get("content", "")
-            if content:
-                system_contents.append(str(content))
+            system_messages.append(msg)
         else:
             non_system_messages.append(msg)
             
-    if system_contents:
-        combined_system = {"role": "system", "content": "\n\n".join(system_contents)}
-        return [combined_system] + non_system_messages
+    if system_messages:
+        compressed_history = [m for m in system_messages if m.get("name") == "compressed_history"]
+        standard_systems = [m for m in system_messages if m.get("name") != "compressed_history"]
+        
+        result = []
+        if standard_systems:
+            combined_content = "\n\n".join(str(m.get("content", "")) for m in standard_systems if m.get("content"))
+            combined_system = {"role": "system", "content": combined_content}
+            result.append(combined_system)
+        for ch in compressed_history:
+            result.append(ch)
+        return result + non_system_messages
     return non_system_messages
 
 def convert_anthropic_to_openai_messages(anthropic_body: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -196,9 +457,16 @@ def convert_anthropic_to_openai_messages(anthropic_body: Dict[str, Any]) -> List
                         res_id = block.get("tool_use_id", "")
                         res_content = block.get("content", "")
                         if isinstance(res_content, list):
-                            res_content = "\n".join([
-                                b.get("text", "") for b in res_content if isinstance(b, dict) and b.get("type") == "text"
-                            ])
+                            parts = []
+                            for b in res_content:
+                                if isinstance(b, str):
+                                    parts.append(b)
+                                elif isinstance(b, dict):
+                                    if b.get("type") == "text":
+                                        parts.append(b.get("text", ""))
+                                    else:
+                                        parts.append(json.dumps(b))
+                            res_content = "\n".join(parts)
                         tool_results.append({
                             "role": "tool",
                             "tool_call_id": res_id,
@@ -301,9 +569,17 @@ def convert_openai_to_anthropic_response(
         from .tokenizer_cache import TokenizerCache
         _tc = TokenizerCache()
         if input_tokens == 0 and messages:
-            # Character heuristic: ~4 chars per token across all messages
-            raw_text = " ".join(str(m.get("content", "")) for m in messages)
-            input_tokens = max(1, len(raw_text) // 4)
+            tot = 0
+            for m in messages:
+                c = m.get("content", "")
+                if isinstance(c, str):
+                    tot += _tc.count_tokens(c, model)
+                elif isinstance(c, list):
+                    for b in c:
+                        if isinstance(b, dict) and b.get("type") == "text":
+                            tot += _tc.count_tokens(b.get("text", ""), model)
+            tot += len(messages) * 4
+            input_tokens = max(1, tot)
         if output_tokens == 0:
             output_tokens = _tc.count_tokens(text_content, model)
 
@@ -323,6 +599,64 @@ def convert_openai_to_anthropic_response(
             "output_tokens": max(1, output_tokens)
         }
     }
+
+async def parse_sse_events(response: httpx.Response):
+    """Parses SSE stream according to HTML5 SSE specification.
+    Handles multi-line data, event, id, retry, and comment lines.
+    Yields dicts with {'event': str, 'data': str, 'id': Optional[str], 'retry': Optional[int]}
+    """
+    buffer_data = []
+    current_event = None
+    current_id = None
+    current_retry = None
+
+    async for line in response.aiter_lines():
+        line = line.rstrip("\r\n")
+        if not line:
+            if buffer_data:
+                data_str = "\n".join(buffer_data)
+                yield {
+                    "event": current_event or "message",
+                    "data": data_str,
+                    "id": current_id,
+                    "retry": current_retry,
+                }
+                buffer_data = []
+                current_event = None
+                current_id = None
+                current_retry = None
+            continue
+
+        if line.startswith(":"):
+            continue
+
+        if ":" in line:
+            field, _, val = line.partition(":")
+            if val.startswith(" "):
+                val = val[1:]
+        else:
+            field = line
+            val = ""
+
+        if field == "data":
+            buffer_data.append(val)
+        elif field == "event":
+            current_event = val
+        elif field == "id":
+            current_id = val
+        elif field == "retry":
+            try:
+                current_retry = int(val)
+            except ValueError:
+                pass
+
+    if buffer_data:
+        yield {
+            "event": current_event or "message",
+            "data": "\n".join(buffer_data),
+            "id": current_id,
+            "retry": current_retry,
+        }
 
 async def forward_stream_anthropic(
     response: httpx.Response,
@@ -351,101 +685,99 @@ async def forward_stream_anthropic(
     try:
         yield f"event: message_start\ndata: {json.dumps({'type': 'message_start', 'message': {'id': msg_id, 'type': 'message', 'role': 'assistant', 'content': [], 'model': model, 'stop_reason': None, 'stop_sequence': None, 'usage': {'input_tokens': input_tokens, 'output_tokens': 1}}})}\n\n".encode("utf-8")
 
-        async for line_bytes in response.aiter_lines():
-            if not line_bytes:
+        async for sse_event in parse_sse_events(response):
+            data_str = sse_event.get("data", "")
+            if not data_str:
                 continue
-            line = line_bytes.strip()
-            if line.startswith("data:"):
-                data_str = line[5:].strip()
-                if data_str == "[DONE]":
-                    break
-                try:
-                    chunk_json = json.loads(data_str)
-                except (json.JSONDecodeError, ValueError):
-                    continue  # malformed SSE data line — skip
-                try:
-                    choices = chunk_json.get("choices", [])
-                    if choices:
-                        choice0 = choices[0]
-                        delta = choice0.get("delta", {})
-                        finish_reason = choice0.get("finish_reason")
+            if data_str == "[DONE]":
+                break
+            try:
+                chunk_json = json.loads(data_str)
+            except (json.JSONDecodeError, ValueError):
+                continue  # malformed SSE data line — skip
+            try:
+                choices = chunk_json.get("choices", [])
+                if choices:
+                    choice0 = choices[0]
+                    delta = choice0.get("delta", {})
+                    finish_reason = choice0.get("finish_reason")
 
-                        if finish_reason:
-                            if finish_reason in ("tool_calls", "function_call"):
-                                final_stop_reason = "tool_use"
-                            elif finish_reason == "length":
-                                final_stop_reason = "max_tokens"
+                    if finish_reason:
+                        if finish_reason in ("tool_calls", "function_call"):
+                            final_stop_reason = "tool_use"
+                        elif finish_reason == "length":
+                            final_stop_reason = "max_tokens"
 
-                        # 1. Text content delta
-                        content_piece = delta.get("content")
-                        if content_piece:
-                            output_token_count += eng.tokenizer_cache.count_tokens(content_piece, model) if eng is not None else max(1, len(content_piece) // 4)
-                            if current_block_type != "text":
+                    # 1. Text content delta
+                    content_piece = delta.get("content")
+                    if content_piece:
+                        output_token_count += eng.tokenizer_cache.count_tokens(content_piece, model) if eng is not None else max(1, len(content_piece) // 4)
+                        if current_block_type != "text":
+                            if current_block_type is not None:
+                                yield f"event: content_block_stop\ndata: {json.dumps({'type': 'content_block_stop', 'index': current_block_index})}\n\n".encode("utf-8")
+                            current_block_index = next_block_index
+                            next_block_index += 1
+                            current_block_type = "text"
+                            has_emitted_any_block = True
+                            yield f"event: content_block_start\ndata: {json.dumps({'type': 'content_block_start', 'index': current_block_index, 'content_block': {'type': 'text', 'text': ''}})}\n\n".encode("utf-8")
+
+                        delta_evt = {
+                            "type": "content_block_delta",
+                            "index": current_block_index,
+                            "delta": {
+                                "type": "text_delta",
+                                "text": content_piece
+                            }
+                        }
+                        yield f"event: content_block_delta\ndata: {json.dumps(delta_evt)}\n\n".encode("utf-8")
+
+                    # 2. Tool calls delta
+                    tool_calls = delta.get("tool_calls")
+                    if tool_calls and isinstance(tool_calls, list):
+                        final_stop_reason = "tool_use"
+                        for tc in tool_calls:
+                            tc_idx = tc.get("index", 0)
+                            fn_data = tc.get("function", {})
+                            tc_id = tc.get("id")
+                            fn_name = fn_data.get("name")
+                            fn_args = fn_data.get("arguments")
+
+                            if tc_idx not in active_tool_calls:
                                 if current_block_type is not None:
                                     yield f"event: content_block_stop\ndata: {json.dumps({'type': 'content_block_stop', 'index': current_block_index})}\n\n".encode("utf-8")
-                                current_block_index = next_block_index
+
+                                anthropic_idx = next_block_index
                                 next_block_index += 1
-                                current_block_type = "text"
-                                has_emitted_any_block = True
-                                yield f"event: content_block_start\ndata: {json.dumps({'type': 'content_block_start', 'index': current_block_index, 'content_block': {'type': 'text', 'text': ''}})}\n\n".encode("utf-8")
-
-                            delta_evt = {
-                                "type": "content_block_delta",
-                                "index": current_block_index,
-                                "delta": {
-                                    "type": "text_delta",
-                                    "text": content_piece
+                                tool_id = tc_id or f"toolu_{uuid.uuid4().hex[:16]}"
+                                tool_name = fn_name or "tool"
+                                
+                                active_tool_calls[tc_idx] = {
+                                    "id": tool_id,
+                                    "name": tool_name,
+                                    "anthropic_index": anthropic_idx
                                 }
-                            }
-                            yield f"event: content_block_delta\ndata: {json.dumps(delta_evt)}\n\n".encode("utf-8")
+                                current_block_index = anthropic_idx
+                                current_block_type = "tool_use"
+                                has_emitted_any_block = True
 
-                        # 2. Tool calls delta
-                        tool_calls = delta.get("tool_calls")
-                        if tool_calls and isinstance(tool_calls, list):
-                            final_stop_reason = "tool_use"
-                            for tc in tool_calls:
-                                tc_idx = tc.get("index", 0)
-                                fn_data = tc.get("function", {})
-                                tc_id = tc.get("id")
-                                fn_name = fn_data.get("name")
-                                fn_args = fn_data.get("arguments")
+                                yield f"event: content_block_start\ndata: {json.dumps({'type': 'content_block_start', 'index': anthropic_idx, 'content_block': {'type': 'tool_use', 'id': tool_id, 'name': tool_name, 'input': {}}})}\n\n".encode("utf-8")
 
-                                if tc_idx not in active_tool_calls:
-                                    if current_block_type is not None:
-                                        yield f"event: content_block_stop\ndata: {json.dumps({'type': 'content_block_stop', 'index': current_block_index})}\n\n".encode("utf-8")
-
-                                    anthropic_idx = next_block_index
-                                    next_block_index += 1
-                                    tool_id = tc_id or f"toolu_{uuid.uuid4().hex[:16]}"
-                                    tool_name = fn_name or "tool"
-                                    
-                                    active_tool_calls[tc_idx] = {
-                                        "id": tool_id,
-                                        "name": tool_name,
-                                        "anthropic_index": anthropic_idx
+                            info = active_tool_calls[tc_idx]
+                            if fn_args:
+                                tok_count = eng.tokenizer_cache.count_tokens(fn_args, model) if eng is not None else max(1, len(fn_args) // 4)
+                                output_token_count += tok_count
+                                delta_evt = {
+                                    "type": "content_block_delta",
+                                    "index": info["anthropic_index"],
+                                    "delta": {
+                                        "type": "input_json_delta",
+                                        "partial_json": fn_args
                                     }
-                                    current_block_index = anthropic_idx
-                                    current_block_type = "tool_use"
-                                    has_emitted_any_block = True
-
-                                    yield f"event: content_block_start\ndata: {json.dumps({'type': 'content_block_start', 'index': anthropic_idx, 'content_block': {'type': 'tool_use', 'id': tool_id, 'name': tool_name, 'input': {}}})}\n\n".encode("utf-8")
-
-                                info = active_tool_calls[tc_idx]
-                                if fn_args:
-                                    tok_count = eng.tokenizer_cache.count_tokens(fn_args, model) if eng is not None else max(1, len(fn_args) // 4)
-                                    output_token_count += tok_count
-                                    delta_evt = {
-                                        "type": "content_block_delta",
-                                        "index": info["anthropic_index"],
-                                        "delta": {
-                                            "type": "input_json_delta",
-                                            "partial_json": fn_args
-                                        }
-                                    }
-                                    yield f"event: content_block_delta\ndata: {json.dumps(delta_evt)}\n\n".encode("utf-8")
-                except Exception as e:
-                    print(f"[proxy] Error processing stream chunk: {e}")
-                    break
+                                }
+                                yield f"event: content_block_delta\ndata: {json.dumps(delta_evt)}\n\n".encode("utf-8")
+            except Exception as e:
+                print(f"[proxy] Error processing stream chunk: {e}")
+                break
 
         if not has_emitted_any_block:
             yield f"event: content_block_start\ndata: {json.dumps({'type': 'content_block_start', 'index': 0, 'content_block': {'type': 'text', 'text': ''}})}\n\n".encode("utf-8")
@@ -467,8 +799,20 @@ async def forward_stream_openai(response: httpx.Response, client: httpx.AsyncCli
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
 async def proxy_all(request: Request, path: str):
+    start_time = time.time()
     cfg = get_config(request)
     eng = get_engine(request)
+
+    # Rate limiting
+    if cfg.rate_limit_enabled:
+        client_ip = request.client.host if request.client else "unknown"
+        if not rate_limiter.is_allowed(client_ip):
+            metrics.record_error("rate_limit_exceeded")
+            return JSONResponse(
+                {"error": {"message": "Rate limit exceeded", "type": "rate_limit_error"}},
+                status_code=429,
+                headers={"Retry-After": str(cfg.rate_limit_window_sec)}
+            )
 
     clean_path = path.lstrip("/")
     is_anthropic_messages = (
@@ -478,11 +822,18 @@ async def proxy_all(request: Request, path: str):
     )
     is_openai_chat = clean_path.endswith("chat/completions")
 
+    # Record request metrics
+    def record_metrics(status_code: int):
+        duration = time.time() - start_time
+        metrics.record_request(request.method, clean_path, duration, status_code)
+
     # Handle Anthropic count_tokens endpoint
     if clean_path.endswith("count_tokens"):
         try:
             body = await request.json()
         except Exception:
+            record_metrics(400)
+            metrics.record_error("invalid_json")
             return JSONResponse(
                 {"error": {"message": "Invalid JSON in request body", "type": "invalid_request_error"}},
                 status_code=400
@@ -490,6 +841,7 @@ async def proxy_all(request: Request, path: str):
         messages = convert_anthropic_to_openai_messages(body)
         model_alias = body.get("model", "")
         token_count = eng.count_tokens_messages(messages, model_alias=model_alias)
+        record_metrics(200)
         return JSONResponse({"input_tokens": token_count})
 
     client = get_http_client(request)
@@ -506,10 +858,15 @@ async def proxy_all(request: Request, path: str):
                 content=req_content
             )
             resp = await client.send(req, stream=True)
-        except Exception:
+        except Exception as e:
+            record_metrics(502)
+            metrics.record_error("upstream_connection")
+            metrics.record_upstream_error("connection")
             raise
 
         if resp.headers.get("content-type", "").startswith("text/event-stream"):
+            record_metrics(resp.status_code)
+            metrics.record_upstream_request(request.method, resp.status_code)
             return StreamingResponse(
                 forward_stream_openai(resp, client),
                 status_code=resp.status_code,
@@ -518,6 +875,8 @@ async def proxy_all(request: Request, path: str):
         else:
             content_bytes = await resp.aread()
             await resp.aclose()
+            record_metrics(resp.status_code)
+            metrics.record_upstream_request(request.method, resp.status_code)
             return Response(content=content_bytes, status_code=resp.status_code, headers=dict(resp.headers))
 
     # Inspect request body
@@ -533,6 +892,14 @@ async def proxy_all(request: Request, path: str):
     max_tokens = body.get("max_tokens", 512)
     is_stream = body.get("stream", False)
     session_id = extract_session_id(request, body)
+
+    # Validate session ID format to prevent fixation attacks
+    if not validate_session_id(session_id, cfg):
+        metrics.record_error("invalid_session_id")
+        return JSONResponse(
+            {"error": {"message": "Invalid session ID format", "type": "invalid_session_id"}},
+            status_code=400
+        )
 
     # Convert messages to normalized format for ContextEngine
     if is_anthropic_messages:
@@ -550,6 +917,8 @@ async def proxy_all(request: Request, path: str):
 
     # Run context compression check
     if messages:
+        # Check if compression will be needed before calling
+        needs_comp = eng.needs_compression(messages, max_tokens if isinstance(max_tokens, int) else 512, ctx_limit, model_alias)
         rebuilt_messages = await eng.maybe_compress(
             session_id=session_id,
             messages=messages,
@@ -558,6 +927,8 @@ async def proxy_all(request: Request, path: str):
             model_alias=model_alias,
             http_client=client
         )
+        if needs_comp:
+            metrics.record_compression()
     else:
         rebuilt_messages = messages
 
@@ -603,12 +974,18 @@ async def proxy_all(request: Request, path: str):
             content=json.dumps(upstream_body).encode("utf-8")
         )
         resp = await client.send(req, stream=is_stream)
-    except Exception:
+    except Exception as e:
+        record_metrics(502)
+        metrics.record_error("upstream_connection")
+        metrics.record_upstream_error("connection")
         raise
 
     if resp.status_code != 200:
         content_bytes = await resp.aread()
         await resp.aclose()
+        record_metrics(resp.status_code)
+        metrics.record_upstream_request("POST", resp.status_code)
+        metrics.record_upstream_error(f"http_{resp.status_code}")
 
         err_text = content_bytes.decode("utf-8", errors="replace")
         if is_anthropic_messages:
@@ -630,6 +1007,8 @@ async def proxy_all(request: Request, path: str):
             )
 
     if is_stream:
+        record_metrics(200)
+        metrics.record_upstream_request("POST", 200)
         if is_anthropic_messages:
             return StreamingResponse(
                 forward_stream_anthropic(resp, client, model_alias, input_tokens, eng),
@@ -645,6 +1024,8 @@ async def proxy_all(request: Request, path: str):
     else:
         content_bytes = await resp.aread()
         await resp.aclose()
+        record_metrics(200)
+        metrics.record_upstream_request("POST", 200)
         
         if is_anthropic_messages:
             try:

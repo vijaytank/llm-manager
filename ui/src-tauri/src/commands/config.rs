@@ -1,7 +1,7 @@
+use crate::scripts::{get_user_data_dir, get_workspace_root};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use crate::scripts::{get_workspace_root, get_user_data_dir};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -130,25 +130,61 @@ pub struct ContextManagerSettings {
     pub summarize_with_model: String,
 }
 
-fn default_warn_threshold() -> f64 { 0.70 }
-fn default_keep_turns() -> u32 { 6 }
-fn default_proxy_port() -> u16 { 8090 }
-fn default_summary_max_tokens() -> u32 { 768 }
-fn default_same() -> String { "same".to_string() }
+fn default_warn_threshold() -> f64 {
+    0.70
+}
+fn default_keep_turns() -> u32 {
+    6
+}
+fn default_proxy_port() -> u16 {
+    8090
+}
+fn default_summary_max_tokens() -> u32 {
+    768
+}
+fn default_same() -> String {
+    "same".to_string()
+}
 
-fn default_installation_type() -> String { "none".to_string() }
-fn default_true() -> bool { true }
-fn default_false() -> bool { false }
-fn default_fit_ctx_min() -> u32 { 8192 }
-fn default_integrations() -> Vec<String> { vec!["server-only".to_string()] }
-fn default_idle_timeout() -> u32 { 60 }
-fn default_idle_timeout_i32() -> i32 { 60 }
-fn default_fallback_provider() -> String { "none".to_string() }
-fn default_spec_type() -> String { "none".to_string() }
-fn default_spec_ngram_size() -> u32 { 12 }
-fn default_cache_reuse() -> u32 { 256 }
-fn default_auto() -> String { "auto".to_string() }
-fn default_neg_one() -> i32 { -1 }
+fn default_installation_type() -> String {
+    "none".to_string()
+}
+fn default_true() -> bool {
+    true
+}
+fn default_false() -> bool {
+    false
+}
+fn default_fit_ctx_min() -> u32 {
+    8192
+}
+fn default_integrations() -> Vec<String> {
+    vec!["server-only".to_string()]
+}
+fn default_idle_timeout() -> u32 {
+    60
+}
+fn default_idle_timeout_i32() -> i32 {
+    60
+}
+fn default_fallback_provider() -> String {
+    "none".to_string()
+}
+fn default_spec_type() -> String {
+    "none".to_string()
+}
+fn default_spec_ngram_size() -> u32 {
+    12
+}
+fn default_cache_reuse() -> u32 {
+    256
+}
+fn default_auto() -> String {
+    "auto".to_string()
+}
+fn default_neg_one() -> i32 {
+    -1
+}
 
 impl Default for AppConfig {
     fn default() -> Self {
@@ -220,7 +256,7 @@ pub fn get_config_path() -> PathBuf {
 #[tauri::command]
 pub fn load_config() -> Result<AppConfig, String> {
     let user_config_path = get_config_path();
-    
+
     if !user_config_path.exists() {
         // Copy initial default config from bundled resources if available
         let root = get_workspace_root();
@@ -230,7 +266,12 @@ pub fn load_config() -> Result<AppConfig, String> {
         ];
 
         if let Some(bundled_path) = bundled_candidates.into_iter().find(|p| p.exists()) {
-            let _ = fs::copy(&bundled_path, &user_config_path);
+            if let Err(e) = fs::copy(&bundled_path, &user_config_path) {
+                eprintln!(
+                    "Warning: Failed to copy bundled config from {:?} to {:?}: {}",
+                    bundled_path, user_config_path, e
+                );
+            }
         }
     }
 
@@ -238,8 +279,12 @@ pub fn load_config() -> Result<AppConfig, String> {
         return Ok(AppConfig::default());
     }
 
-    let contents = fs::read_to_string(&user_config_path)
-        .map_err(|e| format!("Failed to read llo-config.json at {:?}: {}", user_config_path, e))?;
+    let contents = fs::read_to_string(&user_config_path).map_err(|e| {
+        format!(
+            "Failed to read llo-config.json at {:?}: {}",
+            user_config_path, e
+        )
+    })?;
 
     let mut config: AppConfig = serde_json::from_str(&contents)
         .map_err(|e| format!("Failed to parse llo-config.json: {}", e))?;
@@ -330,7 +375,8 @@ mod tests {
     #[test]
     fn test_deserialize_legacy_json_ignores_flat_inference_keys() {
         let raw = r#"{"installation_type": "winget", "cache_type_k": "q8_0", "ubatch_size": 1024, "default_context_size": 65536}"#;
-        let config: AppConfig = serde_json::from_str(raw).expect("Must deserialize legacy JSON cleanly");
+        let config: AppConfig =
+            serde_json::from_str(raw).expect("Must deserialize legacy JSON cleanly");
         assert_eq!(config.installation_type, "winget");
         let serialized = serde_json::to_string(&config).expect("Must serialize");
         assert!(!serialized.contains("\"cache_type_k\""));
@@ -338,4 +384,3 @@ mod tests {
         assert!(!serialized.contains("\"default_context_size\""));
     }
 }
-

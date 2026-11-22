@@ -8,6 +8,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.diag-header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
 }
 
 .diag-actions {
@@ -18,7 +27,7 @@
 .diag-report-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .diag-item {
@@ -26,20 +35,55 @@
   align-items: center;
   gap: 14px;
   padding: 12px 16px;
-  background: var(--bg-elevated);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-button);
   justify-content: space-between;
+  transition: all 0.15s ease;
+}
+
+.diag-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-medium);
 }
 
 .diag-title {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  color: var(--text-primary);
 }
 
 .diag-desc {
   font-size: 0.78rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
+  margin-top: 2px;
 }
 
-.diag-icon.success { color: var(--status-success); }
-.diag-icon.warning { color: var(--status-warning); }
+/* KV Matrix Table */
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 0.85rem;
+}
+
+.matrix-table th {
+  padding: 10px 12px;
+  background: rgba(16, 20, 31, 0.8);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+}
+
+.matrix-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.matrix-table tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}

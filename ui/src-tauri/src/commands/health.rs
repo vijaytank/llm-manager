@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::scripts::run_powershell_script;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HealthItem {
@@ -39,7 +39,10 @@ pub fn parse_health_output(script_output: &str) -> HealthReport {
         } else {
             script_output.trim().to_string()
         };
-        format!("Diagnostics script output was not valid JSON:\n{}", truncated)
+        format!(
+            "Diagnostics script output was not valid JSON:\n{}",
+            truncated
+        )
     };
 
     let items = vec![HealthItem {
@@ -60,10 +63,10 @@ pub fn parse_health_output(script_output: &str) -> HealthReport {
 pub fn run_health_check() -> Result<HealthReport, String> {
     let config_file = crate::scripts::get_user_data_dir().join("llo-config.json");
     let config_file_str = config_file.to_string_lossy().to_string();
-    let script_output = match run_powershell_script("script/test-health.ps1", &["-ConfigFile", &config_file_str, "-Json"]) {
-        Ok(out) => out,
-        Err(e) => e,
-    };
+    let script_output = run_powershell_script(
+        "script/test-health.ps1",
+        &["-ConfigFile", &config_file_str, "-Json"],
+    )?;
 
     Ok(parse_health_output(&script_output))
 }
@@ -72,10 +75,10 @@ pub fn run_health_check() -> Result<HealthReport, String> {
 pub fn audit_scripts() -> Result<String, String> {
     let config_file = crate::scripts::get_user_data_dir().join("llo-config.json");
     let config_file_str = config_file.to_string_lossy().to_string();
-    let output = match run_powershell_script("script/verify-scripts.ps1", &["-ConfigFile", &config_file_str]) {
-        Ok(out) => out,
-        Err(e) => format!("Audit completed with notes:\n{}", e),
-    };
+    let output = run_powershell_script(
+        "script/verify-scripts.ps1",
+        &["-ConfigFile", &config_file_str],
+    )?;
     Ok(output)
 }
 
@@ -105,7 +108,9 @@ mod tests {
         assert_eq!(report.items.len(), 1);
         assert_eq!(report.items[0].status, "failed");
         assert_eq!(report.items[0].title, "Diagnostics Output Error");
-        assert!(report.items[0].description.contains("Cannot bind parameter"));
+        assert!(report.items[0]
+            .description
+            .contains("Cannot bind parameter"));
     }
 
     #[test]

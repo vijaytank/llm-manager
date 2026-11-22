@@ -7,30 +7,34 @@ from fastapi.testclient import TestClient
 from context_manager.proxy import app
 
 
-@respx.mock
-def test_health_endpoint():
-    with TestClient(app) as client:
-        resp = client.get("/health")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "ok"
-        assert data["proxy"] == "llo-context-manager"
+@pytest.fixture
+def client():
+    with TestClient(app) as c:
+        yield c
 
 
 @respx.mock
-def test_direct_passthrough_when_disabled():
-    with TestClient(app) as client:
-        client.app.state.config.enabled = False
-        upstream_url = f"{client.app.state.config.llama_server_url}/v1/models"
-        
-        mock_route = respx.get(upstream_url).mock(
-            return_value=httpx.Response(200, json={"object": "list", "data": [{"id": "test-model"}]})
-        )
+def test_health_endpoint(client):
+    resp = client.get("/health")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "ok"
+    assert data["proxy"] == "llo-context-manager"
 
-        resp = client.get("/v1/models")
-        assert resp.status_code == 200
-        assert mock_route.called
-        assert resp.json()["data"][0]["id"] == "test-model"
+
+@respx.mock
+def test_direct_passthrough_when_disabled(client):
+    client.app.state.config.enabled = False
+    upstream_url = f"{client.app.state.config.llama_server_url}/v1/models"
+    
+    mock_route = respx.get(upstream_url).mock(
+        return_value=httpx.Response(200, json={"object": "list", "data": [{"id": "test-model"}]})
+    )
+
+    resp = client.get("/v1/models")
+    assert resp.status_code == 200
+    assert mock_route.called
+    assert resp.json()["data"][0]["id"] == "test-model"
 
 
 @respx.mock
@@ -131,6 +135,10 @@ def test_openai_chat_roundtrip():
 
 @respx.mock
 def test_compression_triggered_when_threshold_exceeded():
+    import uuid
+    # Use a unique session ID to avoid checkpoint interference from other tests
+    session_id = f"roundtrip-session-test-{uuid.uuid4().hex}"
+    
     with TestClient(app) as client:
         client.app.state.config.enabled = True
         client.app.state.config.ctx_limit = 1000  # Low ctx_limit to trigger compression
@@ -138,6 +146,7 @@ def test_compression_triggered_when_threshold_exceeded():
         client.app.state.config.keep_turns = 2
         # Also set on the engine directly since it was already created with defaults
         client.app.state.engine.warn_threshold = 0.5
+        client.app.state.engine.keep_turns = 2
         upstream_url = f"{client.app.state.config.llama_server_url}/v1/chat/completions"
 
         # Use side_effect with a call counter so summarizer and final inference
@@ -203,7 +212,7 @@ def test_compression_triggered_when_threshold_exceeded():
         resp = client.post(
             "/v1/chat/completions",
             json=payload,
-            headers={"x-llm-session-id": "roundtrip-session-test"}
+            headers={"x-llm-session-id": session_id}
         )
         assert resp.status_code == 200
         assert call_count >= 2  # at least summarizer + final inference

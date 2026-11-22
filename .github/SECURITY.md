@@ -11,12 +11,13 @@ Only the latest release of LLM Manager is actively supported with security updat
 
 ## Reporting a Vulnerability
 
-We take the security of LLM Manager seriously. If you find a security vulnerability, please do **NOT** open a public issue. Instead, report it through the following channel:
+We take the security of LLM Manager seriously. If you find a security vulnerability, please do **NOT** open a public issue.
 
-1. **Email**: Send a detailed report to security-vulnerabilities@example.com (replace with your active security email).
-2. **Details**: Please include:
-   * A description of the vulnerability and its potential impact.
-   * Step-by-step instructions (or a proof-of-concept script) to reproduce the issue.
-   * Your system specs (OS, llama.cpp version).
+Instead, please report vulnerabilities privately via **[GitHub Private Vulnerability Reporting](https://github.com/vijaytank/llm-manager/security/advisories/new)** under the repository's **Security** tab.
 
-We will acknowledge receipt of your report within 48 hours and work with you to coordinate a security patch before public disclosure.
+### Details to Include
+* A description of the vulnerability and its potential impact.
+* Step-by-step instructions (or a proof-of-concept script) to reproduce the issue.
+* Your environment details (OS, llama.cpp version, commit hash/tag).
+
+We will acknowledge receipt of your advisory within 48 hours and coordinate a security patch before public disclosure.

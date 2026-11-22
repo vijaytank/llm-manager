@@ -98,7 +98,7 @@ if (Test-Path $ConfigFile) {
 
 # Check 3: Profile System API Compatibility
 Write-Host "`n[Check 3] Testing Hardware Profiler..." -ForegroundColor Cyan
-$profileScript = Join-Path $ManagerDir "llo-core\Profile.ps1"
+$profileScript = Join-Path $ManagerDir "llo-core/Profile.ps1"
 if (Test-Path $profileScript) {
     try {
         . $profileScript
@@ -116,7 +116,7 @@ if (Test-Path $profileScript) {
 
 # Check 4: Preset Configuration Generator Check
 Write-Host "`n[Check 4] Testing SetupRouter Execution..." -ForegroundColor Cyan
-$setupRouterScript = Join-Path $ManagerDir "llo-core\SetupRouter.ps1"
+$setupRouterScript = Join-Path $ManagerDir "llo-core/SetupRouter.ps1"
 if (Test-Path $setupRouterScript) {
     try {
         # Run SetupRouter inside a dry-run/mock context (temporary outputs).
