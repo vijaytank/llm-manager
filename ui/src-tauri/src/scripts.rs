@@ -145,7 +145,8 @@ pub fn run_powershell_script(script_relative_path: &str, args: &[&str]) -> Resul
 
     let mut command = Command::new(executable);
 
-    if cfg!(target_os = "windows") {
+    #[cfg(target_os = "windows")]
+    {
         command
             .arg("-ExecutionPolicy")
             .arg("Bypass")
