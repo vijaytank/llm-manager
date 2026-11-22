@@ -20,6 +20,16 @@ llo-core/
 ├── FetchAssets.ps1    # Template/grammar downloader
 ```
 
+## Key Abstractions
+
+| Abstraction | Responsibility | Key Fields |
+|-------------|---------------|------------|
+| `FlagEntry` | Parsed `llama-server --help` flag | `Short`, `Long`, `Aliases`, `ValueToken`, `Description`, `EnvVar` |
+| `FlagCache` | Serialized allow-list of known flags | `.cached_flags.json` |
+| `FlagDiff` | Added/removed flags vs cached cache | `Added`, `Removed`, `TotalCurrent` |
+| `CommitImpact` | Classified upstream commit | keywords → impact tag (CUDA/GPU, CPU, Performance, Breaking Change, Server/API, Flash Attention) |
+| `AssetManifest` | SHA-cached template/grammar inventory | `templates_sha`, `grammars_sha`, `files` map |
+
 ## Flag parser (`ParseHelp.ps1`)
 
 ### Two-pass parsing algorithm
@@ -188,6 +198,17 @@ If GitHub API unreachable and no local templates:
 - Uses cached flags to validate derived params
 - Template matching uses synced `templates/` directory
 
+## Entry Points for Modification
+
+| Task | Entry Point | File |
+|------|-------------|------|
+| Change help-line regex | Edit two-pass parsing patterns | `llo-core/ParseHelp.ps1` |
+| Change flag cache location | Edit cache file path | `llo-core/ParseHelp.ps1` |
+| Add an impact keyword | Edit keyword→tag map | `llo-core/GitDiff.ps1` |
+| Change commit scan range | Edit `git rev-list` range | `llo-core/GitDiff.ps1` |
+| Add an asset source | Edit sync target URLs | `llo-core/FetchAssets.ps1` |
+| Add an excluded flag | Edit exclusion list | `script/verify-exclude.json` |
+
 ## Key source files
 
 | File | Purpose |
@@ -199,3 +220,10 @@ If GitHub API unreachable and no local templates:
 | `script/test-health.ps1` | Integrated flag check |
 | `.cached_flags.json` | Flag cache (AppData/workspace) |
 | `.assets-manifest.json` | Template/grammar SHA manifest |
+
+## Related Pages
+
+- [Architecture](../overview/architecture.md) — hardware classification, decision flow, core formulas
+- [PowerShell CLI](../applications/powershell-cli.md) — CLI entry points
+- [Tauri Desktop App](../applications/tauri-desktop-app.md) — Tauri desktop app command dispatch
+- [Upstream Compatibility](../features/upstream-compatibility.md) — llama.cpp argument tracking

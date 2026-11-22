@@ -1,212 +1,87 @@
 # Getting started
 
-**Active contributors:** vijay
+LLM Manager runs on Windows, macOS, and Linux. It requires PowerShell 7+ (cross-platform) or PowerShell 5.1 (Windows only), a compiled or pre-built `llama-server` binary from llama.cpp, and (for the desktop UI) Rust and Node.js.
 
-Prerequisites, installation, and first run instructions for LLM Manager.
+## Prerequisites
 
-## Prerequisites by platform
+* PowerShell 7+
+* `llama-server` binary (from [llama.cpp](https://github.com/ggerganov/llama.cpp))
+* Rust and Node.js — only needed to build or run the Tauri desktop app
+* Python 3 + pytest — only needed to run the context manager proxy tests
 
-### Windows
+## Install and run the CLI wizard
 
-| Requirement | Version | Notes |
-|-------------|---------|-------|
-| PowerShell | 7.4+ (recommended) or 5.1 | PowerShell 7 is cross-platform; install via `winget install Microsoft.PowerShell` |
-| llama.cpp | Latest | Compile from source or download pre-built `llama-server.exe` |
-| Rust | 1.78+ | For Tauri desktop app development |
-| Node.js | 20+ | For Tauri frontend development |
-| Git | Latest | For upstream compatibility checks |
+From the repository root:
 
-**Optional but recommended:**
-- NVIDIA GPU with CUDA 12.x drivers for GPU acceleration
-- Visual Studio Build Tools 2022 (for compiling llama.cpp from source)
-
-### macOS
-
-| Requirement | Version | Notes |
-|-------------|---------|-------|
-| PowerShell | 7.4+ | `brew install powershell` |
-| llama.cpp | Latest | `brew install llama.cpp` or compile from source |
-| Rust | 1.78+ | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
-| Node.js | 20+ | `brew install node` |
-| Xcode Command Line Tools | Latest | `xcode-select --install` |
-
-**Optional:**
-- Apple Silicon (M-series) for Metal acceleration
-- AMD GPU with Metal support
-
-### Linux
-
-| Requirement | Version | Notes |
-|-------------|---------|-------|
-| PowerShell | 7.4+ | `sudo apt install powershell` (Ubuntu/Debian) or distro equivalent |
-| llama.cpp | Latest | Compile from source; see llama.cpp docs for CUDA/ROCm/Vulkan |
-| Rust | 1.78+ | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
-| Node.js | 20+ | Distro package or `fnm`/`nvm` |
-| Build tools | GCC/Clang, CMake, make | For compiling llama.cpp |
-
-**GPU backends:**
-- NVIDIA: CUDA 12.x + `nvidia-smi` in PATH
-- AMD: ROCm + `rocm-smi` in PATH
-- Intel/AMD integrated: Vulkan SDK + `vulkaninfo`
-
-## Installation
-
-### Option 1: Clone and run wizard (recommended)
-
-```bash
-git clone https://github.com/vijaytank/llm-manager.git
-cd llm-manager
-
-# Windows
-powershell -File main.ps1
-
-# macOS / Linux
+```powershell
 pwsh -File main.ps1
-# or
-./run-setup.sh
 ```
 
-The interactive wizard will:
-1. Detect or prompt for `llama-server` binary path
-2. Detect or prompt for models directory (where your `.gguf` files live)
-3. Optionally configure cloud fallback (Ollama, OpenAI, Anthropic, NVIDIA NIM)
-4. Optionally enable client integrations (VSCode, Claude Code, Cursor, Continue)
-5. Write `llo-config.json` to your AppData directory
-6. Generate `.vscode/tasks.json` and `.vscode/settings.json` for VSCode integration
+The interactive wizard collects your model paths, cloud fallback settings, and integration preferences, then writes `llo-config.json` and runs `SetupRouter.ps1` to generate `models-preset.ini`.
 
-### Option 2: Tauri desktop app (development)
+## Start and stop the server
 
-```bash
-cd ui
-npm install
+```powershell
+# Start llama-server (auto-derives parameters, scans for port collisions)
+pwsh -File script/start-server.ps1
+
+# Stop the running server
+pwsh -File script/stop-server.ps1
+```
+
+## Run health and compatibility checks
+
+```powershell
+# Syntax checks, config validation, live server ping
+pwsh -File script/test-health.ps1
+
+# Verify CLI flags against the compiled llama-server binary
+pwsh -File script/verify-scripts.ps1
+```
+
+Bash wrappers exist for macOS/Linux: `./script/test-health.sh` and `./script/verify-scripts.sh`.
+
+## Run tests
+
+PowerShell health scripts cover CLI syntax and config schemas. The Python context manager proxy has 11 pytest modules:
+
+```powershell
+pytest llo-core/context_manager/tests
+```
+
+Or using the project virtualenv:
+
+```powershell
+& "llo-core/.venv\Scripts\python.exe" -m pytest llo-core/context_manager/tests
+```
+
+## Build and run the desktop UI
+
+Inside `ui/`:
+
+```powershell
+# Dev mode
 npm run tauri dev
-```
 
-This runs the React frontend with hot reload and the Rust backend in development mode.
-
-### Option 3: Tauri desktop app (production build)
-
-```bash
-cd ui
+# Production build (NSIS .exe / .dmg / .AppImage)
 npm run tauri build --release
+
+# Frontend type check + build
+npm run build
+
+# Rust backend tests and lints
+cd src-tauri
+cargo test
+cargo clippy
 ```
 
-Produces platform-specific installers:
-- Windows: `.msi` / `.exe` (NSIS)
-- macOS: `.dmg` / `.app`
-- Linux: `.AppImage` / `.deb` / `.rpm`
+## Configuration directory split
 
-## First run
+The Tauri app reads and writes `llo-config.json` from the user's AppData directory (`%APPDATA%\LLM Manager\llo-config.json` on Windows, `~/.config/LLM Manager` on macOS/Linux), not the workspace root. When the GUI launches `start-server.ps1` or `stop-server.ps1`, it passes its AppData config path via `-ConfigFile`. The `llo-core` helper `Paths.ps1` (`Get-LLMManagerConfigPath`) implements this lookup.
 
-After the wizard completes:
+## Related pages
 
-1. **Place your GGUF models** in the configured `models_dir` (default: `./models` relative to workspace root, or your chosen path)
-
-2. **Start the server:**
-   ```powershell
-   # Windows
-   powershell -File script/start-server.ps1
-
-   # macOS / Linux
-   pwsh -File script/start-server.ps1
-   # or
-   ./script/start-server.sh
-   ```
-
-   The server starts on port 8080 (auto-shifts if occupied). Output includes:
-   - Detected hardware profile and performance tier
-   - Derived inference parameters
-   - Discovered models with assigned chat templates
-   - Client environment variables for integration
-
-3. **Verify health:**
-   ```powershell
-   powershell -File script/test-health.ps1
-   ```
-
-4. **Connect a client:**
-   - **Claude Code:** The wizard offers to launch it automatically, or run:
-     ```bash
-     ANTHROPIC_BASE_URL=http://127.0.0.1:8080 \
-     ANTHROPIC_AUTH_TOKEN=local \
-     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
-     claude
-     ```
-   - **Cursor / Continue:** Use `http://127.0.0.1:8080/v1` as the OpenAI-compatible base URL
-   - **VSCode:** Use the generated tasks (Ctrl+Shift+B → "Start LLM Server")
-
-## Directory layout after setup
-
-```
-%APPDATA%\LLM Manager\          (Windows)
-~/.config/LLM Manager/          (macOS/Linux)
-├── llo-config.json             # Your configuration
-├── models-preset.ini           # Generated at each server start
-├── .cached_flags.json          # llama-server flag cache
-├── .assets-manifest.json       # Template/grammar SHA cache
-├── logs/
-│   ├── llama-server.log        # Server stdout
-│   └── llama-server.err.log    # Server stderr
-└── checkpoints/                # Context manager session state
-```
-
-## Configuration basics
-
-The wizard creates `llo-config.json` with these key sections:
-
-```json
-{
-  "installation_type": "local",
-  "llama_server_path": "C:\\path\\to\\llama-server.exe",
-  "llama_repo_path": "C:\\path\\to\\llama.cpp",
-  "models_dir": "C:\\path\\to\\your\\models",
-  "templates_dir": "C:\\path\\to\\llama.cpp\\models\\templates",
-  "grammars_dir": "C:\\path\\to\\llama.cpp\\grammars",
-  "active_model": "",
-  "overrides": {},
-  "integrations": ["server-only"],
-  "idle_timeout_sec": 60,
-  "fallback_provider": "none",
-  "context_manager": {
-    "enabled": false,
-    "proxy_port": 8090
-  }
-}
-```
-
-**Important:** The Tauri app and PowerShell scripts read/write the config in AppData, not the workspace root. The workspace `llo-config.json` is only a template copied on first launch.
-
-## Common commands
-
-| Task | Command |
-|------|---------|
-| Run wizard | `powershell -File main.ps1` / `pwsh -File main.ps1` |
-| Start server | `powershell -File script/start-server.ps1` |
-| Stop server | `powershell -File script/stop-server.ps1` |
-| Health check | `powershell -File script/test-health.ps1` |
-| Verify flags | `powershell -File script/verify-scripts.ps1` |
-| Launch context proxy | `powershell -File script/StartContextManager.ps1` |
-| Tauri dev | `cd ui && npm run tauri dev` |
-| Tauri build | `cd ui && npm run tauri build --release` |
-| Frontend tests | `cd ui && npm run test` |
-| Rust tests | `cd ui/src-tauri && cargo test` |
-| Python tests | `pytest llo-core/context_manager/tests` |
-
-## Troubleshooting first run
-
-| Issue | Resolution |
-|-------|------------|
-| `llama-server` not found | Ensure path in `llo-config.json` is correct; use absolute path |
-| No models discovered | Check `models_dir` exists and contains `.gguf` files |
-| Port 8080 in use | Server auto-shifts; check output for actual port |
-| GPU not detected | Verify `nvidia-smi` / `rocm-smi` / `system_profiler` work in shell |
-| PowerShell execution policy | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
-| Tauri build fails | Ensure Rust toolchain installed; run `rustup update` |
-
-## Next steps
-
-- Read [Architecture](architecture.md) for the decision engine details
-- See [Hardware Profiling](systems/hardware-profiling.md) for GPU classification
-- See [Parameter Derivation](systems/parameter-derivation.md) for inference formulas
-- See [Client Integrations](features/client-integrations.md) for VSCode, Claude Code, Cursor setup
-- See [Configuration Reference](reference/configuration.md) for all config options
+- [Architecture](architecture.md) — hardware classification, decision flow, core formulas
+- [Systems](../systems/index.md) — profiling, parameter derivation, server lifecycle, GGUF management, configuration, compatibility guard
+- [Testing](../how-to-contribute/testing.md) — how to run each test suite
+- [Debugging](../how-to-contribute/debugging.md) — logs, common errors, troubleshooting

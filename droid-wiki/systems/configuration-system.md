@@ -16,6 +16,16 @@ ui/src-tauri/src/commands/config.rs   # Tauri config load/save
 main.ps1                              # Wizard: initial config + VSCode generation
 ```
 
+## Key Abstractions
+
+| Abstraction | Responsibility | Key Fields |
+|-------------|---------------|------------|
+| `AppConfig` | Full user configuration schema | `overrides`, `integrations`, `context_manager`, `models_dir`, `fallback_provider` |
+| `OverridesBlock` | User intent taking absolute priority over derived values | `ctx_size`, `n_gpu_layers`, and any llama-server flag |
+| `LegacyFlatKey` | Pre-override flat config key auto-promoted to overrides | `cache_type_k`, `flash_attn`, `ctx_size`, `ubatch_size`, `parallel_slots` |
+| `ContextManagerConfig` | Sub-config for the Python context proxy | `enabled`, `proxy_port`, `ctx_limit`, `warn_threshold`, `keep_turns` |
+| `UserDataDir` | Platform-resolved config home | `%APPDATA%\LLM Manager` or `~/.config/LLM Manager` |
+
 ## Configuration directory split
 
 ```mermaid
@@ -265,6 +275,17 @@ Effects:
 ```
 When no local models found: routes client traffic to cloud provider instead of starting `llama-server`.
 
+## Entry Points for Modification
+
+| Task | Entry Point | File |
+|------|-------------|------|
+| Add a config key | Add to JSON schema + Rust/TS `AppConfig` | `ui/src/lib/configSchema.ts`, `ui/src-tauri/src/commands/config.rs` |
+| Change config path resolution | Edit candidate order | `llo-core/Paths.ps1` |
+| Change override promotion list | Edit legacy keys array | `llo-core/SetupRouter.ps1` |
+| Change VSCode task/env generation | Edit wizard emission block | `main.ps1` |
+| Change context manager defaults | Edit sub-config defaults | `main.ps1`, `script/StartContextManager.ps1` |
+| Add a fallback provider | Edit provider enum + env wiring | `ui/src/lib/configSchema.ts`, `main.ps1` |
+
 ## Key source files
 
 | File | Purpose |
@@ -276,3 +297,10 @@ When no local models found: routes client traffic to cloud provider instead of s
 | `ui/src/store/configStore.ts` | Frontend config state + CRUD |
 | `script/start-server.ps1` | Reads config, passes `-ConfigFile` to SetupRouter |
 | `script/StartContextManager.ps1` | Reads CM config, launches proxy |
+
+## Related Pages
+
+- [Architecture](../overview/architecture.md) — hardware classification, decision flow, core formulas
+- [PowerShell CLI](../applications/powershell-cli.md) — CLI entry points
+- [Tauri Desktop App](../applications/tauri-desktop-app.md) — Tauri desktop app command dispatch
+- [Hardware-Adaptive Inference](../features/hardware-adaptive-inference.md) — adaptive inference feature

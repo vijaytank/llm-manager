@@ -1,153 +1,76 @@
 # Context Manager Proxy
 
-**Active contributors:** vijay
+**Active contributors:** Vijay
 
-Optional Python FastAPI service for Anthropic→OpenAI protocol translation, session compression, and context budget enforcement.
+## Purpose
 
-## Overview
+Optional Python FastAPI service sitting between clients and `llama-server`. It translates the Anthropic Messages API to OpenAI's Chat Completions API, compresses long conversation histories via summarization, and enforces a context size limit (`ctx_limit`). Lives in `llo-core/context_manager/` (`proxy.py`, `context_engine.py`, `tokenizer_cache.py`, `preset_reader.py`, `config.py`). Launched via `script/StartContextManager.ps1` when `context_manager.enabled = true` in `llo-config.json`.
 
-The Context Manager Proxy sits between clients (Claude Code, custom apps) and `llama-server`. It translates the Anthropic Messages API to OpenAI's Chat Completions API, compresses long conversation histories via summarization, and enforces a context size limit (`ctx_limit`).
+## Directory layout
 
-**Enabled via:** `context_manager.enabled = true` in `llo-config.json`
-**Default ports:** Proxy `8090` → Upstream `llama-server` `8080`
-**Launch:** `powershell -File script/StartContextManager.ps1`
+```
+llo-core/context_manager/
+├── proxy.py              # FastAPI server, Anthropic→OpenAI translation, streaming
+├── context_engine.py     # Compression logic, token counting, checkpoint persistence
+├── tokenizer_cache.py    # Shared HF tokenizer with alias normalization
+├── preset_reader.py      # models-preset.ini parser for ctx_limit
+├── config.py             # Pydantic settings (ContextManagerConfig)
+├── __init__.py
+├── requirements.txt
+├── requirements-dev.txt
+├── tests/                # 11 pytest modules
+│   ├── test_compression.py
+│   ├── test_token_counting.py
+│   ├── test_session_tracking.py
+│   ├── test_protocol_conversion.py
+│   ├── test_http_roundtrip.py
+│   ├── test_checkpoint_persistence.py
+│   ├── test_needs_compression.py
+│   ├── test_tokenizer_cache.py
+│   ├── test_preset_reader.py
+│   ├── test_config.py
+│   └── test_proxy_lifespan.py
+└── benchmarks/
+```
 
-## Architecture
+## Key abstractions
+
+| Abstraction | Description |
+|-------------|-------------|
+| **proxy.py** | FastAPI server (`app`), HTTP round-trip, protocol translation (Anthropic ↔ OpenAI), session ID extraction, SSE streaming, tool-call passthrough |
+| **context_engine.py** | `ContextEngine` class: per-session `SessionState`, token counting, compression heuristics (`needs_compression`), summarization via llama-server, token clamping, disk checkpoints, eviction loop |
+| **tokenizer_cache.py** | Shared HuggingFace tokenizer, alias normalization (e.g. `claude-3-5-sonnet-20241022` → `anthropic/claude-3.5-sonnet`), persistent token-count cache |
+| **preset_reader.py** | Parses `models-preset.ini` to resolve active model's `ctx_size` (ctx_limit) |
+| **config.py** | `ContextManagerConfig` Pydantic settings model loaded from `llo-config.json` |
+| **StartContextManager.ps1** | PowerShell launcher: venv setup (uv/python), port scan, uvicorn launch, health verification |
+
+## How it works
 
 ```mermaid
 graph TB
-    Client[Client\nAnthropic SDK / HTTP] -->|POST /v1/messages| Proxy[proxy.py\nFastAPI]
-    Proxy -->|Translate + Compress| Engine[context_engine.py\nContextEngine]
-    Engine -->|Token count| Tokenizer[tokenizer_cache.py\nHF Tokenizer]
-    Engine -->|Summarize| LlamaServer[llama-server\nUpstream]
-    Engine -->|Read ctx_limit| Preset[preset_reader.py\nmodels-preset.ini]
-    Engine -->|Persist| Checkpoints[AppData/checkpoints/\nsession_state.json]
-    Proxy -->|Forward OpenAI| LlamaServer
-    LlamaServer -->|Response| Proxy
-    Proxy -->|Translate back| Client
+    subgraph Client[Client]
+        C[Client\nAnthropic SDK / HTTP]
+    end
+    subgraph Proxy[proxy.py :8090]
+        P[FastAPI app] | Extract session_id | S[SessionState]
+        P -->|Translate| T1[Anthropic → OpenAI]
+    end
+    subgraph Engine[context_engine.py]
+        E[ContextEngine] -->|Token count| Tok[tokenizer_cache.py\nHF Tokenizer]
+        E -->|Compression| Comp[Summarize older turns]
+        E -->|Read ctx_limit| R[preset_reader.py\nmodels-preset.ini]
+        E -->|Persist| Cp[AppData/checkpoints/\nsession_id.json]
+    end
+    subgraph Upstream[llama-server :8080]
+        U[llama-server]
+    end
+    C -->|POST /v1/messages| P
+    P --> E
+    E --> U
+    U -->|Response| P
+    P -->|Translate back| C
+    E -->|Summarize via| U
 ```
-
-## Components
-
-### `proxy.py` — FastAPI server
-
-**Responsibilities:**
-- HTTP server on `proxy_port` (default 8090)
-- Request/response translation: Anthropic ↔ OpenAI
-- Session ID extraction (headers → body metadata → x-request-id → UUID)
-- Streaming support (SSE for both protocols)
-- Tool call passthrough
-
-**Key functions:**
-```python
-# Protocol translation
-convert_anthropic_to_openai_messages(body) -> List[Dict]
-convert_openai_to_anthropic_response(openai_resp, request_id) -> Dict
-normalize_system_messages(messages) -> List[Dict]
-convert_anthropic_tools_to_openai(tools) -> List[Dict]
-
-# Streaming
-forward_stream_anthropic(response, client, session_id, engine)
-forward_stream_openai(response, client)
-```
-
-**Session ID priority:**
-1. `x-llm-session-id` header
-2. `x-session-id` header
-3. `metadata.session_id` in request body
-4. `x-request-id` header → `session_{uuid}`
-5. Random UUID fallback
-
-### `context_engine.py` — Compression engine
-
-**Core class:** `ContextEngine`
-
-```python
-class ContextEngine:
-    def __init__(
-        self,
-        warn_threshold: float = 0.70,      # Trigger at 70% of ctx_limit
-        keep_turns: int = 6,               # Preserve last N turns uncompressed
-        llama_server_url: str = "http://127.0.0.1:8080",
-        summary_max_tokens: int = 768,     # Max tokens for summary response
-        summarize_with_model: str = "same", # Model alias for summarization
-        tokenizer_repo_override: str = "",  # Explicit HF repo
-        eviction_interval_sec: int = 300,  # Stale session scan interval
-        session_ttl_sec: int = 86400,      # Session inactivity TTL
-    )
-```
-
-**Session state (`SessionState`):**
-```python
-class SessionState:
-    session_id: str
-    messages: List[Dict]           # Full conversation history
-    compressed_history: List[Dict] # Summarized blocks
-    last_accessed: float           # Unix timestamp
-    checksum: str                  # SHA256 of turns to summarize (idempotency)
-```
-
-**Compression policy:**
-```python
-def needs_compression(self, session: SessionState, max_tokens_requested: int) -> bool:
-    # Triggers when:
-    prompt_tokens + max_tokens_requested >= ctx_limit * warn_threshold
-```
-
-**Compression flow:**
-1. Keep last `keep_turns` turns uncompressed
-2. Summarize older turns via `llama-server` (using `summarize_with_model`)
-3. Replace summarized turns with `[Compressed History Summary]` system block
-4. Clamp total tokens to `85% * ctx_limit` (safety margin)
-5. Idempotency: SHA256 of turns-to-summarize; skip if unchanged
-
-**Background tasks:**
-- Eviction loop: scans sessions every `eviction_interval_sec`, removes if `last_accessed > session_ttl_sec`
-- Checkpoint persistence: saves session state to `%APPDATA%\LLM Manager\checkpoints\{session_id}.json`
-
-### `tokenizer_cache.py` — Shared HF tokenizer
-
-**Features:**
-- Alias normalization: `claude-3-5-sonnet-20241022` → `anthropic/claude-3.5-sonnet`
-- Persistent token-count cache (file-based)
-- Per-repo overrides via `tokenizer_repo` config
-- Lazy loading: tokenizer fetched on first use
-
-```python
-def get_tokenizer(model_alias: str) -> PreTrainedTokenizerFast:
-    # Normalize alias → HF repo ID
-    # Load from cache or download
-    # Return tokenizer
-```
-
-### `preset_reader.py` — models-preset.ini parser
-
-```python
-def read_preset_ctx_limit(preset_path: str) -> int:
-    # Parses models-preset.ini for active model's ctx_size
-    # Returns 0 if not found (falls back to 65536 in config)
-```
-
-### `config.py` — Pydantic settings
-
-```python
-class ContextManagerConfig(BaseModel):
-    enabled: bool = False
-    warn_threshold: float = 0.70
-    keep_turns: int = 6
-    proxy_port: int = 8090
-    llama_server_url: str = "http://127.0.0.1:8080"
-    ctx_limit: int = 0              # 0 = auto from preset
-    tokenizer_repo: str = ""
-    summary_max_tokens: int = 768
-    summarize_with_model: str = "same"
-    eviction_interval_sec: int = 300
-    session_ttl_sec: int = 86400
-```
-
-**Config resolution:** Reads `context_manager` block from `llo-config.json` in AppData (same as Tauri).
-
-## Compression algorithm detail
 
 ```mermaid
 sequenceDiagram
@@ -160,116 +83,40 @@ sequenceDiagram
         alt hash unchanged (idempotent)
             Engine-->>Proxy: Return existing compressed_history
         else
-            Engine->>LlamaServer: POST /v1/chat/completions (summarization prompt)
-            LlamaServer-->>Engine: Summary response
+            Engine->>Upstream: POST /v1/chat/completions (summarization)
+            Upstream-->>Engine: Summary response
             Engine->>Engine: Build compressed_history + [Compressed Summary] block
             Engine->>Engine: _clamp_message_tokens(85% ctx_limit)
             Engine->>Disk: Save checkpoint
     end
     Engine-->>Proxy: Compressed message list
     Proxy->>Proxy: Convert Anthropic → OpenAI format
-    Proxy->>LlamaServer: POST /v1/chat/completions (OpenAI)
-    LlamaServer-->>Proxy: Response (streaming or non-streaming)
+    Proxy->>Upstream: POST /v1/chat/completions (OpenAI)
+    Upstream-->>Proxy: Response
     Proxy->>Proxy: Convert OpenAI → Anthropic format
     Proxy-->>Client: Response
 ```
 
-## Configuration
+## Integration points
 
-```json
-{
-  "context_manager": {
-    "enabled": true,
-    "warn_threshold": 0.70,
-    "keep_turns": 6,
-    "proxy_port": 8090,
-    "llama_server_url": "http://127.0.0.1:8080",
-    "ctx_limit": 0,
-    "tokenizer_repo": "",
-    "summary_max_tokens": 768,
-    "summarize_with_model": "same",
-    "eviction_interval_sec": 300,
-    "session_ttl_sec": 86400
-  }
-}
-```
+- **[overview/architecture.md](../overview/architecture.md)** — hardware classification, decision flow, core formulas
+- **[systems/hardware-profiling.md](../systems/hardware-profiling.md)** — CPU/RAM/GPU detection and tier classification
+- **[systems/parameter-derivation.md](../systems/parameter-derivation.md)** — models-preset.ini generation
+- **[systems/server-lifecycle.md](../systems/server-lifecycle.md)** — start/stop server, port collision
+- **[features/context-compression.md](../features/context-compression.md)** — session compression and ctx_limit
+- **[features/client-integrations.md](../features/client-integrations.md)** — VSCode, Claude Code, Cursor, Continue provisioning
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `enabled` | `false` | Master switch |
-| `warn_threshold` | `0.70` | Compression trigger at `tokens + max_tokens >= ctx_limit * threshold` |
-| `keep_turns` | `6` | Recent turns preserved uncompressed |
-| `proxy_port` | `8090` | Proxy listen port |
-| `llama_server_url` | `http://127.0.0.1:8080` | Upstream llama-server |
-| `ctx_limit` | `0` | Context limit; 0 = auto from `models-preset.ini` |
-| `tokenizer_repo` | `""` | Explicit HF tokenizer repo override |
-| `summary_max_tokens` | `768` | Max tokens for summarization response |
-| `summarize_with_model` | `"same"` | Model alias for summarization |
-| `eviction_interval_sec` | `300` | Stale session scan interval |
-| `session_ttl_sec` | `86400` | Session inactivity TTL (24h) |
+## Entry points for modification
 
-## Running the proxy
-
-### Via PowerShell (recommended)
-
-```powershell
-powershell -File script/StartContextManager.ps1 [-Port 8090] [-ConfigFile <path>]
-```
-
-### Direct Python (development)
-
-```bash
-cd llo-core/context_manager
-.venv/bin/activate
-python -m uvicorn proxy:app --host 0.0.0.0 --port 8090 --log-level debug
-```
-
-### Client configuration
-
-**Claude Code:**
-```bash
-ANTHROPIC_BASE_URL=http://127.0.0.1:8090 \
-ANTHROPIC_AUTH_TOKEN=local \
-CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
-claude
-```
-
-**Cursor / Continue / OpenAI SDK:**
-```json
-{
-  "baseURL": "http://127.0.0.1:8090/v1",
-  "apiKey": "local"
-}
-```
-
-## Testing
-
-```bash
-cd llo-core/context_manager
-.venv/bin/activate
-pytest tests/ -v
-
-# Specific modules
-pytest tests/test_compression.py -v
-pytest tests/test_token_counting.py -v
-pytest tests/test_protocol_conversion.py -v
-pytest tests/test_http_roundtrip.py -v
-```
-
-**Test coverage (11 modules):**
-| Test file | Coverage |
-|-----------|----------|
-| `test_compression.py` | Compression logic, idempotency, clamping |
-| `test_token_counting.py` | Tokenizer accuracy, alias normalization |
-| `test_session_tracking.py` | Session state, checkpoints, eviction |
-| `test_protocol_conversion.py` | Anthropic↔OpenAI translation, tools, streaming |
-| `test_http_roundtrip.py` | Full proxy integration with mock upstream |
-| `test_checkpoint_persistence.py` | Disk save/load, corruption handling |
-| `test_needs_compression.py` | Heuristic validation, edge cases |
-| `test_tokenizer_cache.py` | Alias normalization, caching, overrides |
-| `test_preset_reader.py` | models-preset.ini parsing |
-| `test_config.py` | Pydantic validation, defaults |
-| `test_proxy_lifespan.py` | Startup/shutdown, background tasks |
+| Entry point | What to modify |
+|-------------|----------------|
+| `llo-core/context_manager/proxy.py` | FastAPI routes, protocol translation, streaming, session ID logic |
+| `llo-core/context_manager/context_engine.py` | Compression policy, token clamping, checkpoint persistence, eviction |
+| `llo-core/context_manager/tokenizer_cache.py` | Alias normalization, tokenizer loading, cache behavior |
+| `llo-core/context_manager/preset_reader.py` | models-preset.ini parsing, ctx_limit fallback |
+| `llo-core/context_manager/config.py` | Pydantic settings fields and defaults |
+| `llo-core/context_manager/tests/` | Add/extend pytest coverage |
+| `script/StartContextManager.ps1` | Venv setup, port scan, uvicorn launch, health check |
 
 ## Key source files
 

@@ -14,6 +14,17 @@ Tier-based inference parameter tables, override application, per-model context c
 llo-core/SetupRouter.ps1    # Main derivation logic
 ```
 
+## Key Abstractions
+
+| Abstraction | Responsibility | Key Parameters |
+|-------------|---------------|----------------|
+| `InferenceParams` | Tier-derived llama-server flag set | `n_gpu_layers`, `flash_attn`, `cache_type_k/v`, `ubatch_size`, `parallel`, `spec_type` |
+| `PerformanceTier` | Hardware class driving parameter policy | `cpu`, `low`, `mid`, `high` |
+| `OverridePrecedence` | Resolution order: overrides > hardware > legacy > defaults | `config.overrides` (absolute priority) |
+| `ContextSizeFormula` | Per-model context ceiling from RAM/KV math | `ctxSize` (standard sizes: 4096…262144) |
+| `SpecTypeValidator` | Speculative decoding compatibility gate | `ngram-simple` vs `none` |
+| `TemplateMatcher` | Chat template resolution priority | exact → token → default → GGUF internal |
+
 ## Base parameter tables per tier
 
 ```powershell
@@ -223,6 +234,18 @@ spec_type = ngram-simple
 
 Consumed by `llama-server --models-preset models-preset.ini`.
 
+## Entry Points for Modification
+
+| Task | Entry Point | File |
+|------|-------------|------|
+| Change base parameter values per tier | Edit tier switch block | `llo-core/SetupRouter.ps1` |
+| Change `parallel=2` upgrade condition | Edit conditional upgrade block | `llo-core/SetupRouter.ps1` |
+| Change override precedence | Edit override application loop | `llo-core/SetupRouter.ps1` |
+| Change context size formula | Edit `Get-SafeContextSize` | `llo-core/SetupRouter.ps1` |
+| Change speculative decoding compatibility | Edit `Get-ValidatedSpecType` incompatible list | `llo-core/SetupRouter.ps1` |
+| Change KV-cache byte math discrepancy | Edit `calculateKvCacheGb` exact byte sizes | `ui/src/lib/validation.ts` |
+| Add a template match method | Edit `Find-MatchingTemplate` priority order | `llo-core/SetupRouter.ps1` |
+
 ## Key source files
 
 | File | Purpose |
@@ -231,3 +254,10 @@ Consumed by `llama-server --models-preset models-preset.ini`.
 | `ui/src/lib/validation.ts` | UI-side exact KV calculator (bytes/element) |
 | `ui/src/pages/Performance.tsx` | Override sliders for all params |
 | `ui/src/pages/Diagnostics.tsx` | Validation display |
+
+## Related Pages
+
+- [Architecture](../overview/architecture.md) — hardware classification, decision flow, core formulas
+- [PowerShell CLI](../applications/powershell-cli.md) — CLI entry points
+- [Hardware-Adaptive Inference](../features/hardware-adaptive-inference.md) — adaptive inference feature
+- [Upstream Compatibility](../features/upstream-compatibility.md) — llama.cpp argument tracking

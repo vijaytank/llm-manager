@@ -1,19 +1,21 @@
 {
-  "generatedAt": "2026-11-19T04:55:00Z",
+  "generatedAt": "2026-11-22T00:00:00Z",
   "commitHash": "HEAD",
   "branch": "develop",
-  "pageCount": 38,
+  "pageCount": 37,
   "topLevelSections": [
     "overview",
     "by-the-numbers",
     "lore",
+    "fun-facts",
     "how-to-contribute",
     "applications",
     "systems",
     "features",
-    "primitives",
-    "reference",
-    "maintainers"
+    "deployment",
+    "security",
+    "background",
+    "reference"
   ],
   "pageOrder": [
     "overview/index.md",
@@ -22,6 +24,7 @@
     "overview/glossary.md",
     "by-the-numbers.md",
     "lore.md",
+    "fun-facts.md",
     "how-to-contribute/index.md",
     "how-to-contribute/development-workflow.md",
     "how-to-contribute/testing.md",
@@ -29,8 +32,8 @@
     "how-to-contribute/patterns-and-conventions.md",
     "how-to-contribute/tooling.md",
     "applications/index.md",
-    "applications/powershell-cli.md",
     "applications/tauri-desktop-app.md",
+    "applications/powershell-cli.md",
     "applications/context-manager-proxy.md",
     "systems/index.md",
     "systems/hardware-profiling.md",
@@ -45,11 +48,12 @@
     "features/context-compression.md",
     "features/client-integrations.md",
     "features/upstream-compatibility.md",
-    "primitives/index.md",
+    "deployment.md",
+    "security.md",
+    "background/index.md",
     "reference/index.md",
     "reference/configuration.md",
     "reference/data-models.md",
-    "reference/dependencies.md",
-    "maintainers.md"
+    "reference/dependencies.md"
   ]
 }

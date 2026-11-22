@@ -18,6 +18,16 @@ ui/src-tauri/src/commands/
 ├── server.rs               # Tauri commands: start, stop, status, log tailing
 ```
 
+## Key Abstractions
+
+| Abstraction | Responsibility | Key Fields |
+|-------------|---------------|------------|
+| `ServerProcess` | Running `llama-server` instance | process handle, port, host, log files |
+| `PortReservation` | Collision-free socket found by scanning upward | resolved port, scanned range |
+| `ClientEnv` | Exported client environment variables | `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` |
+| `ServerStatus` | Tauri-side lifecycle state | `IS_RUNNING`, `IS_STARTING`, `ACTIVE_PORT` |
+| `LogTailTask` | Streaming log reader for stdout/stderr | file handle, position, level classifier |
+
 ## Startup sequence (`start-server.ps1`)
 
 ```mermaid
@@ -199,6 +209,17 @@ pub fn launch_claude_terminal(port: Option<u16>, model: Option<String>) {
 }
 ```
 
+## Entry Points for Modification
+
+| Task | Entry Point | File |
+|------|-------------|------|
+| Change default port or scan range | Edit port collision scan loop | `script/start-server.ps1` |
+| Change launch flags | Edit `llama-server` argument list | `script/start-server.ps1` |
+| Change shutdown mechanism | Edit process-termination branches | `script/stop-server.ps1` |
+| Add a Tauri command | Add `#[tauri::command]` handler | `ui/src-tauri/src/commands/server.rs` |
+| Change log level classification | Edit `emit_log_file_lines` prefix classifier | `ui/src-tauri/src/commands/server.rs` |
+| Change env var names/values | Edit env export block | `script/start-server.ps1` |
+
 ## Key source files
 
 | File | Purpose |
@@ -210,3 +231,10 @@ pub fn launch_claude_terminal(port: Option<u16>, model: Option<String>) {
 | `ui/src/store/serverStore.ts` | Frontend server state (status, port, logs) |
 | `ui/src/pages/Overview.tsx` | Launch/stop buttons, live logs (100 lines) |
 | `ui/src/pages/Logs.tsx` | Full log viewer with filtering |
+
+## Related Pages
+
+- [Architecture](../overview/architecture.md) — hardware classification, decision flow, core formulas
+- [PowerShell CLI](../applications/powershell-cli.md) — CLI entry points
+- [Tauri Desktop App](../applications/tauri-desktop-app.md) — Tauri desktop app command dispatch
+- [Hardware-Adaptive Inference](../features/hardware-adaptive-inference.md) — adaptive inference feature

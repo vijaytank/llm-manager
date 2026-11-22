@@ -18,6 +18,15 @@ ui/src/pages/Models.tsx      # Frontend: model list, inspector, mmproj pairing
 ui/src/store/modelsStore.ts  # Frontend state
 ```
 
+## Key Abstractions
+
+| Abstraction | Responsibility | Key Fields |
+|-------------|---------------|------------|
+| `ModelInfo` | Discovered GGUF model with parsed metadata | `name`, `filename`, `path`, `quantization`, `template`, `calculated_context`, `is_mmproj` |
+| `GgufMetadata` | Binary header parse result | `architecture`, `quantization`, `context_length`, `block_count`, `file_size_gb` |
+| `ChatTemplate` | Matched Jinja template for a model | template name, match method (`binary-header`/`mmproj-projector`/`fallback`) |
+| `MmprojPair` | Vision projector associated with a text model | `mmproj_path`, `mmproj_no_offload` |
+
 ## Recursive model scan (`models.rs`)
 
 ```rust
@@ -168,6 +177,17 @@ export function validateModelLaunch(
 - Compares against `profile.vramGb` and `profile.totalRamGb`
 - Severity: `ok` (fits comfortably), `warn` (tight), `caution` (close), `block` (exceeds)
 
+## Entry Points for Modification
+
+| Task | Entry Point | File |
+|------|-------------|------|
+| Change recursive scan roots | Edit `models_dir` resolution priority | `ui/src-tauri/src/commands/models.rs` |
+| Add a GGUF KV key | Extend header parse switch | `ui/src-tauri/src/commands/gguf.rs` |
+| Change template match priority | Edit `Find-MatchingTemplate` order | `llo-core/SetupRouter.ps1` |
+| Add a template directory | Edit template resolution fallback chain | `llo-core/SetupRouter.ps1` |
+| Change mmproj pairing UI | Edit dropdown/offload radio logic | `ui/src/pages/Models.tsx` |
+| Change pre-flight severity thresholds | Edit `validateModelLaunch` cases | `ui/src/lib/validation.ts` |
+
 ## Key source files
 
 | File | Purpose |
@@ -179,3 +199,9 @@ export function validateModelLaunch(
 | `ui/src/pages/Overview.tsx` | Model select, pre-flight check, launch |
 | `ui/src/lib/validation.ts` | Hardware safety validation |
 | `ui/src/store/modelsStore.ts` | Frontend model state |
+
+## Related Pages
+
+- [Architecture](../overview/architecture.md) — hardware classification, decision flow, core formulas
+- [Tauri Desktop App](../applications/tauri-desktop-app.md) — Tauri desktop app command dispatch
+- [Hardware-Adaptive Inference](../features/hardware-adaptive-inference.md) — adaptive inference feature

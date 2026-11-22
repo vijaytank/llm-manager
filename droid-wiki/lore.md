@@ -1,159 +1,67 @@
 # Lore
 
-**Active contributors:** vijay
+**Narrative history of the LLM Manager codebase.** Dates are taken from git history on the `develop` branch; motivations are hedged with "appears to" / "likely" where the commit record doesn't say why.
 
-Timeline and history of the LLM Manager codebase.
+The visible history begins on **11 July 2026** with the initial commit ("initial commit: add basic files and architecture documentation") and runs through **22 November 2026** — about 65 commits by a single contributor on `develop`.
 
 ## Eras
 
-### Era 1: Foundation (Aug 2024)
-**Initial commit — Single-script hardware profiler**
+### Era 1: Scaffold (July 2026)
 
-The project began as a standalone PowerShell script (`Profile.ps1`) that detected CPU, RAM, and GPU on Windows via WMI. The goal was simple: classify the GPU into tiers and print recommended llama.cpp flags.
+The project appears to have started as a hardware-adaptive inference orchestrator built on top of `llama.cpp`. On 11 July 2026 the initial commit added basic files and architecture documentation. Within days (12–14 July 2026) the core PowerShell pieces landed: `llo-core/Profile.ps1` for CPU/RAM/GPU detection, `llo-core/SetupRouter.ps1` for deriving inference parameters, `script/start-server.ps1` / `script/stop-server.ps1` for server lifecycle, and `main.ps1` as the setup-wizard entry point. Project governance files (contribution guidelines, security policy, issue and PR templates) were added on 12 July 2026, which likely reflects an intent to run the repo as an open, contributable project from the start — even though it has remained a solo effort.
 
-**Key events:**
-- Aug 11, 2024: Initial commit with `Profile.ps1` (Windows-only WMI detection)
-- Aug 12, 2024: Added `SetupRouter.ps1` for parameter derivation
-- Aug 13, 2024: First `start-server.ps1` and `stop-server.ps1` for lifecycle management
+### Era 2: CI/CD + core scripts + security policy (July 2026)
 
-### Era 2: Cross-platform expansion (Aug–Sep 2024)
-**macOS/Linux support + macOS unified memory handling**
+The second half of July focused on hardening the core. On 14 July 2026 a commit added an automated code-review workflow, the model preset router, and the server startup script; the same period saw `llo-core/ParseHelp.ps1` introduced to parse `llama-server --help` output and track upstream llama.cpp changes — a compatibility guard that appears designed to catch breaking flag changes before they reach users. Cross-platform support followed on 21–22 July 2026, extending hardware profiling from Windows WMI to macOS (`sysctl`/`system_profiler`) and Linux (`/proc`, `nvidia-smi`/`rocm-smi`). By late July the repository also had CI workflows (`.github/workflows/ci.yml`, `release.yml`) and the security policy in place.
 
-Extended hardware detection to all three major platforms. Added `sysctl`/`system_profiler` for macOS and `/proc` + `nvidia-smi`/`rocm-smi` for Linux. Apple Silicon unified memory required special handling — VRAM reported as 0 but tier logic adapted.
+### Era 3: Context manager performance + security (August – November 2026)
 
-**Key events:**
-- Aug 16, 2024: macOS detection via `sysctl` and `system_profiler`
-- Aug 18, 2024: Linux `/proc` parsing + `nvidia-smi`/`rocm-smi`
-- Aug 20, 2024: Unified memory tier logic (Apple Silicon → `high` tier based on RAM)
-- Sep 2, 2024: Added `run-setup.sh` wrapper for non-Windows
+The optional Python context-manager proxy began taking shape in August: the virtual environment and core utility scripts were initialized around 11 August 2026, and the proxy itself — translating the Anthropic protocol to OpenAI, with session tracking and message translation — appeared around 16 August 2026. September brought performance-tuning UI work, system-resource-management scripts, and comprehensive configuration testing (5 September 2026), along with local model-server management and cross-platform port handling. The proxy later gained performance and security features: a Prometheus metrics endpoint and configurable connection pooling (21 November 2026), alongside TLS, rate-limiting, and session-ID validation work.
 
-### Era 3: Configuration system & Wizard (Sep–Oct 2024)
-**AppData config directory + Interactive wizard + VSCode integration**
+### Era 4: Tauri + architectural report (July – August 2026)
 
-Introduced the configuration directory split (AppData vs workspace) to support the future Tauri app. Built `main.ps1` wizard with path detection, integration selection, and VSCode task generation. Legacy flat keys auto-promoted to `overrides` block for backward compatibility.
+The desktop UI is a Tauri 2 application wrapping the PowerShell core. UI scaffolding appears in late July 2026 (overview UI components, backend model-scanning commands, TopBar navigation, server lifecycle management), followed by a full UI-scaffolding push on 2 August 2026 (integration pages, logging dashboard, diagnostics). A project dependency graph was generated in JSON format on 30 July and again on 3 August 2026, and `ARCHITECTURE.md` documents the hardware classification and decision flow. The configuration directory split (AppData vs. workspace) landed around 3–4 August 2026, centralizing config handling with dynamic port support for integrations — a change likely driven by the Tauri app's need to read and write user config outside the install directory.
 
-**Key events:**
-- Sep 5, 2024: `Paths.ps1` for AppData config resolution
-- Sep 10, 2024: `main.ps1` wizard with integration selection
-- Sep 15, 2024: VSCode `.vscode/tasks.json` + `.vscode/settings.json` generation
-- Sep 20, 2024: Legacy key promotion (`cache_type_k`, `flash_attn` → `overrides`)
-- Oct 1, 2024: Cloud fallback providers (Ollama, OpenAI, Anthropic, NVIDIA NIM)
+### Era 5: Comprehensive update + CI hardening (November 2026)
 
-### Era 4: Context Manager Proxy (Oct–Nov 2024)
-**Python FastAPI proxy for Anthropic→OpenAI translation + session compression**
-
-Added optional Python subsystem to handle long-context sessions. Translates Anthropic Messages API to OpenAI Chat Completions, compresses history via summarization when token budget exceeded, persists checkpoints to disk.
-
-**Key events:**
-- Oct 5, 2024: Initial `proxy.py` with protocol translation
-- Oct 12, 2024: `context_engine.py` with compression logic + idempotency
-- Oct 18, 2024: `tokenizer_cache.py` with alias normalization
-- Oct 25, 2024: `preset_reader.py` for `ctx_limit` from preset
-- Nov 1, 2024: 11 pytest modules for compression, token counting, protocol conversion
-- Nov 5, 2024: `StartContextManager.ps1` launcher + Tauri config integration
-
-### Era 5: Tauri Desktop App (Nov 2024–Jan 2025)
-**React + Rust native GUI wrapping PowerShell core**
-
-Built desktop application with Tauri 2. Rust backend dispatches PowerShell scripts via `run_powershell_script`. React frontend with Zustand stores mirrors all CLI functionality: hardware diagnostics, model management, performance tuning, live logs, integration helpers.
-
-**Key events:**
-- Nov 10, 2024: Tauri project init (`ui/` + `ui/src-tauri/`)
-- Nov 15, 2024: Rust commands (`config.rs`, `profile.rs`, `server.rs`)
-- Nov 20, 2024: GGUF binary parser (`gguf.rs`, `models.rs`)
-- Nov 25, 2024: React pages (Overview, Models, Performance, Settings, Diagnostics, Logs, Integrations)
-- Dec 1, 2024: Live log tailing via Rust file watchers + Tauri events
-- Dec 10, 2024: Exact KV cache calculator (`lib/validation.ts`) — UI-side precision
-- Dec 15, 2024: Pre-flight validation (`validationStore.ts`) + auto-tune launch
-- Jan 5, 2025: Production build pipeline (NSIS, DMG, AppImage)
-
-### Era 6: Upstream Compatibility Guard (Jan–Mar 2025)
-**Flag parser + Git scanner + Asset sync**
-
-Proactive protection against llama.cpp breaking changes. Two-pass `llama-server --help` parser with alias registry. Git commit scanner for hardware-impacting changes. SHA-cached template/grammar sync from ggml-org/llama.cpp.
-
-**Key events:**
-- Jan 10, 2025: `ParseHelp.ps1` two-pass parser + `.cached_flags.json`
-- Jan 18, 2025: `GitDiff.ps1` with keyword impact classification
-- Jan 25, 2025: `FetchAssets.ps1` SHA-cached download
-- Feb 1, 2025: Integrated into `test-health.ps1` and `verify-scripts.ps1`
-- Mar 10, 2025: Verification exclusions (external commands, PS common flags)
-
-### Era 7: Polish & Documentation (Mar–May 2025)
-**ARCHITECTURE.md, USER_GUIDE.md, SYSTEM_COMMANDS.md, testing infrastructure**
-
-Comprehensive documentation of algorithms, formulas, and CLI reference. Health check orchestration. CI/CD pipeline with multi-platform matrix.
-
-**Key events:**
-- Mar 15, 2025: `ARCHITECTURE.md` with decision flow, formulas, tier tables
-- Mar 20, 2025: `USER_GUIDE.md` with platform prerequisites and quick start
-- Apr 1, 2025: `SYSTEM_COMMANDS.md` parameter reference
-- Apr 10, 2025: GitHub Actions matrix (Windows/macOS/Linux)
-- May 1, 2025: `test-health.ps1` full orchestration (syntax, config, hardware, ping, flags)
+November was by far the busiest month (32 of 65 visible commits). On 21 November 2026 a cluster of commits delivered Sprint 4 UI updates (virtualization, JSON Schema validation, live preview, quick actions), Sprint 5 CI/CD with pre-commit hooks and release automation, major library updates (Vite 8, TypeScript 7), critical npm vulnerability fixes, Rust dependency updates, context-manager Prometheus metrics, file-based caching for hardware profiles and model scanning, and alignment of the context-size formula between PowerShell and TypeScript. On 22 November 2026 PR #4 ("comprehensive update") was merged, followed by CI bumps (pytest 9.0.3, pytest-asyncio), cargo-audit advisory handling, and cross-platform fixes for temp paths and Windows-only APIs on Linux/macOS. This era appears to represent a push to harden the whole stack before wider use.
 
 ## Longest-standing features
 
-| Feature | Introduced | Survived Refactors | Status |
-|---------|------------|-------------------|--------|
-| Hardware profiling (`Profile.ps1`) | Aug 2024 | 3 (cross-platform, tier logic, JSON output) | Active |
-| Parameter derivation (`SetupRouter.ps1`) | Aug 2024 | 2 (override precedence, context formula) | Active |
-| Server lifecycle (`start/stop-server.ps1`) | Aug 2024 | 2 (port collision, log redirection) | Active |
-| AppData config directory | Sep 2024 | 1 (Tauri integration) | Active |
-| Legacy key promotion | Sep 2024 | 0 | Active |
+| Feature | First appeared | Status |
+|---------|----------------|--------|
+| Hardware profiling (`llo-core/Profile.ps1`) | 11–13 July 2026 | Active — survived the cross-platform expansion of 21–22 July 2026 |
+| Parameter derivation / preset router (`llo-core/SetupRouter.ps1`, `script/start-server.ps1`) | 12–14 July 2026 | Active — override precedence and context formula added later |
+| llama.cpp flag tracking (`llo-core/ParseHelp.ps1`) | 12 July 2026 (extended 22 July 2026) | Active |
+| AppData configuration directory (`llo-core/Paths.ps1`) | 3–4 August 2026 | Active |
 
 ## Deprecated features
 
-| Feature | Introduced | Deprecated | Replaced By |
-|---------|------------|------------|-------------|
-| Flat inference keys (`cache_type_k`, `flash_attn` at config root) | Aug 2024 | Sep 2024 | `config.overrides` block |
-| Workspace-root config (`llo-config.json` in repo) | Aug 2024 | Sep 2024 | AppData directory |
-| Single-model launch | Aug 2024 | Oct 2024 | `models-preset.ini` multi-model |
-| Manual template selection | Sep 2024 | Nov 2024 | Auto-match + `use_default_template` |
+No features are formally marked deprecated in the repository. One convention changed early: flat legacy config keys (e.g. `cache_type_k`, `flash_attn` at config root) were superseded by the `config.overrides` block — but this is a configuration convention rather than a removed feature, and nothing appears to have been deleted.
 
 ## Major rewrites
 
-| Rewrite | Period | Scope | Reason |
-|---------|--------|-------|--------|
-| Cross-platform hardware detection | Aug–Sep 2024 | `Profile.ps1` | macOS/Linux support |
-| Config directory split | Sep 2024 | `Paths.ps1`, `main.ps1`, `config.rs` | Tauri AppData requirement |
-| Context Manager Proxy | Oct–Nov 2024 | New Python subsystem | Long-context session support |
-| Tauri Desktop App | Nov 2024–Jan 2025 | New `ui/` + `ui/src-tauri/` | Visual dashboard |
-| Upstream Compatibility Guard | Jan–Mar 2025 | `ParseHelp.ps1`, `GitDiff.ps1`, `FetchAssets.ps1` | Breaking change prevention |
+| Rewrite | Period | Scope | Likely reason |
+|---------|--------|-------|---------------|
+| Cross-platform hardware detection | 21–22 July 2026 | `llo-core/Profile.ps1` | macOS/Linux support beyond Windows WMI |
+| Configuration directory split | 3–4 August 2026 | `llo-core/Paths.ps1`, `main.ps1`, Tauri config commands | Tauri app reads/writes user config in AppData |
+| Context Manager proxy | 11 August – September 2026 | New Python subsystem (`llo-core/context_manager/`) | Long-context session compression and Anthropic↔OpenAI translation |
+| Tauri desktop app | 30 July – 16 August 2026 | New `ui/` and `ui/src-tauri/` | Visual dashboard on top of the PowerShell CLI |
+| CI hardening | 21–22 November 2026 | `.github/workflows/`, `cargo-audit`, pytest versions | Supply-chain advisories and test stability |
 
 ## Growth trajectory
 
-```mermaid
-xychart-beta
-    title "Codebase Growth (Lines of Code)"
-    x-axis ["Aug 24", "Sep 24", "Oct 24", "Nov 24", "Dec 24", "Jan 25", "Feb 25", "Mar 25", "Apr 25", "May 25"]
-    y-axis "LOC" 0 --> 30000
-    line [800, 2500, 5200, 12000, 18500, 22000, 24500, 26800, 28000, 28600]
-```
+Visible commit cadence: July 17 → August 12 → September 4 → October 0 → November 32. The November surge (roughly half of all visible commits in a single month) suggests a period of intense consolidation — CI/CD, pre-commit hooks, release automation, dependency updates, and the merged comprehensive update — rather than steady linear growth. Lines of code grew alongside, but historical per-month LOC isn't reconstructed here.
 
-**Contributor growth signals:**
-- Aug 2024: 1 contributor (initial)
-- Nov 2024: 1 contributor (Tauri added)
-- Mar 2025: 1 contributor (compatibility guard)
-- Current: 1 primary contributor
+## Related pages
 
-## Fun facts
-
-### Oldest surviving code
-`Profile.ps1` CPU detection via `Get-CimInstance Win32_Processor` — unchanged since Aug 11, 2024. The WMI query pattern has survived all cross-platform expansions.
-
-### Dependency archaeology
-Oldest direct dependency: **PowerShell 5.1** (Windows built-in). The script guards `$IsWindows`/`$IsMacOS`/`$IsLinux` have never needed a version bump.
-
-### Naming origins
-- **LLM Manager** — Descriptive, chosen for clarity over cleverness
-- **llo-core** — "LLM Manager Orchestrator Core" (internal abbreviation)
-- **PerformanceTier** — Explicitly named to separate "hardware identity" (AdapterClass) from "inference policy" (Tier)
-
-### TODO/FIXME count
-As of Nov 2026: **3 TODO comments** in codebase
-- `Profile.ps1`: "Add Vulkan backend detection for Linux AMD"
-- `SetupRouter.ps1`: "Support speculative decoding with draft model (not just ngram)"
-- `context_engine.py`: "Add streaming summary for very long contexts"
-
-### Longest file
-`llo-core/SetupRouter.ps1` at **803 lines** — contains parameter derivation, context formula, template matching, and preset generation. Candidate for splitting into `ParameterDerivation.ps1` + `PresetWriter.ps1`.
+- [Overview](overview/index.md)
+- [Getting started](overview/getting-started.md) — prerequisites, install, build, test, run
+- [Systems index](systems/index.md) — systems overview
+- [Applications index](applications/index.md) — applications overview
+- [Architecture](overview/architecture.md) — hardware classification and decision flow
+- [Compatibility guard](systems/compatibility-guard.md) — `ParseHelp.ps1` / `GitDiff.ps1` / `FetchAssets.ps1`
+- [Tauri desktop app](applications/tauri-desktop-app.md)
+- [Context manager proxy](applications/context-manager-proxy.md)
+- [By the numbers](by-the-numbers.md) — codebase statistics snapshot
+- [Fun facts](fun-facts.md) — light notes on origins, age, and trivia

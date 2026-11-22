@@ -1,135 +1,96 @@
 # Context Compression
 
-**Active contributors:** vijay
+**Active contributors:** Vijay
 
-Anthropic→OpenAI protocol translation, session summarization, and context budget enforcement via optional Python proxy.
+Anthropic→OpenAI protocol translation, session summarization, and context budget enforcement via the optional Python Context Manager Proxy (`llo-core/context_manager/`).
 
-## Overview
+## Purpose
 
-The Context Manager Proxy (`llo-core/context_manager/`) sits between clients and `llama-server`, translating the Anthropic Messages API to OpenAI's Chat Completions API, compressing long conversation histories via summarization, and enforcing a context size limit (`ctx_limit`).
+The Context Manager Proxy sits between clients and `llama-server`, translating the Anthropic Messages API to OpenAI's Chat Completions API, compressing long conversation histories via summarization, and enforcing a context size limit (`ctx_limit`). It is enabled only when `context_manager.enabled = true` in `llo-config.json` and launched with `script/StartContextManager.ps1` (default proxy port 8090, upstream llama-server on 8080). See [applications/context-manager-proxy.md](../applications/context-manager-proxy.md) for the proxy application page and [overview/architecture.md](../overview/architecture.md) for how the proxy fits into the two-stage pipeline.
 
-## Architecture
+## Directory layout
+
+```
+llo-core/
+└── context_manager/
+    ├── proxy.py          # FastAPI server, protocol translation, streaming
+    ├── context_engine.py # ContextEngine: compression, token counting, checkpoints
+    ├── tokenizer_cache.py# Shared HF tokenizer + alias normalization
+    ├── preset_reader.py  # models-preset.ini parser for ctx_limit
+    └── config.py         # ContextManagerConfig (Pydantic settings)
+script/
+└── StartContextManager.ps1  # PowerShell launcher for the proxy
+```
+
+## Key Abstractions
+
+| Abstraction | Responsibility | Primary interface |
+|-------------|---------------|-------------------|
+| `ContextEngine` | Per-session state, token counting, compression heuristic, summarization, disk checkpoints | `llo-core/context_manager/context_engine.py` → `ContextEngine` |
+| `SessionState` | `session_id`, `messages`, `summary_block`, `summary_up_to_turn`, `last_compress_hash`, `last_accessed` | `context_engine.py` |
+| `needs_compression` | Trigger: `prompt_tokens + max_tokens_requested >= ctx_limit * warn_threshold` | `context_engine.py` |
+| Compressed history | `[Compressed History Summary]` system block + last `keep_turns` turns, clamped to 85% of `ctx_limit` | `context_engine.py` → `compress()` |
+| Checkpoint | SHA256-keyed session state persisted to AppData for idempotent resume | `context_engine.py` → `_save_checkpoint_to_disk` |
+| `ctx_limit` | Context ceiling; `0` = auto-read from `models-preset.ini` via `preset_reader.py` (fallback 65536) | `config.py` / `preset_reader.py` |
+
+## How it works
 
 ```mermaid
-graph TB
-    Client[Client\nAnthropic SDK] -->|POST /v1/messages| Proxy[proxy.py\nFastAPI :8090]
-    Proxy -->|Extract session_id| Session[SessionState]
-    Proxy -->|Translate + Compress| Engine[context_engine.py\nContextEngine]
-    Engine -->|Token count| Tokenizer[tokenizer_cache.py\nHF Tokenizer]
-    Engine -->|Summarize via| LlamaServer[llama-server\n:8080]
-    Engine -->|Read ctx_limit| Preset[preset_reader.py\nmodels-preset.ini]
-    Engine -->|Persist| Checkpoints[AppData/checkpoints/\nsession_id.json]
-    Proxy -->|Forward OpenAI| LlamaServer
-    LlamaServer -->|Response| Proxy
-    Proxy -->|Translate back| Client
+sequenceDiagram
+    participant Cl as Client (Anthropic SDK)
+    participant Pr as proxy.py (FastAPI :8090)
+    participant En as context_engine.py (ContextEngine)
+    participant Tk as tokenizer_cache.py
+    participant LS as llama-server :8080
+    participant CP as AppData/checkpoints/*.json
+    Cl->>Pr: POST /v1/messages (Anthropic)
+    Pr->>Pr: Extract session_id (headers → body → request-id → UUID)
+    Pr->>En: get_or_create_session(session_id)
+    En->>Tk: count_tokens_messages(messages)
+    En->>En: needs_compression(messages, max_tokens, ctx_limit)
+    alt threshold reached
+        En->>En: SHA256 hash of turns-to-summarize (idempotency)
+        alt hash unchanged
+            En-->>Pr: Return existing compressed_history
+        else
+            En->>LS: Summarize older turns via /v1/chat/completions
+            LS-->>En: Summary response
+            En->>En: Build compressed history: [Compressed Summary] + last keep_turns
+            En->>En: Clamp to 85% of ctx_limit
+            En->>CP: Save checkpoint (session_id.json)
+        end
+    end
+    En-->>Pr: Compressed message list
+    Pr->>Pr: Convert Anthropic → OpenAI format
+    Pr->>LS: POST /v1/chat/completions (OpenAI)
+    LS-->>Pr: Response (streaming or non-streaming)
+    Pr->>Pr: Convert OpenAI → Anthropic format
+    Pr-->>Cl: Anthropic response
 ```
 
-## Compression policy
-
-### Trigger condition
+### Compression trigger (`needs_compression`)
 
 ```python
-def needs_compression(self, session: SessionState, max_tokens_requested: int) -> bool:
-    prompt_tokens = self.count_tokens_messages(session.messages)
-    return prompt_tokens + max_tokens_requested >= ctx_limit * warn_threshold
+def needs_compression(self, messages, max_tokens_requested, ctx_limit, model_alias=""):
+    if ctx_limit <= 0:
+        ctx_limit = 65536
+    prompt_tokens = self.count_tokens_messages(messages, model_alias)
+    total_projected = prompt_tokens + max(0, max_tokens_requested)
+    threshold = int(ctx_limit * self.warn_threshold)
+    return total_projected >= threshold
 ```
 
-**Defaults:**
-- `warn_threshold = 0.70` (70% of context limit)
-- `ctx_limit = 0` → auto-read from `models-preset.ini` (fallback 65536)
+Defaults: `warn_threshold = 0.70` (trigger at 70% of `ctx_limit`), `keep_turns = 6` recent turns preserved uncompressed, `summary_max_tokens = 768`, `summarize_with_model = "same"`. When `ctx_limit` is `0`, it is read from the active model's `ctx_size` in `models-preset.ini` via `preset_reader.py`, falling back to 65536.
 
 ### Compression algorithm
 
-```python
-async def compress(self, session: SessionState, max_allowed_tokens: int):
-    # 1. Idempotency check
-    to_summarize = session.messages[:-keep_turns]  # Older turns
-    hash = self._compute_hash(session.id, to_summarize)
-    if hash == session.checksum:
-        return  # Unchanged delta, skip
-
-    # 2. Request summary from llama-server
-    summary_prompt = build_summary_prompt(to_summarize)
-    summary = await self._request_summary(summary_prompt)
-
-    # 3. Build compressed history
-    compressed = [
-        {"role": "system", "content": f"[Compressed History Summary]\n{summary}"}
-    ] + session.messages[-keep_turns:]  # Keep last N turns
-
-    # 4. Clamp to safety margin
-    compressed = self._clamp_message_tokens(compressed, int(ctx_limit * 0.85))
-
-    # 5. Update session
-    session.compressed_history = compressed
-    session.checksum = hash
-    self._save_checkpoint_to_disk(session)
-```
-
-### Parameters
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `warn_threshold` | 0.70 | Trigger at 70% of ctx_limit |
-| `keep_turns` | 6 | Recent turns preserved uncompressed |
-| `summary_max_tokens` | 768 | Max tokens for summary response |
-| `summarize_with_model` | "same" | Model alias for summarization |
-| `ctx_limit` | 0 (auto) | Context limit; 0 = from preset |
-
-## Protocol translation
-
-### Anthropic → OpenAI (request)
-
-```python
-def convert_anthropic_to_openai_messages(body: Dict) -> List[Dict]:
-    messages = []
-    
-    # System message(s)
-    if body.get("system"):
-        messages.append({"role": "system", "content": body["system"]})
-    
-    # Conversation messages
-    for msg in body["messages"]:
-        if msg["role"] == "user":
-            messages.append({"role": "user", "content": msg["content"]})
-        elif msg["role"] == "assistant":
-            messages.append({"role": "assistant", "content": msg["content"]})
-    
-    # Tool calls passthrough
-    if body.get("tools"):
-        openai_tools = convert_anthropic_tools_to_openai(body["tools"])
-    
-    return messages
-```
-
-### OpenAI → Anthropic (response)
-
-```python
-def convert_openai_to_anthropic_response(openai_resp, request_id) -> Dict:
-    choice = openai_resp["choices"][0]
-    message = choice["message"]
-    
-    return {
-        "id": request_id,
-        "type": "message",
-        "role": "assistant",
-        "content": [{"type": "text", "text": message["content"]}],
-        "model": openai_resp["model"],
-        "stop_reason": map_finish_reason(choice["finish_reason"]),
-        "usage": {
-            "input_tokens": openai_resp["usage"]["prompt_tokens"],
-            "output_tokens": openai_resp["usage"]["completion_tokens"]
-        }
-    }
-```
-
-### Streaming
-
-Both protocols use SSE. Proxy forwards chunks bidirectionally:
-- Anthropic: `event: message_start` / `content_block_delta` / `message_delta` / `message_stop`
-- OpenAI: `data: {choices:[{delta:{content:"..."}}]}`
-
-## Session management
+1. **Split** conversation turns: older turns (`delta_turns`) vs the last `keep_turns` turns kept verbatim. Incremental: only turns since `summary_up_to_turn` are re-summarized.
+2. **Idempotency check:** SHA256 hash of the session id plus turns-to-summarize; if the hash matches `last_compress_hash`, skip recompression.
+3. **Summarize** older turns through `llama-server` (`/v1/chat/completions`) using `summarize_with_model`; merge with any `PRIOR_SUMMARY`.
+4. **Rebuild** history: `[Compressed History Summary]` system block + recent window.
+5. **Clamp** total tokens to `int(ctx_limit * 0.85)` as a safety margin; tool-call messages are never clamped.
+6. **Persist** checkpoint to `%APPDATA%\LLM Manager\checkpoints\{session_id}.json`; reload on `get_or_create_session()`.
+7. Background eviction scans sessions every `eviction_interval_sec` (300s) and removes sessions idle beyond `session_ttl_sec` (86400s = 24h).
 
 ### Session ID extraction (priority)
 
@@ -139,105 +100,47 @@ Both protocols use SSE. Proxy forwards chunks bidirectionally:
 4. `x-request-id` header → `session_{uuid}`
 5. Random UUID fallback
 
-### Session state (`SessionState`)
+### Tokenizer cache (`tokenizer_cache.py`)
 
-```python
-class SessionState:
-    session_id: str
-    messages: List[Dict]           # Full history
-    compressed_history: List[Dict] # Compressed blocks
-    last_accessed: float           # Unix timestamp
-    checksum: str                  # SHA256 of turns-to-summarize
-```
+Normalizes model aliases to Hugging Face repo IDs (e.g. `claude-3-5-sonnet-20241022` → `anthropic/claude-3.5-sonnet`, `gpt-4o` → `openai/gpt-4o`), checks a persistent file-based cache, downloads from HF Hub on first use (honoring `tokenizer_repo` override), and caches the tokenizer.
 
-### Persistence (checkpoints)
+## Integration points
 
-- Path: `%APPDATA%\LLM Manager\checkpoints\{session_id}.json`
-- Saved after each compression
-- Loaded on `get_or_create_session()`
-- Background eviction: `session_ttl_sec` (default 86400s = 24h)
+- [overview/architecture.md](../overview/architecture.md) — proxy placement between clients and llama-server in the two-stage pipeline.
+- [systems/parameter-derivation.md](../systems/parameter-derivation.md) — `models-preset.ini` supplies `ctx_size`, which the proxy resolves as `ctx_limit` via `preset_reader.py`.
+- [systems/compatibility-guard.md](../systems/compatibility-guard.md) — not directly involved; the proxy speaks OpenAI to llama-server, so flag compatibility matters only for summarization calls.
+- [applications/context-manager-proxy.md](../applications/context-manager-proxy.md) — full proxy application reference (components, config, running, testing).
+- [applications/powershell-cli.md](../applications/powershell-cli.md) — `StartContextManager.ps1` launcher and `test-health.ps1` coverage.
 
-## Tokenizer cache (`tokenizer_cache.py`)
+## Entry points for modification
 
-```python
-def get_tokenizer(model_alias: str) -> PreTrainedTokenizerFast:
-    # 1. Normalize alias
-    #    "claude-3-5-sonnet-20241022" → "anthropic/claude-3.5-sonnet"
-    #    "gpt-4o" → "openai/gpt-4o"
-    # 2. Check persistent cache (file-based)
-    # 3. Load from HF Hub (with tokenizer_repo override)
-    # 4. Cache and return
-```
-
-**Alias mapping:** Maintained in `tokenizer_cache.py` for common models.
-
-## Configuration
-
-```json
-{
-  "context_manager": {
-    "enabled": false,
-    "warn_threshold": 0.70,
-    "keep_turns": 6,
-    "proxy_port": 8090,
-    "llama_server_url": "http://127.0.0.1:8080",
-    "ctx_limit": 0,
-    "tokenizer_repo": "",
-    "summary_max_tokens": 768,
-    "summarize_with_model": "same",
-    "eviction_interval_sec": 300,
-    "session_ttl_sec": 86400
-  }
-}
-```
-
-**Enable:** Set `enabled: true` in config, then `powershell -File script/StartContextManager.ps1`
-
-## Client usage
-
-### With proxy enabled (port 8090)
-
-```bash
-# Claude Code
-ANTHROPIC_BASE_URL=http://127.0.0.1:8090 \
-ANTHROPIC_AUTH_TOKEN=local \
-CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
-claude
-
-# OpenAI SDK
-client = OpenAI(base_url="http://127.0.0.1:8090/v1", api_key="local")
-```
-
-### Tauri integration
-
-`launch_claude_terminal` command checks `context_manager.enabled`:
-- If enabled → routes to proxy port (8090)
-- If disabled → routes to server port (8080)
-
-## Testing
-
-```bash
-cd llo-core/context_manager
-.venv/bin/activate
-pytest tests/ -v
-
-# 11 test modules:
-# test_compression.py, test_token_counting.py, test_session_tracking.py,
-# test_protocol_conversion.py, test_http_roundtrip.py,
-# test_checkpoint_persistence.py, test_needs_compression.py,
-# test_tokenizer_cache.py, test_preset_reader.py, test_config.py,
-# test_proxy_lifespan.py
-```
+| Task | Entry point | File |
+|------|-------------|------|
+| Change compression trigger threshold | `warn_threshold` / `needs_compression()` | `llo-core/context_manager/context_engine.py` |
+| Change turns kept uncompressed | `keep_turns` | `llo-core/context_manager/context_engine.py` |
+| Change summary model / max tokens | `summarize_with_model`, `summary_max_tokens` | `context_engine.py` / `config.py` |
+| Change checkpoint path or TTL | `_save_checkpoint_to_disk`, eviction loop | `context_engine.py` |
+| Change proxy port or upstream URL | `proxy_port`, `llama_server_url` | `config.py` + `StartContextManager.ps1` |
+| Add tokenizer alias mapping | Alias normalization table | `llo-core/context_manager/tokenizer_cache.py` |
+| Change clamp safety margin (85%) | `_clamp_message_tokens` max_allowed | `context_engine.py` |
 
 ## Key source files
 
 | File | Purpose |
 |------|---------|
-| `llo-core/context_manager/proxy.py` | FastAPI server, protocol translation, streaming |
+| `llo-core/context_manager/proxy.py` | FastAPI server, Anthropic↔OpenAI translation, SSE streaming |
 | `llo-core/context_manager/context_engine.py` | Compression, token counting, checkpoints, eviction |
-| `llo-core/context_manager/tokenizer_cache.py` | Shared HF tokenizer, alias normalization |
-| `llo-core/context_manager/preset_reader.py` | models-preset.ini parser for ctx_limit |
-| `llo-core/context_manager/config.py` | Pydantic settings (ContextManagerConfig) |
+| `llo-core/context_manager/tokenizer_cache.py` | Shared HF tokenizer, alias normalization, token cache |
+| `llo-core/context_manager/preset_reader.py` | `models-preset.ini` parser for `ctx_limit` |
+| `llo-core/context_manager/config.py` | `ContextManagerConfig` Pydantic settings |
 | `llo-core/context_manager/tests/` | 11 pytest modules |
-| `script/StartContextManager.ps1` | PowerShell launcher |
-| `ui/src-tauri/src/commands/config.rs` | Reads CM config for Claude Code launch |
+| `script/StartContextManager.ps1` | PowerShell launcher for the proxy |
+| `ui/src-tauri/src/commands/config.rs` | Reads CM config for Claude Code launch port selection |
+
+## Related Pages
+
+- [overview/architecture.md](../overview/architecture.md) — hardware classification, decision flow, core formulas
+- [systems/parameter-derivation.md](../systems/parameter-derivation.md) — models-preset.ini generation
+- [systems/compatibility-guard.md](../systems/compatibility-guard.md) — llama-server argument compatibility
+- [applications/context-manager-proxy.md](../applications/context-manager-proxy.md) — context manager proxy
+- [applications/powershell-cli.md](../applications/powershell-cli.md) — PowerShell CLI wizard

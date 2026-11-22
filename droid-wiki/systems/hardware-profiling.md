@@ -15,6 +15,17 @@ llo-core/Profile.ps1              # Main profiler (PowerShell)
 ui/src-tauri/src/commands/profile.rs  # Tauri command bridge
 ```
 
+## Key Abstractions
+
+| Abstraction | Responsibility | Fields |
+|-------------|---------------|--------|
+| `SystemHardwareProfile` | Aggregated CPU/RAM/GPU detection result | `cpu`, `ram`, `gpu` |
+| `CpuInfo` | CPU identification and thread sizing | `name`, `physicalCores`, `logicalCores`, `optimalThreads` |
+| `RamInfo` | Memory budget with OS reservation | `totalGb`, `safeBudgetMb` |
+| `GpuInfo` | GPU classification on two orthogonal axes | `name`, `totalVramMb`, `adapterClass`, `performanceTier`, `reason` |
+| `AdapterClass` | Hardware identity | `none`, `integrated`, `dedicated` |
+| `PerformanceTier` | Inference policy tier | `cpu`, `low`, `mid`, `high` |
+
 ## Data structures
 
 ```json
@@ -147,6 +158,16 @@ pub fn detect_hardware() -> Result<SystemHardwareProfile, String> {
 
 **Error handling:** On deserialization failure, writes raw output to `%APPDATA%\LLM Manager\logs\hardware_debug.log` for debugging.
 
+## Entry Points for Modification
+
+| Task | Entry Point | File |
+|------|-------------|------|
+| Change GPU tier VRAM thresholds | Edit `performanceTier` classification branch | `llo-core/Profile.ps1` |
+| Add a detection method | Add platform branch guarded by `$IsWindows`/`$IsMacOS`/`$IsLinux` | `llo-core/Profile.ps1` |
+| Change optimal-threads heuristic | Edit Intel hybrid cap/floor logic | `llo-core/Profile.ps1` |
+| Add a Tauri command output field | Extend `SystemHardwareProfile` Rust struct + deserialization | `ui/src-tauri/src/commands/profile.rs` |
+| Change debug-log path | Edit error-handling catch block | `ui/src-tauri/src/commands/profile.rs` |
+
 ## Key source files
 
 | File | Purpose |
@@ -156,3 +177,10 @@ pub fn detect_hardware() -> Result<SystemHardwareProfile, String> {
 | `ui/src/store/hardwareStore.ts` | Frontend state + fetchHardware() |
 | `ui/src/pages/Overview.tsx` | Displays hardware profile with tier badge |
 | `ui/src/pages/Diagnostics.tsx` | Detailed hardware validation |
+
+## Related Pages
+
+- [Architecture](../overview/architecture.md) — hardware classification, decision flow, core formulas
+- [PowerShell CLI](../applications/powershell-cli.md) — CLI entry points
+- [Tauri Desktop App](../applications/tauri-desktop-app.md) — Tauri desktop app command dispatch
+- [Hardware-Adaptive Inference](../features/hardware-adaptive-inference.md) — adaptive inference feature
