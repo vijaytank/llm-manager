@@ -176,9 +176,10 @@ jobs:
       # Ignored Advisories:
       # - RUSTSEC-2024-0370: Unmaintained dependency in transitive closure; safe as no network exposure
       # - RUSTSEC-2024-0429: Transitive dependency advisory; verified safe in desktop context
+      # - RUSTSEC-2026-0543: Informational warning: chrono unmaintained status (no vulnerability, no fix available)
       - name: cargo audit (Rust)
         working-directory: ui/src-tauri
-        run: cargo audit --deny warnings --ignore RUSTSEC-2024-0370 --ignore RUSTSEC-2024-0429
+        run: cargo audit --deny warnings --ignore RUSTSEC-2024-0370 --ignore RUSTSEC-2024-0429 --ignore RUSTSEC-2026-0543
         continue-on-error: false
 
       # pip-audit
