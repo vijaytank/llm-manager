@@ -1,4 +1,4 @@
-﻿# LLO Hardware Profiler v2
+# LLO Hardware Profiler v2
 # Two-step GPU classification:
 #   AdapterClass:    none | integrated | dedicated
 #   PerformanceTier: cpu  | low        | mid       | high

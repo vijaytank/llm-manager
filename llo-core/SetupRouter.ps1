@@ -1,4 +1,4 @@
-﻿# LLO Preset Config Router Setup v2
+# LLO Preset Config Router Setup v2
 # Hardware-adaptive inference parameter derivation + models-preset.ini generation.
 #
 # All inference parameters (n-gpu-layers, flash-attn, ubatch-size, cache types,
