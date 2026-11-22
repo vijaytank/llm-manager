@@ -1,4 +1,4 @@
-# LLO Hardware Profiler v2
+﻿# LLO Hardware Profiler v2
 # Two-step GPU classification:
 #   AdapterClass:    none | integrated | dedicated
 #   PerformanceTier: cpu  | low        | mid       | high
@@ -25,8 +25,9 @@ $isLin = $IsLinux -or (-not $isWin -and -not $isMac)
 
 $ErrorActionPreference = "Stop"
 
-# Cache file path for hardware profile
-$cacheFile = Join-Path $env:TEMP "llo-hardware-profile-cache.json"
+# Cache file path for hardware profile (cross-platform temp dir)
+$tempDir = [System.IO.Path]::GetTempPath()
+$cacheFile = Join-Path $tempDir "llo-hardware-profile-cache.json"
 
 function Get-CachedProfile {
     if ($NoCache -or -not (Test-Path $cacheFile)) {

@@ -1,4 +1,4 @@
-# LLO Preset Config Router Setup v2
+﻿# LLO Preset Config Router Setup v2
 # Hardware-adaptive inference parameter derivation + models-preset.ini generation.
 #
 # All inference parameters (n-gpu-layers, flash-attn, ubatch-size, cache types,
@@ -48,8 +48,9 @@ if ([string]::IsNullOrWhiteSpace($ModelsDir))    { $ModelsDir    = [System.IO.Pa
 if ([string]::IsNullOrWhiteSpace($TemplatesDir)) { $TemplatesDir = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "templates")) }
 if ([string]::IsNullOrWhiteSpace($GrammarsDir))  { $GrammarsDir  = [System.IO.Path]::GetFullPath((Join-Path $ManagerDir "grammars")) }
 
-# ── Model scan cache ──────────────────────────────────────────────────────────
-$modelCacheFile = Join-Path $env:TEMP "llo-model-scan-cache.json"
+# ── Model scan cache (cross-platform temp dir) ──────────────────────────────────
+$tempDir = [System.IO.Path]::GetTempPath()
+$modelCacheFile = Join-Path $tempDir "llo-model-scan-cache.json"
 $modelCacheTtlHours = 1
 
 function Get-CachedModelScan {
