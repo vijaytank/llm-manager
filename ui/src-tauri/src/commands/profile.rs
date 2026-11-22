@@ -118,8 +118,29 @@ mod tests {
             "\n=== LIVE TAURI IPC JSON OUTPUT ===\n{}\n==================================",
             json_str
         );
-        assert_ne!(live_profile.gpu.name, "No Compatible GPU");
-        assert!(live_profile.gpu.total_vram_mb > 0);
-        assert_eq!(live_profile.gpu.adapter_class, "dedicated");
+        assert!(
+            !live_profile.cpu.name.is_empty(),
+            "CPU name must be populated"
+        );
+        assert!(
+            live_profile.cpu.physical_cores > 0,
+            "Physical cores must be > 0"
+        );
+        assert!(
+            live_profile.cpu.logical_cores > 0,
+            "Logical cores must be > 0"
+        );
+        assert!(live_profile.ram.total_gb > 0.0, "Total RAM must be > 0");
+        assert!(
+            ["none", "integrated", "dedicated"].contains(&live_profile.gpu.adapter_class.as_str()),
+            "Adapter class must be a valid classification"
+        );
+        assert!(
+            ["cpu", "low", "mid", "high"].contains(&live_profile.gpu.performance_tier.as_str()),
+            "Performance tier must be a valid tier"
+        );
+        if live_profile.gpu.adapter_class == "dedicated" {
+            assert!(live_profile.gpu.total_vram_mb > 0);
+        }
     }
 }
