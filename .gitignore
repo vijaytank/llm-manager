@@ -25,7 +25,9 @@ desktop.ini
 # NOTE: templates/default.jinja IS tracked (bundled offline fallback)
 templates/*.jinja
 !templates/default.jinja
-grammars/
+grammars/*.gbnf
+!grammars/README.md
+!grammars/.gitkeep
 .assets-manifest.json
 
 # Internal analysis and planning docs
